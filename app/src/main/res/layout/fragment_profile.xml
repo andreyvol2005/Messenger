@@ -1,0 +1,299 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="#FFFFFF">
+
+    <!-- Верхняя панель -->
+    <TextView
+        android:id="@+id/toolbar"
+        android:layout_width="match_parent"
+        android:layout_height="56dp"
+        android:text="Профиль"
+        android:textSize="20sp"
+        android:textStyle="bold"
+        android:textColor="#000000"
+        android:gravity="center"
+        android:background="#AAAAAA" />
+
+    <!-- Контент профиля -->
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="24dp">
+
+            <!-- Аватар -->
+            <FrameLayout
+                android:layout_width="120dp"
+                android:layout_height="120dp"
+                android:layout_gravity="center">
+
+                <com.google.android.material.imageview.ShapeableImageView
+                    android:id="@+id/ivAvatar"
+                    android:layout_width="120dp"
+                    android:layout_height="120dp"
+                    app:shapeAppearanceOverlay="@style/roundedImageView"
+                    android:src="@drawable/ic_avatar_default"
+                    android:scaleType="centerCrop" />
+
+                <!-- Значок карандаша для редактирования аватарки -->
+                <ImageView
+                    android:id="@+id/editAvatar"
+                    android:layout_width="32dp"
+                    android:layout_height="32dp"
+                    android:layout_gravity="bottom|end"
+                    android:src="@drawable/edit"
+                    android:background="@drawable/bg_edit_icon"
+                    android:padding="6dp"
+                    android:clickable="true"
+                    android:focusable="true" />
+
+            </FrameLayout>
+
+            <!-- Отображаемое имя (nickname) -->
+            <TextView
+                android:id="@+id/tvDisplayName"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:text="Загрузка..."
+                android:textSize="24sp"
+                android:textStyle="bold"
+                android:textColor="#000000"
+                android:gravity="center" />
+
+
+            <!-- Один большой блок со всеми полями -->
+            <androidx.cardview.widget.CardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                app:cardCornerRadius="32dp"
+                app:cardElevation="0dp"
+                app:cardBackgroundColor="#F5F5F5">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical">
+
+                    <!-- Username -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:padding="16dp"
+                        android:gravity="center_vertical">
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:orientation="vertical">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Username"
+                                android:textSize="12sp"
+                                android:textColor="#757575" />
+
+                            <TextView
+                                android:id="@+id/tvUsername"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="2dp"
+                                android:text="username"
+                                android:textSize="16sp"
+                                android:textColor="#000000" />
+
+                        </LinearLayout>
+
+                        <ImageView
+                            android:id="@+id/editUsername"
+                            android:layout_width="24dp"
+                            android:layout_height="24dp"
+                            android:src="@drawable/edit"
+                            android:contentDescription="Редактировать"
+                            android:clickable="true"
+                            android:focusable="true" />
+
+                    </LinearLayout>
+
+                    <!-- Разделитель -->
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_gravity="center"
+                        android:layout_height="1dp"
+                        android:background="#E0E0E0" />
+
+                    <!-- Отображаемое имя -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:padding="16dp"
+                        android:gravity="center_vertical">
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:orientation="vertical">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Nickname"
+                                android:textSize="12sp"
+                                android:textColor="#757575" />
+
+                            <TextView
+                                android:id="@+id/tvNickname"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="2dp"
+                                android:text="nickname"
+                                android:textSize="16sp"
+                                android:textColor="#000000" />
+
+                        </LinearLayout>
+
+                        <ImageView
+                            android:id="@+id/editNickname"
+                            android:layout_width="24dp"
+                            android:layout_height="24dp"
+                            android:src="@drawable/edit"
+                            android:contentDescription="Редактировать"
+                            android:clickable="true"
+                            android:focusable="true" />
+
+                    </LinearLayout>
+
+                    <!-- Разделитель -->
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_gravity="center"
+                        android:layout_height="1dp"
+                        android:background="#E0E0E0" />
+
+                    <!-- Описание -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:padding="16dp"
+                        android:gravity="center_vertical">
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:orientation="vertical">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="About my self"
+                                android:textSize="12sp"
+                                android:textColor="#757575" />
+
+                            <TextView
+                                android:id="@+id/tvBio"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="2dp"
+                                android:text="о себе"
+                                android:textSize="14sp"
+                                android:textColor="#000000" />
+
+                        </LinearLayout>
+
+                        <ImageView
+                            android:id="@+id/editBio"
+                            android:layout_width="24dp"
+                            android:layout_height="24dp"
+                            android:src="@drawable/edit"
+                            android:contentDescription="Редактировать"
+                            android:clickable="true"
+                            android:focusable="true" />
+
+                    </LinearLayout>
+
+                    <!-- Разделитель -->
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_gravity="center"
+                        android:layout_height="1dp"
+                        android:background="#E0E0E0" />
+
+                    <!-- Дата рождения -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:padding="16dp"
+                        android:gravity="center_vertical">
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:orientation="vertical">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="День рождения"
+                                android:textSize="12sp"
+                                android:textColor="#757575" />
+
+                            <TextView
+                                android:id="@+id/tvBirthDate"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="2dp"
+                                android:text="..."
+                                android:textSize="14sp"
+                                android:textColor="#000000" />
+
+                        </LinearLayout>
+
+                        <ImageView
+                            android:id="@+id/editBirthDate"
+                            android:layout_width="24dp"
+                            android:layout_height="24dp"
+                            android:src="@drawable/edit"
+                            android:contentDescription="Редактировать"
+                            android:clickable="true"
+                            android:focusable="true" />
+
+                    </LinearLayout>
+
+                </LinearLayout>
+
+            </androidx.cardview.widget.CardView>
+
+            <!-- Кнопка выхода -->
+            <Button
+                android:id="@+id/btnLogout"
+                android:layout_width="match_parent"
+                android:layout_height="56dp"
+                android:layout_marginTop="32dp"
+                android:text="Выйти из аккаунта"
+                android:textSize="16sp"
+                android:textAllCaps="false"
+                android:backgroundTint="#F44336" />
+
+        </LinearLayout>
+
+    </ScrollView>
+
+</LinearLayout>

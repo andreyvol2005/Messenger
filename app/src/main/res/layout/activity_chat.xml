@@ -1,0 +1,126 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="#AAAAAA">
+
+    <!-- Верхняя панель с названием -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="56dp"
+        android:background="#AAAAAA"
+        android:gravity="center_vertical"
+        android:paddingStart="16dp"
+        android:paddingEnd="16dp">
+
+        <ImageView
+            android:id="@+id/btnBack"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:src="@drawable/back"
+            android:contentDescription="Назад" />
+
+        <TextView
+            android:id="@+id/tvTitle"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Чат"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:textColor="#000000"
+            android:gravity="center" />
+
+        <com.google.android.material.imageview.ShapeableImageView
+            android:id="@+id/ivAvatar"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            app:shapeAppearanceOverlay="@style/roundedImageView"
+            app:srcCompat="@drawable/ic_avatar_default"
+            android:scaleType="centerCrop"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintBottom_toBottomOf="parent"
+            android:background="@color/white"/>
+
+    </LinearLayout>
+
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/rvMessages"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:padding="8dp"
+        android:clipToPadding="false"
+        android:background="@color/white"/>
+
+    <LinearLayout
+        android:id="@+id/replyBar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:background="#E8E8E8"
+        android:padding="8dp"
+        android:visibility="gone">
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/tvReplySender"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Алексей"
+                android:textSize="12sp"
+                android:textStyle="bold"
+                android:textColor="#2196F3" />
+
+            <TextView
+                android:id="@+id/tvReplyText"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="сообщение"
+                android:textSize="12sp"
+                android:textColor="#757575"
+                android:layout_marginTop="2dp" />
+
+        </LinearLayout>
+
+    </LinearLayout>
+
+
+    <!-- Нижняя панель ввода -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:padding="8dp"
+        android:background="#F5F5F5">
+
+        <EditText
+            android:id="@+id/etMessage"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:hint="Сообщение..."
+            android:background="@drawable/bg_message_input"
+            android:padding="12dp"
+            android:maxLines="5"
+            android:inputType="textMultiLine" />
+
+        <ImageButton
+            android:id="@+id/btnSend"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:src="@drawable/send"
+            android:background="?selectableItemBackgroundBorderless"
+            android:contentDescription="Отправить" />
+
+    </LinearLayout>
+
+</LinearLayout>

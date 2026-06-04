@@ -1,0 +1,144 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginTop="4dp">
+
+    <LinearLayout
+        android:id="@+id/llSender"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:background="@drawable/bg_message_left"
+        android:layout_marginStart="8dp"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        android:visibility="gone">
+
+        <LinearLayout
+            android:id="@+id/replyContainerSender"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:background="@drawable/bg_reply"
+            android:orientation="vertical"
+            android:padding="8dp"
+            android:visibility="gone">
+
+            <TextView
+                android:id="@+id/tvReplySenderName"
+                android:layout_width="wrap_content"
+                android:layout_height="15dp"
+                android:maxWidth="150dp"
+                android:textColor="#2196F3"
+                android:textSize="12sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/tvReplyTextSender"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:maxWidth="200dp"
+                android:textColor="#757575"
+                android:textSize="12sp" />
+
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/tvMessageSender"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textColor="#000000"
+            android:maxWidth="300dp"
+            android:minWidth="30dp"
+            android:text=""
+            android:textSize="18sp" />
+
+        <TextView
+            android:id="@+id/tvTimeSender"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textColor="#757575"
+            android:textSize="10sp"
+            android:text=""
+            android:gravity="end" />
+
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/llReceiver"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:background="@drawable/bg_message_right"
+        android:layout_marginEnd="8dp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        android:visibility="gone">
+
+        <LinearLayout
+            android:id="@+id/replyContainerReceiver"
+            android:layout_width="wrap_content"
+            android:layout_height="50dp"
+            android:orientation="vertical"
+            android:background="@drawable/bg_reply_receiver"
+            android:padding="8dp"
+            android:visibility="gone">
+
+            <TextView
+                android:id="@+id/tvReplyReceiverName"
+                android:layout_width="wrap_content"
+                android:layout_height="15dp"
+                android:textSize="12sp"
+                android:maxWidth="150dp"
+                android:textStyle="bold"
+                android:textColor="#B8E1FC" />
+
+            <TextView
+                android:id="@+id/tvReplyTextReceiver"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textSize="12sp"
+                android:maxWidth="200dp"
+                android:textColor="#B8E1FC"
+                android:layout_marginTop="2dp" />
+
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/tvMessageReceiver"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textColor="#FFFFFF"
+            android:maxWidth="300dp"
+            android:minWidth="50dp"
+            android:textSize="18sp" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="end">
+
+            <TextView
+                android:id="@+id/tvTimeReceiver"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="#B8E1FC"
+                android:text="10:10"
+                android:textSize="10sp" />
+
+            <ImageView
+                android:id="@+id/ivReadStatus"
+                android:layout_width="14dp"
+                android:layout_height="14dp"
+                android:layout_marginStart="4dp"
+                android:src="@drawable/check" />
+
+        </LinearLayout>
+
+    </LinearLayout>
+
+</androidx.constraintlayout.widget.ConstraintLayout>
