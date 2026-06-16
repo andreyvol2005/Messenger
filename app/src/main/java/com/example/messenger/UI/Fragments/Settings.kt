@@ -1,4 +1,4 @@
-package com.example.messenger.Fragments
+package com.example.messenger.UI.Fragments
 
 import androidx.fragment.app.viewModels
 import android.os.Bundle

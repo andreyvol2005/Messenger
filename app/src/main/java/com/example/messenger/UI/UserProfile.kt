@@ -1,26 +1,20 @@
-package com.example.messenger
+package com.example.messenger.UI
 
 import android.os.Build
 import android.os.Bundle
 import android.view.View
 import android.view.WindowInsets
 import android.view.WindowInsetsController
-import android.widget.ImageView
-import android.widget.TextView
-import android.widget.Toast
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
-import com.bumptech.glide.Glide
 import com.example.messenger.databinding.ActivityUserProfileBinding
-import com.google.firebase.firestore.FirebaseFirestore
 
 class UserProfile : AppCompatActivity() {
 
     private lateinit var binding: ActivityUserProfileBinding
-    private val db = FirebaseFirestore.getInstance()
     private var userId: String = ""
     private var username: String = ""
 
@@ -62,34 +56,34 @@ class UserProfile : AppCompatActivity() {
     }
 
     private fun loadUserProfile() {
-        db.collection("Users").document(userId).get()
-            .addOnSuccessListener { doc ->
-                if (!doc.exists()) {
-                    Toast.makeText(this, "Пользователь не найден", Toast.LENGTH_SHORT).show()
-                    finish()
-                    return@addOnSuccessListener
-                }
-
-                val nickname = doc.getString("nickname") ?: username
-                val bio = doc.getString("bio") ?: "Нет описания"
-                val birthDate = doc.getString("birthDate") ?: "Не указана"
-                val avatarUrl = doc.getString("avatarUrl")
-
-                binding.tvDisplayName.text = nickname
-                binding.tvUsername.text = "@$username"
-                binding.tvBio.text = bio
-                binding.tvBirthDate.text = birthDate
-
-                if (!avatarUrl.isNullOrEmpty()) {
-                    Glide.with(this)
-                        .load(avatarUrl)
-                        .placeholder(R.drawable.ic_avatar_default)
-                        .into(binding.ivAvatar)
-                }
-            }
-            .addOnFailureListener {
-                Toast.makeText(this, "Ошибка загрузки профиля", Toast.LENGTH_SHORT).show()
-                finish()
-            }
+//        db.collection("Users").document(userId).get()
+//            .addOnSuccessListener { doc ->
+//                if (!doc.exists()) {
+//                    Toast.makeText(this, "Пользователь не найден", Toast.LENGTH_SHORT).show()
+//                    finish()
+//                    return@addOnSuccessListener
+//                }
+//
+//                val nickname = doc.getString("nickname") ?: username
+//                val bio = doc.getString("bio") ?: "Нет описания"
+//                val birthDate = doc.getString("birthDate") ?: "Не указана"
+//                val avatarUrl = doc.getString("avatarUrl")
+//
+//                binding.tvDisplayName.text = nickname
+//                binding.tvUsername.text = "@$username"
+//                binding.tvBio.text = bio
+//                binding.tvBirthDate.text = birthDate
+//
+//                if (!avatarUrl.isNullOrEmpty()) {
+//                    Glide.with(this)
+//                        .load(avatarUrl)
+//                        .placeholder(R.drawable.ic_avatar_default)
+//                        .into(binding.ivAvatar)
+//                }
+//            }
+//            .addOnFailureListener {
+//                Toast.makeText(this, "Ошибка загрузки профиля", Toast.LENGTH_SHORT).show()
+//                finish()
+//            }
     }
 }

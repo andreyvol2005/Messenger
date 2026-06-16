@@ -1,11 +1,10 @@
-package com.example.messenger.Adapters
+package com.example.messenger.UI.Adapters
 
-import android.content.Intent
 import android.view.LayoutInflater
 import android.view.ViewGroup
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
-import com.example.messenger.Chat
+import com.example.messenger.Adapters.Contact
 import com.example.messenger.R
 import com.example.messenger.databinding.ItemContactBinding
 

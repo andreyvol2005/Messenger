@@ -1,4 +1,4 @@
-package com.example.messenger.Adapters
+package com.example.messenger.UI.Adapters
 
 import android.content.ClipData
 import android.content.ClipboardManager
@@ -10,13 +10,15 @@ import android.widget.Toast
 import androidx.recyclerview.widget.RecyclerView
 import com.example.messenger.DataClasses.Message
 import com.example.messenger.databinding.ItemMessageBinding
-import com.google.firebase.firestore.FirebaseFirestore
 import android.graphics.drawable.ColorDrawable
-import android.util.Log
 import android.widget.LinearLayout
 import android.widget.PopupWindow
-import com.example.messenger.Chat
+import com.example.messenger.UI.Chat
+import com.example.messenger.R
 import com.example.messenger.databinding.PupMenuMessageBinding
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 class MessagesAdapter(
     private val messages: List<Message>,
@@ -25,7 +27,6 @@ class MessagesAdapter(
     private val otherUserNickname: String
 ) : RecyclerView.Adapter<MessagesAdapter.MessageViewHolder>() {
 
-    private val db = FirebaseFirestore.getInstance()  // добавляем db
 
     class MessageViewHolder(val binding: ItemMessageBinding) : RecyclerView.ViewHolder(binding.root)
 
@@ -56,9 +57,9 @@ class MessagesAdapter(
             }
 
             when (message.read) {
-                0 -> holder.binding.ivReadStatus.setImageResource(com.example.messenger.R.drawable.check0)
-                1 -> holder.binding.ivReadStatus.setImageResource(com.example.messenger.R.drawable.check1)
-                2 -> holder.binding.ivReadStatus.setImageResource(com.example.messenger.R.drawable.check)
+                0 -> holder.binding.ivReadStatus.setImageResource(R.drawable.check0)
+                1 -> holder.binding.ivReadStatus.setImageResource(R.drawable.check1)
+                2 -> holder.binding.ivReadStatus.setImageResource(R.drawable.check)
             }
         } else {
             holder.binding.llSender.visibility = View.VISIBLE
@@ -95,32 +96,32 @@ class MessagesAdapter(
     }
 
     private fun loadReplyData(replyToId: String, holder: MessageViewHolder, isMyMessage: Boolean, onResult: (String) -> Unit) {
-        db.collection("LS").document(chatId)
-            .collection("messages").document(replyToId)
-            .get()
-            .addOnSuccessListener { doc ->
-                val repliedMessage = doc.toObject(Message::class.java)
-                if (repliedMessage != null) {
-                    val replyText = repliedMessage.text
-                    val senderName = if (repliedMessage.from == currentUserIndex) {
-                        "Вы"
-                    } else {
-                        otherUserNickname
-                    }
-
-                    if (isMyMessage) {
-                        holder.binding.replyContainerReceiver.visibility = View.VISIBLE
-                        holder.binding.tvReplyReceiverName.text = senderName
-                        holder.binding.tvReplyTextReceiver.text = replyText
-                    } else {
-                        holder.binding.replyContainerSender.visibility = View.VISIBLE
-                        holder.binding.tvReplySenderName.text = senderName
-                        holder.binding.tvReplyTextSender.text = replyText
-                    }
-
-                    onResult(replyText)
-                }
-            }
+//        db.collection("LS").document(chatId)
+//            .collection("messages").document(replyToId)
+//            .get()
+//            .addOnSuccessListener { doc ->
+//                val repliedMessage = doc.toObject(Message::class.java)
+//                if (repliedMessage != null) {
+//                    val replyText = repliedMessage.text
+//                    val senderName = if (repliedMessage.from == currentUserIndex) {
+//                        "Вы"
+//                    } else {
+//                        otherUserNickname
+//                    }
+//
+//                    if (isMyMessage) {
+//                        holder.binding.replyContainerReceiver.visibility = View.VISIBLE
+//                        holder.binding.tvReplyReceiverName.text = senderName
+//                        holder.binding.tvReplyTextReceiver.text = replyText
+//                    } else {
+//                        holder.binding.replyContainerSender.visibility = View.VISIBLE
+//                        holder.binding.tvReplySenderName.text = senderName
+//                        holder.binding.tvReplyTextSender.text = replyText
+//                    }
+//
+//                    onResult(replyText)
+//                }
+//            }
     }
 
     private fun showCustomPopupMenu(anchor: View, message: Message, holder: MessageViewHolder) {
@@ -160,15 +161,15 @@ class MessagesAdapter(
 
     private fun deleteMessage(message: Message, holder: MessageViewHolder) {
         if (message.id.isNotEmpty()) {
-            db.collection("LS").document(chatId)
-                .collection("messages").document(message.id)
-                .delete()
-                .addOnSuccessListener {
-                    Toast.makeText(holder.itemView.context, "Сообщение удалено", Toast.LENGTH_SHORT).show()
-                }
-                .addOnFailureListener {
-                    Toast.makeText(holder.itemView.context, "Ошибка удаления", Toast.LENGTH_SHORT).show()
-                }
+//            db.collection("LS").document(chatId)
+//                .collection("messages").document(message.id)
+//                .delete()
+//                .addOnSuccessListener {
+//                    Toast.makeText(holder.itemView.context, "Сообщение удалено", Toast.LENGTH_SHORT).show()
+//                }
+//                .addOnFailureListener {
+//                    Toast.makeText(holder.itemView.context, "Ошибка удаления", Toast.LENGTH_SHORT).show()
+//                }
         }
     }
 
@@ -178,8 +179,8 @@ class MessagesAdapter(
         return if (timeString.isNotEmpty()) {
             try {
                 val timestamp = timeString.toLong()
-                val date = java.util.Date(timestamp)
-                val format = java.text.SimpleDateFormat("HH:mm", java.util.Locale.getDefault())
+                val date = Date(timestamp)
+                val format = SimpleDateFormat("HH:mm", Locale.getDefault())
                 format.format(date)
             } catch (e: NumberFormatException) {
                 ""

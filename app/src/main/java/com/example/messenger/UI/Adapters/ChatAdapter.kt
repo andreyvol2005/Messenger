@@ -1,22 +1,16 @@
-package com.example.messenger.Adapters
+package com.example.messenger.UI.Adapters
 
-import android.content.Intent
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
-import com.example.messenger.Chat
 import com.example.messenger.DataClasses.LS
 import com.example.messenger.R
 import com.example.messenger.databinding.ItemChatBinding
-import com.google.firebase.firestore.FirebaseFirestore
 import android.graphics.drawable.ColorDrawable
-import android.util.Log
 import android.widget.LinearLayout
 import android.widget.PopupWindow
-import android.widget.Toast
 import com.example.messenger.databinding.PopMenuBinding
 
 class ChatAdapter(
@@ -24,7 +18,6 @@ class ChatAdapter(
     private val currentUsername: String
 ) : RecyclerView.Adapter<ChatAdapter.ChatViewHolder>() {
 
-    private val db = FirebaseFirestore.getInstance()
     class ChatViewHolder(val binding: ItemChatBinding) : RecyclerView.ViewHolder(binding.root)
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ChatViewHolder {
@@ -72,21 +65,21 @@ class ChatAdapter(
         }
 
         holder.itemView.setOnClickListener {
-            db.collection("LS").document(chat.id).get()
-                .addOnSuccessListener { doc ->
-                    val members = doc.get("members") as? List<*> ?: emptyList<Any>()
-                    val userIndex = members.indexOf(currentUsername)
-                    val companionName = members.find { it != currentUsername } as? String ?: "Unknown"
-
-                    val intent = Intent(holder.itemView.context, Chat::class.java).apply {
-                        putExtra("chatId", chat.id)
-                        putExtra("chatTitle", companionName)
-                        putExtra("otherUsername", companionName)
-                        putExtra("currentUsername", currentUsername)
-                        putExtra("userIndex", userIndex)
-                    }
-                    holder.itemView.context.startActivity(intent)
-                }
+//            db.collection("LS").document(chat.id).get()
+//                .addOnSuccessListener { doc ->
+//                    val members = doc.get("members") as? List<*> ?: emptyList<Any>()
+//                    val userIndex = members.indexOf(currentUsername)
+//                    val companionName = members.find { it != currentUsername } as? String ?: "Unknown"
+//
+//                    val intent = Intent(holder.itemView.context, Chat::class.java).apply {
+//                        putExtra("chatId", chat.id)
+//                        putExtra("chatTitle", companionName)
+//                        putExtra("otherUsername", companionName)
+//                        putExtra("currentUsername", currentUsername)
+//                        putExtra("userIndex", userIndex)
+//                    }
+//                    holder.itemView.context.startActivity(intent)
+//                }
         }
 
         holder.itemView.setOnLongClickListener { view ->
@@ -118,19 +111,19 @@ class ChatAdapter(
         val chatId = chat.id
         val members = chat.members
 
-        db.collection("LS").document(chatId).delete()
-            .addOnSuccessListener {
-                for (member in members) {
-                    db.collection("Users").whereEqualTo("username", member).get()
-                        .addOnSuccessListener { users ->
-                            if (users.isEmpty()) return@addOnSuccessListener
-                            val userDoc = users.first()
-                            val currentChats = userDoc.get("chats") as? List<String> ?: emptyList()
-                            val updatedChats = currentChats.filter { it != chatId }
-                            userDoc.reference.update("chats", updatedChats)
-                        }
-                }
-            }
+//        db.collection("LS").document(chatId).delete()
+//            .addOnSuccessListener {
+//                for (member in members) {
+//                    db.collection("Users").whereEqualTo("username", member).get()
+//                        .addOnSuccessListener { users ->
+//                            if (users.isEmpty()) return@addOnSuccessListener
+//                            val userDoc = users.first()
+//                            val currentChats = userDoc.get("chats") as? List<String> ?: emptyList()
+//                            val updatedChats = currentChats.filter { it != chatId }
+//                            userDoc.reference.update("chats", updatedChats)
+//                        }
+//                }
+//            }
     }
 
     override fun getItemCount(): Int = chats.size

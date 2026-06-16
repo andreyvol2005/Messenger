@@ -1,7 +1,9 @@
-package com.example.messenger.Fragments
+package com.example.messenger.UI.Fragments
 
+import android.Manifest
 import android.app.Activity
 import android.app.DatePickerDialog
+import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.database.Cursor
@@ -20,11 +22,8 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import com.bumptech.glide.Glide
-import com.example.messenger.MainActivity
-import com.example.messenger.R
-import com.example.messenger.Registration
+import com.example.messenger.UI.Registration
 import com.example.messenger.databinding.FragmentProfileBinding
-import com.google.firebase.firestore.FirebaseFirestore
 import okhttp3.*
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.RequestBody.Companion.asRequestBody
@@ -40,15 +39,13 @@ class Profile : Fragment() {
     private var _binding: FragmentProfileBinding? = null
     private val binding get() = _binding!!
 
-    private val db = FirebaseFirestore.getInstance()
-    private val prefs by lazy { requireActivity().getSharedPreferences("app_prefs", android.content.Context.MODE_PRIVATE) }
+    private val prefs by lazy { requireActivity().getSharedPreferences("app_prefs", Context.MODE_PRIVATE) }
     private var currentUsername: String = ""
     private var userDocId: String = ""
     private val API_KEY = "6d207e02198a847aa98d0a2a901485a5"
 
     private val PICK_IMAGE_REQUEST = 1000
     private val PERMISSION_REQUEST_CODE = 100
-    private var userListener: com.google.firebase.firestore.ListenerRegistration? = null
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -92,15 +89,15 @@ class Profile : Fragment() {
                     return@showEditDialog
                 }
 
-                db.collection("Users").whereEqualTo("username", newValue).get()
-                    .addOnSuccessListener { users ->
-                        if (users.isEmpty()) {
-                            updateUserField("username", newValue)
-                            binding.tvDisplayName.text = newValue
-                        } else {
-                            Toast.makeText(requireContext(), "Пользователь с таким username уже существует", Toast.LENGTH_SHORT).show()
-                        }
-                    }
+//                db.collection("Users").whereEqualTo("username", newValue).get()
+//                    .addOnSuccessListener { users ->
+//                        if (users.isEmpty()) {
+//                            updateUserField("username", newValue)
+//                            binding.tvDisplayName.text = newValue
+//                        } else {
+//                            Toast.makeText(requireContext(), "Пользователь с таким username уже существует", Toast.LENGTH_SHORT).show()
+//                        }
+//                    }
             }
         }
 
@@ -158,10 +155,10 @@ class Profile : Fragment() {
     }
 
     private fun openImageChooser() {
-        if (ContextCompat.checkSelfPermission(requireContext(), android.Manifest.permission.READ_MEDIA_IMAGES)
+        if (ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.READ_MEDIA_IMAGES)
             != PackageManager.PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions(requireActivity(),
-                arrayOf(android.Manifest.permission.READ_MEDIA_IMAGES),
+                arrayOf(Manifest.permission.READ_MEDIA_IMAGES),
                 PERMISSION_REQUEST_CODE)
         } else {
             val intent = Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI)
@@ -272,32 +269,32 @@ class Profile : Fragment() {
     }
 
     private fun loadUserProfile() {
-        userListener = db.collection("Users")
-            .whereEqualTo("username", currentUsername)
-            .addSnapshotListener { users, error ->
-                if (error != null || users == null || _binding == null) return@addSnapshotListener
-
-                if (users.isEmpty()) {
-                    Toast.makeText(requireContext(), "Пользователь не найден", Toast.LENGTH_SHORT).show()
-                    return@addSnapshotListener
-                }
-
-                val userDoc = users.first()
-                userDocId = userDoc.id
-                val userData = userDoc.data
-
-                val username = userData["username"] as? String ?: ""
-                val nickname = userData["nickname"] as? String ?: ""
-                val bio = userData["bio"] as? String ?: "Нет описания"
-                val birthDate = userData["birthDate"] as? String ?: "Не указана"
-                val avatarUrl = userData["avatarUrl"] as? String
-
-                binding.tvDisplayName.text = nickname.ifEmpty { username }
-                binding.tvUsername.text = username
-                binding.tvNickname.text = nickname.ifEmpty { "Не указано" }
-                binding.tvBio.text = bio
-                binding.tvBirthDate.text = birthDate
-            }
+//        userListener = db.collection("Users")
+//            .whereEqualTo("username", currentUsername)
+//            .addSnapshotListener { users, error ->
+//                if (error != null || users == null || _binding == null) return@addSnapshotListener
+//
+//                if (users.isEmpty()) {
+//                    Toast.makeText(requireContext(), "Пользователь не найден", Toast.LENGTH_SHORT).show()
+//                    return@addSnapshotListener
+//                }
+//
+//                val userDoc = users.first()
+//                userDocId = userDoc.id
+//                val userData = userDoc.data
+//
+//                val username = userData["username"] as? String ?: ""
+//                val nickname = userData["nickname"] as? String ?: ""
+//                val bio = userData["bio"] as? String ?: "Нет описания"
+//                val birthDate = userData["birthDate"] as? String ?: "Не указана"
+//                val avatarUrl = userData["avatarUrl"] as? String
+//
+//                binding.tvDisplayName.text = nickname.ifEmpty { username }
+//                binding.tvUsername.text = username
+//                binding.tvNickname.text = nickname.ifEmpty { "Не указано" }
+//                binding.tvBio.text = bio
+//                binding.tvBirthDate.text = birthDate
+//            }
     }
 
     private fun showEditDialog(title: String, currentValue: String, onSave: (String) -> Unit) {
@@ -348,20 +345,20 @@ class Profile : Fragment() {
     }
 
     private fun updateUserField(field: String, value: String) {
-        db.collection("Users").document(userDocId)
-            .update(field, value)
-            .addOnSuccessListener {
-                Toast.makeText(requireContext(), "Обновлено", Toast.LENGTH_SHORT).show()
-            }
-            .addOnFailureListener {
-                Toast.makeText(requireContext(), "Ошибка обновления", Toast.LENGTH_SHORT).show()
-            }
+//        db.collection("Users").document(userDocId)
+//            .update(field, value)
+//            .addOnSuccessListener {
+//                Toast.makeText(requireContext(), "Обновлено", Toast.LENGTH_SHORT).show()
+//            }
+//            .addOnFailureListener {
+//                Toast.makeText(requireContext(), "Ошибка обновления", Toast.LENGTH_SHORT).show()
+//            }
     }
 
     override fun onDestroyView() {
         super.onDestroyView()
-        userListener?.remove()
-        userListener = null
+//        userListener?.remove()
+//        userListener = null
         _binding = null
     }
 }

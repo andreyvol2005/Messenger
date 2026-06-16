@@ -1,17 +1,9 @@
-package com.example.messenger
+package com.example.messenger.UI
 
-import android.content.Intent
 import android.os.Bundle
 import android.text.InputType
-import android.view.LayoutInflater
 import android.view.View
-import android.view.ViewGroup
-import android.widget.CheckBox
 import android.widget.EditText
-import android.widget.LinearLayout
-import android.widget.ScrollView
-import android.widget.TextView
-import android.widget.Toast
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
@@ -19,18 +11,14 @@ import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.recyclerview.widget.LinearLayoutManager
-import androidx.recyclerview.widget.RecyclerView
 import com.example.messenger.Adapters.Contact
-import com.example.messenger.Adapters.ContactsAdapter
-import com.example.messenger.DataClasses.User
+import com.example.messenger.UI.Adapters.ContactsAdapter
 import com.example.messenger.databinding.ActivityCreateChatBinding
-import com.google.firebase.firestore.FirebaseFirestore
 
 class CreateChat : AppCompatActivity() {
 
     private lateinit var binding: ActivityCreateChatBinding
     private lateinit var contactsAdapter: ContactsAdapter
-    private val db = FirebaseFirestore.getInstance()
     private val contactsList = mutableListOf<Contact>()
     private var currentUsername: String = ""
 
@@ -169,54 +157,54 @@ class CreateChat : AppCompatActivity() {
                 .setPositiveButton("Создать") { _, _ ->
                     val otherUser = input.text.toString().trim()
                     if (otherUser.isNotEmpty() && otherUser != currentUsername) {
-                        db.collection("Users").whereEqualTo("username", otherUser).get()
-                            .addOnSuccessListener { users ->
-                                if (users.isEmpty()) {
-                                    Toast.makeText(this, "Пользователь не найден", Toast.LENGTH_SHORT).show()
-                                    return@addOnSuccessListener
-                                }
-
-                                db.collection("LS").whereArrayContains("members", currentUsername).get()
-                                    .addOnSuccessListener { chats ->
-                                        var chatId = ""
-                                        for (doc in chats) {
-                                            val members = doc.get("members") as? List<*> ?: emptyList<Any>()
-                                            if (members.contains(otherUser)) {
-                                                chatId = doc.id
-                                                break
-                                            }
-                                        }
-
-                                        if (chatId.isEmpty()) {
-                                            // Создаём новый чат
-                                            chatId = db.collection("LS").document().id
-                                            val members = listOf(currentUsername, otherUser)
-                                            db.collection("LS").document(chatId).set(
-                                                mapOf("members" to members, "lastMsg" to "", "time" to System.currentTimeMillis())
-                                            ).addOnSuccessListener {
-                                                // Добавляем чат пользователям
-                                                listOf(currentUsername, otherUser).forEach { user ->
-                                                    db.collection("Users").whereEqualTo("username", user).get()
-                                                        .addOnSuccessListener { userDocs ->
-                                                            if (userDocs.isEmpty()) return@addOnSuccessListener
-                                                            val userDoc = userDocs.first()
-                                                            val currentChats = userDoc.get("chats") as? List<String> ?: emptyList()
-                                                            if (!currentChats.contains(chatId)) {
-                                                                userDoc.reference.update("chats", currentChats + chatId)
-                                                            }
-                                                        }
-                                                }
-                                            }
-                                        }
-
-                                        // Открываем чат
-                                        startActivity(Intent(this, Chat::class.java).apply {
-                                            putExtra("chatId", chatId)
-                                            putExtra("otherUsername", otherUser)
-                                            putExtra("currentUsername", currentUsername)
-                                        })
-                                    }
-                            }
+//                        db.collection("Users").whereEqualTo("username", otherUser).get()
+//                            .addOnSuccessListener { users ->
+//                                if (users.isEmpty()) {
+//                                    Toast.makeText(this, "Пользователь не найден", Toast.LENGTH_SHORT).show()
+//                                    return@addOnSuccessListener
+//                                }
+//
+//                                db.collection("LS").whereArrayContains("members", currentUsername).get()
+//                                    .addOnSuccessListener { chats ->
+//                                        var chatId = ""
+//                                        for (doc in chats) {
+//                                            val members = doc.get("members") as? List<*> ?: emptyList<Any>()
+//                                            if (members.contains(otherUser)) {
+//                                                chatId = doc.id
+//                                                break
+//                                            }
+//                                        }
+//
+//                                        if (chatId.isEmpty()) {
+//                                            // Создаём новый чат
+//                                            chatId = db.collection("LS").document().id
+//                                            val members = listOf(currentUsername, otherUser)
+//                                            db.collection("LS").document(chatId).set(
+//                                                mapOf("members" to members, "lastMsg" to "", "time" to System.currentTimeMillis())
+//                                            ).addOnSuccessListener {
+//                                                // Добавляем чат пользователям
+//                                                listOf(currentUsername, otherUser).forEach { user ->
+//                                                    db.collection("Users").whereEqualTo("username", user).get()
+//                                                        .addOnSuccessListener { userDocs ->
+//                                                            if (userDocs.isEmpty()) return@addOnSuccessListener
+//                                                            val userDoc = userDocs.first()
+//                                                            val currentChats = userDoc.get("chats") as? List<String> ?: emptyList()
+//                                                            if (!currentChats.contains(chatId)) {
+//                                                                userDoc.reference.update("chats", currentChats + chatId)
+//                                                            }
+//                                                        }
+//                                                }
+//                                            }
+//                                        }
+//
+//                                        // Открываем чат
+//                                        startActivity(Intent(this, Chat::class.java).apply {
+//                                            putExtra("chatId", chatId)
+//                                            putExtra("otherUsername", otherUser)
+//                                            putExtra("currentUsername", currentUsername)
+//                                        })
+//                                    }
+//                            }
                     }
                 }
                 .setNegativeButton("Отмена", null)
@@ -233,80 +221,80 @@ class CreateChat : AppCompatActivity() {
     }
 
     private fun loadContacts() {
-        db.collection("Users")
-            .whereEqualTo("username", currentUsername)
-            .get()
-            .addOnSuccessListener { users ->
-                if (users.isEmpty()) {
-                    binding.tvNoContacts.visibility = View.VISIBLE
-                    binding.rvContacts.visibility = View.GONE
-                    return@addOnSuccessListener
-                }
-
-                val user = users.first().toObject(User::class.java)
-                // Фильтруем пустые ID
-                val contactIds = user.contacts.filter { it.isNotBlank() }
-
-                if (contactIds.isEmpty()) {
-                    binding.tvNoContacts.visibility = View.VISIBLE
-                    binding.rvContacts.visibility = View.GONE
-                    return@addOnSuccessListener
-                }
-
-                contactsList.clear()
-                var loadedCount = 0
-
-                for (contactId in contactIds) {
-                    db.collection("Users").document(contactId)
-                        .get()
-                        .addOnSuccessListener { doc ->
-                            val username = doc.getString("username") ?: ""
-                            val nickname = doc.getString("nickname") ?: ""
-                            val avatarUrl = doc.getString("avatarUrl") ?: ""
-                            val displayName = if (nickname.isNotEmpty()) nickname else username
-                            contactsList.add(Contact(displayName, contactId, username, avatarUrl))
-                            contactsAdapter.notifyDataSetChanged()
-                            binding.tvNoContacts.visibility = View.GONE
-                            binding.rvContacts.visibility = View.VISIBLE
-                        }
-                }
-            }
-            .addOnFailureListener {
-                Toast.makeText(this, "Ошибка загрузки контактов", Toast.LENGTH_SHORT).show()
-            }
+//        db.collection("Users")
+//            .whereEqualTo("username", currentUsername)
+//            .get()
+//            .addOnSuccessListener { users ->
+//                if (users.isEmpty()) {
+//                    binding.tvNoContacts.visibility = View.VISIBLE
+//                    binding.rvContacts.visibility = View.GONE
+//                    return@addOnSuccessListener
+//                }
+//
+//                val user = users.first().toObject(User::class.java)
+//                // Фильтруем пустые ID
+//                val contactIds = user.contacts.filter { it.isNotBlank() }
+//
+//                if (contactIds.isEmpty()) {
+//                    binding.tvNoContacts.visibility = View.VISIBLE
+//                    binding.rvContacts.visibility = View.GONE
+//                    return@addOnSuccessListener
+//                }
+//
+//                contactsList.clear()
+//                var loadedCount = 0
+//
+//                for (contactId in contactIds) {
+//                    db.collection("Users").document(contactId)
+//                        .get()
+//                        .addOnSuccessListener { doc ->
+//                            val username = doc.getString("username") ?: ""
+//                            val nickname = doc.getString("nickname") ?: ""
+//                            val avatarUrl = doc.getString("avatarUrl") ?: ""
+//                            val displayName = if (nickname.isNotEmpty()) nickname else username
+//                            contactsList.add(Contact(displayName, contactId, username, avatarUrl))
+//                            contactsAdapter.notifyDataSetChanged()
+//                            binding.tvNoContacts.visibility = View.GONE
+//                            binding.rvContacts.visibility = View.VISIBLE
+//                        }
+//                }
+//            }
+//            .addOnFailureListener {
+//                Toast.makeText(this, "Ошибка загрузки контактов", Toast.LENGTH_SHORT).show()
+//            }
     }
 
     private fun openChatWithContact(contact: Contact) {
-        db.collection("LS")
-            .whereArrayContains("members", currentUsername)
-            .get()
-            .addOnSuccessListener { chats ->
-                var existingChatId: String? = null
-                var userIndex = 0
-
-                for (doc in chats) {
-                    val members = doc.get("members") as? List<*> ?: emptyList<Any>()
-                    if (members.contains(contact.username)) {
-                        existingChatId = doc.id
-                        userIndex = members.indexOf(currentUsername)
-                        break
-                    }
-                }
-
-                val intent = Intent(this, Chat::class.java).apply {
-                    if (existingChatId != null) {
-                        putExtra("chatId", existingChatId)
-                        putExtra("userIndex", userIndex)
-                    }
-                    putExtra("chatTitle", contact.username)
-                    putExtra("otherUsername", contact.username)
-                    putExtra("currentUsername", currentUsername)
-                }
-                startActivity(intent)
-                finish()
-            }
-            .addOnFailureListener {
-                Toast.makeText(this, "Ошибка", Toast.LENGTH_SHORT).show()
-            }
+//        db.collection("LS")
+//            .whereArrayContains("members", currentUsername)
+//            .get()
+//            .addOnSuccessListener { chats ->
+//                var existingChatId: String? = null
+//                var userIndex = 0
+//
+//                for (doc in chats) {
+//                    val members = doc.get("members") as? List<*> ?: emptyList<Any>()
+//                    if (members.contains(contact.username)) {
+//                        existingChatId = doc.id
+//                        userIndex = members.indexOf(currentUsername)
+//                        break
+//                    }
+//                }
+//
+//                val intent = Intent(this, Chat::class.java).apply {
+//                    if (existingChatId != null) {
+//                        putExtra("chatId", existingChatId)
+//                        putExtra("userIndex", userIndex)
+//                    }
+//                    putExtra("chatTitle", contact.username)
+//                    putExtra("otherUsername", contact.username)
+//                    putExtra("currentUsername", currentUsername)
+//                }
+//                startActivity(intent)
+//                finish()
+//            }
+//            .addOnFailureListener {
+//                Toast.makeText(this, "Ошибка", Toast.LENGTH_SHORT).show()
+//            }
     }
 }

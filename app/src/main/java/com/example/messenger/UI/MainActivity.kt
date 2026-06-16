@@ -1,6 +1,5 @@
-package com.example.messenger
+package com.example.messenger.UI
 
-import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.view.View
@@ -10,12 +9,12 @@ import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.fragment.app.Fragment
-import com.example.messenger.Fragments.Chats
-import com.example.messenger.Fragments.Contacts
-import com.example.messenger.Fragments.Profile
-import com.example.messenger.Fragments.Settings
+import com.example.messenger.UI.Fragments.Chats
+import com.example.messenger.UI.Fragments.Contacts
+import com.example.messenger.UI.Fragments.Profile
+import com.example.messenger.UI.Fragments.Settings
+import com.example.messenger.R
 import com.example.messenger.databinding.ActivityMainBinding
-import com.google.firebase.FirebaseApp
 
 class MainActivity : AppCompatActivity() {
 
@@ -29,7 +28,6 @@ class MainActivity : AppCompatActivity() {
                         or View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
                 )
 
-        FirebaseApp.initializeApp(this)
 
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
@@ -41,7 +39,7 @@ class MainActivity : AppCompatActivity() {
             insets
         }
 
-        val prefs = getSharedPreferences("app_prefs", Context.MODE_PRIVATE)
+        val prefs = getSharedPreferences("app_prefs", MODE_PRIVATE)
         if (!prefs.contains("user")) {
             prefs.edit { putString("user", "none") }
         }
