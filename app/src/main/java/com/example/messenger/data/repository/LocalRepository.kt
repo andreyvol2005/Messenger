@@ -8,6 +8,7 @@ class LocalRepository(private val db: AppDatabase) {
     // ===== Users =====
     suspend fun saveUser(user: UserEntity) = db.userDao().insertUser(user)
     suspend fun getUser(userId: Int) = db.userDao().getUser(userId)
+    suspend fun clearAllData() = db.userDao().deleteAllUsers()
 
 //    // ===== Chats =====
 //    suspend fun saveChats(chats: List<ChatEntity>) = db.chatDao().insertAllChats(chats)

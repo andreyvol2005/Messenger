@@ -4,16 +4,15 @@ import android.content.Intent
 import android.os.Bundle
 import android.view.View
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.content.edit
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.fragment.app.Fragment
+import com.example.messenger.R
 import com.example.messenger.UI.Fragments.Chats
 import com.example.messenger.UI.Fragments.Contacts
 import com.example.messenger.UI.Fragments.Profile
 import com.example.messenger.UI.Fragments.Settings
-import com.example.messenger.R
 import com.example.messenger.databinding.ActivityMainBinding
 
 class MainActivity : AppCompatActivity() {
@@ -23,15 +22,16 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        // Скрываем системную навигацию
         window.decorView.systemUiVisibility = (
                 View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
                         or View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
                 )
 
-
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
+        // Настройка отступов для edge-to-edge
         WindowCompat.setDecorFitsSystemWindows(window, false)
         ViewCompat.setOnApplyWindowInsetsListener(binding.root) { v, insets ->
             val top = insets.getInsets(WindowInsetsCompat.Type.systemBars()).top
@@ -39,13 +39,8 @@ class MainActivity : AppCompatActivity() {
             insets
         }
 
-        val prefs = getSharedPreferences("app_prefs", MODE_PRIVATE)
-        if (!prefs.contains("user")) {
-            prefs.edit { putString("user", "none") }
-        }
-
-        handleIntent(intent)
         setupNavigation()
+        handleIntent(intent)
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -146,5 +141,4 @@ class MainActivity : AppCompatActivity() {
             }
         }
     }
-
 }

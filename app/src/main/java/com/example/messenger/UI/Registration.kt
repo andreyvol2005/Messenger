@@ -53,7 +53,6 @@ class Registration : AppCompatActivity() {
                 val response = api.register(RegisterRequest(username, password))
                 withContext(Dispatchers.Main) {
                     prefs.saveUserId(response.userId)
-                    prefs.saveUsername(username)
                     startActivity(Intent(this@Registration, MainActivity::class.java))
                     finish()
                 }
@@ -75,7 +74,6 @@ class Registration : AppCompatActivity() {
                 val response = api.login(LoginRequest(username, password))
                 withContext(Dispatchers.Main) {
                     prefs.saveUserId(response.userId)
-                    prefs.saveUsername(username)
                     startActivity(Intent(this@Registration, MainActivity::class.java))
                     finish()
                 }
