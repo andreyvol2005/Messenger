@@ -11,7 +11,7 @@ import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.recyclerview.widget.LinearLayoutManager
-import com.example.messenger.Adapters.Contact
+//import com.example.messenger.Adapters.Contact
 import com.example.messenger.UI.Adapters.ContactsAdapter
 import com.example.messenger.databinding.ActivityCreateChatBinding
 
@@ -19,7 +19,7 @@ class CreateChat : AppCompatActivity() {
 
     private lateinit var binding: ActivityCreateChatBinding
     private lateinit var contactsAdapter: ContactsAdapter
-    private val contactsList = mutableListOf<Contact>()
+//    private val contactsList = mutableListOf<Contact>()
     private var currentUsername: String = ""
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -211,9 +211,9 @@ class CreateChat : AppCompatActivity() {
                 .show()
         }
 
-        contactsAdapter = ContactsAdapter(contactsList, currentUsername) { contact ->
-            openChatWithContact(contact)
-        }
+//        contactsAdapter = ContactsAdapter(contactsList, currentUsername) { contact ->
+//            openChatWithContact(contact)
+//        }
         binding.rvContacts.layoutManager = LinearLayoutManager(this)
         binding.rvContacts.adapter = contactsAdapter
 
@@ -264,37 +264,37 @@ class CreateChat : AppCompatActivity() {
 //            }
     }
 
-    private fun openChatWithContact(contact: Contact) {
-//        db.collection("LS")
-//            .whereArrayContains("members", currentUsername)
-//            .get()
-//            .addOnSuccessListener { chats ->
-//                var existingChatId: String? = null
-//                var userIndex = 0
-//
-//                for (doc in chats) {
-//                    val members = doc.get("members") as? List<*> ?: emptyList<Any>()
-//                    if (members.contains(contact.username)) {
-//                        existingChatId = doc.id
-//                        userIndex = members.indexOf(currentUsername)
-//                        break
-//                    }
-//                }
-//
-//                val intent = Intent(this, Chat::class.java).apply {
-//                    if (existingChatId != null) {
-//                        putExtra("chatId", existingChatId)
-//                        putExtra("userIndex", userIndex)
-//                    }
-//                    putExtra("chatTitle", contact.username)
-//                    putExtra("otherUsername", contact.username)
-//                    putExtra("currentUsername", currentUsername)
-//                }
-//                startActivity(intent)
-//                finish()
-//            }
-//            .addOnFailureListener {
-//                Toast.makeText(this, "Ошибка", Toast.LENGTH_SHORT).show()
-//            }
-    }
+//    private fun openChatWithContact(contact: Contact) {
+////        db.collection("LS")
+////            .whereArrayContains("members", currentUsername)
+////            .get()
+////            .addOnSuccessListener { chats ->
+////                var existingChatId: String? = null
+////                var userIndex = 0
+////
+////                for (doc in chats) {
+////                    val members = doc.get("members") as? List<*> ?: emptyList<Any>()
+////                    if (members.contains(contact.username)) {
+////                        existingChatId = doc.id
+////                        userIndex = members.indexOf(currentUsername)
+////                        break
+////                    }
+////                }
+////
+////                val intent = Intent(this, Chat::class.java).apply {
+////                    if (existingChatId != null) {
+////                        putExtra("chatId", existingChatId)
+////                        putExtra("userIndex", userIndex)
+////                    }
+////                    putExtra("chatTitle", contact.username)
+////                    putExtra("otherUsername", contact.username)
+////                    putExtra("currentUsername", currentUsername)
+////                }
+////                startActivity(intent)
+////                finish()
+////            }
+////            .addOnFailureListener {
+////                Toast.makeText(this, "Ошибка", Toast.LENGTH_SHORT).show()
+////            }
+//    }
 }

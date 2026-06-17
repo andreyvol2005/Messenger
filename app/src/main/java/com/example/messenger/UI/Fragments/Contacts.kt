@@ -12,7 +12,7 @@ import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.LinearLayoutManager
-import com.example.messenger.Adapters.Contact
+//import com.example.messenger.Adapters.Contact
 import com.example.messenger.UI.Adapters.ContactsAdapter
 import com.example.messenger.UI.Chat
 import com.example.messenger.databinding.FragmentContactsBinding
@@ -23,7 +23,7 @@ class Contacts : Fragment() {
     private val binding get() = _binding!!
 
     private lateinit var contactsAdapter: ContactsAdapter
-    private val contactsList = mutableListOf<Contact>()
+//    private val contactsList = mutableListOf<Contact>()
     private val prefs by lazy { requireActivity().getSharedPreferences("app_prefs", Context.MODE_PRIVATE) }
     private var currentUsername: String = ""
 
@@ -44,9 +44,9 @@ class Contacts : Fragment() {
             return
         }
 
-        contactsAdapter = ContactsAdapter(contactsList, currentUsername) { contact ->
-            openChatWithContact(contact.username)
-        }
+//        contactsAdapter = ContactsAdapter(contactsList, currentUsername) { contact ->
+//            openChatWithContact(contact.username)
+//        }
 
         binding.rvContacts.layoutManager = LinearLayoutManager(requireContext())
         binding.rvContacts.adapter = contactsAdapter

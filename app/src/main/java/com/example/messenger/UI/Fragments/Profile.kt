@@ -21,9 +21,18 @@ import androidx.appcompat.app.AlertDialog
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.lifecycleScope
 import com.bumptech.glide.Glide
+import com.example.messenger.R
 import com.example.messenger.UI.Registration
+import com.example.messenger.data.local.database.AppDatabase
+import com.example.messenger.data.local.entities.UserEntity
+import com.example.messenger.data.repository.LocalRepository
 import com.example.messenger.databinding.FragmentProfileBinding
+import com.example.messenger.network.RetrofitClient
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import okhttp3.*
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.RequestBody.Companion.asRequestBody
@@ -39,9 +48,11 @@ class Profile : Fragment() {
     private var _binding: FragmentProfileBinding? = null
     private val binding get() = _binding!!
 
+    private lateinit var localRepository: LocalRepository
+
     private val prefs by lazy { requireActivity().getSharedPreferences("app_prefs", Context.MODE_PRIVATE) }
+    private var currentUserId: Int = 0
     private var currentUsername: String = ""
-    private var userDocId: String = ""
     private val API_KEY = "6d207e02198a847aa98d0a2a901485a5"
 
     private val PICK_IMAGE_REQUEST = 1000
@@ -58,11 +69,17 @@ class Profile : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        currentUsername = prefs.getString("user", "none") ?: "none"
-        if (currentUsername == "none") {
+        currentUsername = prefs.getString("username", "") ?: ""
+        currentUserId = prefs.getInt("user_id", 0)
+
+        if (currentUserId == 0 || currentUsername.isEmpty()) {
             Toast.makeText(requireContext(), "Пользователь не авторизован", Toast.LENGTH_SHORT).show()
             return
         }
+
+        // Инициализация Room
+        val db = AppDatabase.getDatabase(requireContext())
+        localRepository = LocalRepository(db)
 
         loadUserProfile()
 
@@ -89,15 +106,17 @@ class Profile : Fragment() {
                     return@showEditDialog
                 }
 
-//                db.collection("Users").whereEqualTo("username", newValue).get()
-//                    .addOnSuccessListener { users ->
-//                        if (users.isEmpty()) {
-//                            updateUserField("username", newValue)
-//                            binding.tvDisplayName.text = newValue
-//                        } else {
-//                            Toast.makeText(requireContext(), "Пользователь с таким username уже существует", Toast.LENGTH_SHORT).show()
-//                        }
-//                    }
+                // Проверка на существование через API
+                lifecycleScope.launch {
+                    try {
+                        // TODO: добавить эндпоинт для проверки username
+                        updateUserField("username", newValue)
+                    } catch (e: Exception) {
+                        withContext(Dispatchers.Main) {
+                            Toast.makeText(requireContext(), "Ошибка: ${e.message}", Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                }
             }
         }
 
@@ -146,11 +165,71 @@ class Profile : Fragment() {
         }
 
         binding.btnLogout.setOnClickListener {
-            prefs.edit().putString("user", "none").apply()
+            prefs.edit().clear().apply()
             val intent = Intent(requireContext(), Registration::class.java)
             intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
             startActivity(intent)
             Toast.makeText(requireContext(), "Вы вышли из аккаунта", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private fun loadUserProfile() {
+        lifecycleScope.launch {
+            // 1. Сначала пробуем загрузить из локальной БД
+            val localUser = localRepository.getUser(currentUserId)
+
+            if (localUser != null) {
+                displayUser(localUser)
+            }
+
+            // 2. Обновляем с сервера (в фоне)
+            try {
+                val api = RetrofitClient.apiService
+                val user = api.getUser(currentUserId)
+
+                // 3. Сохраняем в локальную БД
+                val userEntity = UserEntity(
+                    id = user.id,
+                    username = user.username,
+                    nickname = user.nickname,
+                    bio = user.bio,
+                    birthDate = user.birthDate,
+                    avatarUrl = user.avatarUrl,
+                    createdAt = user.createdAt
+                )
+                localRepository.saveUser(userEntity)
+
+                // 4. Обновляем UI, если изменилось
+                withContext(Dispatchers.Main) {
+                    displayUser(userEntity)
+                }
+            } catch (e: Exception) {
+                // Если нет интернета, просто используем данные из Room
+                if (localUser == null) {
+                    withContext(Dispatchers.Main) {
+                        Toast.makeText(requireContext(), "Ошибка загрузки профиля", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            }
+        }
+    }
+
+    private fun displayUser(user: UserEntity) {
+        val displayName = user.nickname.ifEmpty { user.username }
+        binding.tvDisplayName.text = displayName
+        binding.tvUsername.text = user.username
+        binding.tvNickname.text = user.nickname.ifEmpty { "Не указано" }
+        binding.tvBio.text = user.bio ?: "Нет описания"
+        binding.tvBirthDate.text = user.birthDate ?: "Не указана"
+
+        if (!user.avatarUrl.isNullOrEmpty()) {
+            Glide.with(requireContext())
+                .load(user.avatarUrl)
+                .placeholder(R.drawable.ic_avatar_default)
+                .error(R.drawable.ic_avatar_default)
+                .into(binding.ivAvatar)
+        } else {
+            binding.ivAvatar.setImageResource(R.drawable.ic_avatar_default)
         }
     }
 
@@ -204,7 +283,6 @@ class Profile : Fragment() {
 
     private fun uploadImageToHost(imageFile: File) {
         if (_binding == null) return
-        // Сжимаем изображение
         val compressedFile = compressImage(imageFile)
 
         Toast.makeText(requireContext(), "Загрузка изображения...", Toast.LENGTH_SHORT).show()
@@ -258,43 +336,11 @@ class Profile : Fragment() {
     private fun compressImage(imageFile: File): File {
         val bitmap = BitmapFactory.decodeFile(imageFile.absolutePath)
         val outputStream = ByteArrayOutputStream()
-
-        // Сжимаем до 80% качества
         bitmap.compress(Bitmap.CompressFormat.JPEG, 80, outputStream)
 
         val compressedFile = File(requireContext().cacheDir, "compressed_${System.currentTimeMillis()}.jpg")
         FileOutputStream(compressedFile).write(outputStream.toByteArray())
-
         return compressedFile
-    }
-
-    private fun loadUserProfile() {
-//        userListener = db.collection("Users")
-//            .whereEqualTo("username", currentUsername)
-//            .addSnapshotListener { users, error ->
-//                if (error != null || users == null || _binding == null) return@addSnapshotListener
-//
-//                if (users.isEmpty()) {
-//                    Toast.makeText(requireContext(), "Пользователь не найден", Toast.LENGTH_SHORT).show()
-//                    return@addSnapshotListener
-//                }
-//
-//                val userDoc = users.first()
-//                userDocId = userDoc.id
-//                val userData = userDoc.data
-//
-//                val username = userData["username"] as? String ?: ""
-//                val nickname = userData["nickname"] as? String ?: ""
-//                val bio = userData["bio"] as? String ?: "Нет описания"
-//                val birthDate = userData["birthDate"] as? String ?: "Не указана"
-//                val avatarUrl = userData["avatarUrl"] as? String
-//
-//                binding.tvDisplayName.text = nickname.ifEmpty { username }
-//                binding.tvUsername.text = username
-//                binding.tvNickname.text = nickname.ifEmpty { "Не указано" }
-//                binding.tvBio.text = bio
-//                binding.tvBirthDate.text = birthDate
-//            }
     }
 
     private fun showEditDialog(title: String, currentValue: String, onSave: (String) -> Unit) {
@@ -345,20 +391,41 @@ class Profile : Fragment() {
     }
 
     private fun updateUserField(field: String, value: String) {
-//        db.collection("Users").document(userDocId)
-//            .update(field, value)
-//            .addOnSuccessListener {
-//                Toast.makeText(requireContext(), "Обновлено", Toast.LENGTH_SHORT).show()
-//            }
-//            .addOnFailureListener {
-//                Toast.makeText(requireContext(), "Ошибка обновления", Toast.LENGTH_SHORT).show()
-//            }
+        lifecycleScope.launch {
+            try {
+                // 1. Отправляем запрос на сервер
+                val api = RetrofitClient.apiService
+                // TODO: добавить эндпоинт для обновления пользователя
+                // api.updateUser(currentUserId, mapOf(field to value))
+
+                // 2. Обновляем локальную БД
+                val currentUser = localRepository.getUser(currentUserId)
+                if (currentUser != null) {
+                    val updatedUser = when (field) {
+                        "username" -> currentUser.copy(username = value)
+                        "nickname" -> currentUser.copy(nickname = value)
+                        "bio" -> currentUser.copy(bio = value)
+                        "birthDate" -> currentUser.copy(birthDate = value)
+                        "avatarUrl" -> currentUser.copy(avatarUrl = value)
+                        else -> currentUser
+                    }
+                    localRepository.saveUser(updatedUser)
+
+                    withContext(Dispatchers.Main) {
+                        Toast.makeText(requireContext(), "Обновлено", Toast.LENGTH_SHORT).show()
+                        loadUserProfile()
+                    }
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(requireContext(), "Ошибка обновления: ${e.message}", Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
     }
 
     override fun onDestroyView() {
         super.onDestroyView()
-//        userListener?.remove()
-//        userListener = null
         _binding = null
     }
 }

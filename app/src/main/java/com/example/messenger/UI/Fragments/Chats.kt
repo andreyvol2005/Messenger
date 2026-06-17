@@ -11,7 +11,7 @@ import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.messenger.UI.Adapters.ChatAdapter
 import com.example.messenger.UI.CreateChat
-import com.example.messenger.DataClasses.LS
+//import com.example.messenger.DataClasses.LS
 import com.example.messenger.databinding.FragmentChatsBinding
 
 class Chats : Fragment() {
@@ -21,7 +21,7 @@ class Chats : Fragment() {
 
     private lateinit var chatAdapter: ChatAdapter
     private val prefs by lazy { requireActivity().getSharedPreferences("app_prefs", Context.MODE_PRIVATE) }
-    private val chatsList = mutableListOf<LS>()
+//    private val chatsList = mutableListOf<LS>()
 
     private var currentUsername: String = ""
 
@@ -43,7 +43,7 @@ class Chats : Fragment() {
             return
         }
 
-        chatAdapter = ChatAdapter(chatsList, currentUsername)
+//        chatAdapter = ChatAdapter(chatsList, currentUsername)
         binding.rvChats.layoutManager = LinearLayoutManager(requireContext())
         binding.rvChats.adapter = chatAdapter
 
@@ -84,7 +84,7 @@ class Chats : Fragment() {
     }
 
     private fun subscribeToChats(chatIds: List<String>) {
-        chatsList.clear()
+//        chatsList.clear()
 //        snapshots.clear()
 
         for (chatId in chatIds) {
@@ -126,26 +126,26 @@ class Chats : Fragment() {
         }
     }
 
-    private fun updateChatList(chat: LS) {
-        if (_binding == null) return
-        val index = chatsList.indexOfFirst { it.id == chat.id }
-        if (index != -1) {
-            chatsList[index] = chat
-        } else {
-            chatsList.add(chat)
-        }
-
-        chatsList.sortByDescending { it.time }
-        chatAdapter.notifyDataSetChanged()
-
-        if (chatsList.isEmpty()) {
-            binding.tvNoChats.visibility = View.VISIBLE
-            binding.rvChats.visibility = View.GONE
-        } else {
-            binding.tvNoChats.visibility = View.GONE
-            binding.rvChats.visibility = View.VISIBLE
-        }
-    }
+//    private fun updateChatList(chat: LS) {
+//        if (_binding == null) return
+//        val index = chatsList.indexOfFirst { it.id == chat.id }
+//        if (index != -1) {
+//            chatsList[index] = chat
+//        } else {
+//            chatsList.add(chat)
+//        }
+//
+//        chatsList.sortByDescending { it.time }
+//        chatAdapter.notifyDataSetChanged()
+//
+//        if (chatsList.isEmpty()) {
+//            binding.tvNoChats.visibility = View.VISIBLE
+//            binding.rvChats.visibility = View.GONE
+//        } else {
+//            binding.tvNoChats.visibility = View.GONE
+//            binding.rvChats.visibility = View.VISIBLE
+//        }
+//    }
 
     override fun onDestroyView() {
         super.onDestroyView()

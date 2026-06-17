@@ -13,14 +13,14 @@ import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.messenger.UI.Adapters.MessagesAdapter
-import com.example.messenger.DataClasses.Message
+//import com.example.messenger.DataClasses.Message
 import com.example.messenger.databinding.ActivityChatBinding
 
 class Chat : AppCompatActivity() {
 
     private lateinit var binding: ActivityChatBinding
     private lateinit var messagesAdapter: MessagesAdapter
-    private val messagesList = mutableListOf<Message>()
+//    private val messagesList = mutableListOf<Message>()
 
     private var chatId: String = ""
     private var currentUsername: String = ""
@@ -61,7 +61,7 @@ class Chat : AppCompatActivity() {
         currentUsername = intent.getStringExtra("currentUsername") ?: ""
         currentUserIndex = intent.getIntExtra("userIndex", 0)
 
-        messagesAdapter = MessagesAdapter(messagesList, currentUserIndex, chatId, otherUsername)
+//        messagesAdapter = MessagesAdapter(messagesList, currentUserIndex, chatId, otherUsername)
         binding.rvMessages.layoutManager = LinearLayoutManager(this)
         binding.rvMessages.adapter = messagesAdapter
 
@@ -115,9 +115,9 @@ class Chat : AppCompatActivity() {
             val keypadHeight = screenHeight - rect.bottom
 
             if (keypadHeight > screenHeight * 0.15) {
-                if (messagesList.isNotEmpty()) {
-                    binding.rvMessages.scrollToPosition(messagesList.size - 1)
-                }
+//                if (messagesList.isNotEmpty()) {
+//                    binding.rvMessages.scrollToPosition(messagesList.size - 1)
+//                }
             }
         }
     }
