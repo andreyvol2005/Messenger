@@ -5,18 +5,24 @@ import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
+import com.example.messenger.data.local.database.dao.ContactDao
 import com.example.messenger.data.local.database.dao.UserDao
-import com.example.messenger.data.local.entities.*
+import com.example.messenger.data.local.entities.ContactEntity
+import com.example.messenger.data.local.entities.UserEntity
 
 @Database(
-    entities = [UserEntity::class],
-    version = 1,
+    entities = [
+        UserEntity::class,
+        ContactEntity::class
+    ],
+    version = 2,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
 abstract class AppDatabase : RoomDatabase() {
 
     abstract fun userDao(): UserDao
+    abstract fun contactDao(): ContactDao
 
     companion object {
         @Volatile
@@ -29,8 +35,8 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "messenger_database"
                 )
-                    .fallbackToDestructiveMigration()
-                    .build()
+                .fallbackToDestructiveMigration()
+                .build()
                 INSTANCE = instance
                 instance
             }

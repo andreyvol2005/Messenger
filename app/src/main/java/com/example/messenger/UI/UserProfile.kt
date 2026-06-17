@@ -18,7 +18,7 @@ import com.example.messenger.data.local.database.AppDatabase
 import com.example.messenger.data.local.entities.UserEntity
 import com.example.messenger.data.repository.LocalRepository
 import com.example.messenger.databinding.ActivityUserProfileBinding
-import com.example.messenger.network.RetrofitClient
+import com.example.messenger.data.network.RetrofitClient
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext

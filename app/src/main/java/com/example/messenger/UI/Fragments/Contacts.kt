@@ -1,5 +1,6 @@
 package com.example.messenger.UI.Fragments
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
@@ -11,11 +12,19 @@ import android.widget.EditText
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
-//import com.example.messenger.Adapters.Contact
 import com.example.messenger.UI.Adapters.ContactsAdapter
 import com.example.messenger.UI.Chat
+import com.example.messenger.data.local.database.AppDatabase
+import com.example.messenger.data.local.entities.ContactEntity
+import com.example.messenger.data.network.AddContactRequest
+import com.example.messenger.data.network.RetrofitClient
+import com.example.messenger.data.repository.LocalRepository
 import com.example.messenger.databinding.FragmentContactsBinding
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class Contacts : Fragment() {
 
@@ -23,8 +32,10 @@ class Contacts : Fragment() {
     private val binding get() = _binding!!
 
     private lateinit var contactsAdapter: ContactsAdapter
-//    private val contactsList = mutableListOf<Contact>()
+    private lateinit var localRepository: LocalRepository
+    private val contactsList = mutableListOf<ContactEntity>()
     private val prefs by lazy { requireActivity().getSharedPreferences("app_prefs", Context.MODE_PRIVATE) }
+    private var currentUserId: Int = 0
     private var currentUsername: String = ""
 
     override fun onCreateView(
@@ -38,15 +49,20 @@ class Contacts : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        currentUsername = prefs.getString("user", "none") ?: "none"
-        if (currentUsername == "none") {
+        currentUserId = prefs.getInt("user_id", 0)
+        currentUsername = prefs.getString("username", "") ?: ""
+
+        if (currentUserId == 0) {
             Toast.makeText(requireContext(), "Пользователь не авторизован", Toast.LENGTH_SHORT).show()
             return
         }
 
-//        contactsAdapter = ContactsAdapter(contactsList, currentUsername) { contact ->
-//            openChatWithContact(contact.username)
-//        }
+        val db = AppDatabase.getDatabase(requireContext())
+        localRepository = LocalRepository(db)
+
+        contactsAdapter = ContactsAdapter(contactsList, currentUsername) { contact ->
+            openChatWithContact(contact.username)
+        }
 
         binding.rvContacts.layoutManager = LinearLayoutManager(requireContext())
         binding.rvContacts.adapter = contactsAdapter
@@ -77,140 +93,84 @@ class Contacts : Fragment() {
     }
 
     private fun addContact(otherUsername: String) {
-//        db.collection("Users").whereEqualTo("username", otherUsername).get()
-//            .addOnSuccessListener { users ->
-//                if (users.isEmpty()) {
-//                    Toast.makeText(requireContext(), "Пользователь не найден", Toast.LENGTH_SHORT).show()
-//                    return@addOnSuccessListener
-//                }
-//
-//                val otherUserId = users.first().id
-//
-//                db.collection("Users").whereEqualTo("username", currentUsername).get()
-//                    .addOnSuccessListener { currentUsers ->
-//                        if (currentUsers.isEmpty()) return@addOnSuccessListener
-//                        val currentUserDoc = currentUsers.first()
-//                        val currentContacts = currentUserDoc.get("contacts") as? List<String> ?: emptyList()
-//
-//                        if (!currentContacts.contains(otherUserId)) {
-//                            currentUserDoc.reference.update("contacts", currentContacts + otherUserId)
-//                            Toast.makeText(requireContext(), "Контакт добавлен", Toast.LENGTH_SHORT).show()
-//                        } else {
-//                            Toast.makeText(requireContext(), "Контакт уже существует", Toast.LENGTH_SHORT).show()
-//                        }
-//                    }
-//            }
+        lifecycleScope.launch {
+            try {
+                // 1. Найти пользователя по username
+                val api = RetrofitClient.apiService
+                val user = api.getUserByUsername(otherUsername)
+
+                // 2. Добавить контакт на сервере
+                val response = api.addContact(currentUserId, AddContactRequest(user.id))
+
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(requireContext(), "Контакт добавлен", Toast.LENGTH_SHORT).show()
+                    loadContacts() // обновляем список
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(requireContext(), "Ошибка: ${e.message}", Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+    }
+
+    @SuppressLint("NotifyDataSetChanged")
+    private fun loadContacts() {
+        lifecycleScope.launch {
+            // 1. Сначала из локальной БД
+            val localContacts = localRepository.getAllContacts()
+            if (localContacts.isNotEmpty()) {
+                contactsList.clear()
+                contactsList.addAll(localContacts)
+                contactsAdapter.notifyDataSetChanged()
+                binding.tvNoContacts.visibility = View.GONE
+                binding.rvContacts.visibility = View.VISIBLE
+            }
+
+            // 2. Обновляем с сервера
+            try {
+                val api = RetrofitClient.apiService
+                val contacts = api.getContacts(currentUserId)
+
+                if (contacts.isNotEmpty()) {
+                    val contactEntities = contacts.map {
+                        ContactEntity(
+                            id = it.id,
+                            username = it.username,
+                            nickname = it.nickname,
+                            avatarUrl = it.avatarUrl
+                        )
+                    }
+                    localRepository.saveContacts(contactEntities)
+
+                    contactsList.clear()
+                    contactsList.addAll(contactEntities)
+                    contactsAdapter.notifyDataSetChanged()
+                    binding.tvNoContacts.visibility = View.GONE
+                    binding.rvContacts.visibility = View.VISIBLE
+                } else {
+                    if (contactsList.isEmpty()) {
+                        binding.tvNoContacts.visibility = View.VISIBLE
+                        binding.rvContacts.visibility = View.GONE
+                    }
+                }
+            } catch (e: Exception) {
+                if (contactsList.isEmpty()) {
+                    withContext(Dispatchers.Main) {
+                        Toast.makeText(requireContext(), "Ошибка загрузки контактов", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            }
+        }
     }
 
     private fun openChatWithContact(otherUsername: String) {
-        val members = listOf(currentUsername, otherUsername)
-//        db.collection("LS")
-//            .whereArrayContains("members", currentUsername)
-//            .get()
-//            .addOnSuccessListener { chats ->
-//                var chatId: String? = null
-//                var userIndex = 0
-//
-//                for (doc in chats) {
-//                    val members = doc.get("members") as? List<*> ?: emptyList<Any>()
-//                    if (members.contains(otherUsername)) {
-//                        chatId = doc.id
-//                        userIndex = members.indexOf(currentUsername)
-//                        break
-//                    }
-//                }
-//
-//                if (chatId == null) {
-//                    val newChatId = db.collection("LS").document().id
-//                    val members = listOf(currentUsername, otherUsername)
-//
-//                    db.collection("LS").document(newChatId).set(
-//                        mapOf(
-//                            "members" to members,
-//                            "lastMsg" to "",
-//                            "time" to System.currentTimeMillis()
-//                        )
-//                    ).addOnSuccessListener {
-//                        addChatToUser(currentUsername, newChatId)
-//                        addChatToUser(otherUsername, newChatId)
-//                        openChatActivity(newChatId, otherUsername, 0)
-//                    }
-//                } else {
-//                    openChatActivity(chatId, otherUsername, userIndex)
-//                }
-//            }
-    }
-
-    private fun addChatToUser(username: String, chatId: String) {
-//        db.collection("Users").whereEqualTo("username", username).get()
-//            .addOnSuccessListener { users ->
-//                if (users.isEmpty()) return@addOnSuccessListener
-//                val userDoc = users.first()
-//                val currentChats = userDoc.get("chats") as? List<String> ?: emptyList()
-//                if (!currentChats.contains(chatId)) {
-//                    userDoc.reference.update("chats", currentChats + chatId)
-//                }
-//            }
-    }
-
-    private fun openChatActivity(chatId: String, otherUsername: String, userIndex: Int) {
-        val intent = Intent(requireContext(), Chat::class.java).apply {
-            putExtra("chatId", chatId)
-            putExtra("otherUsername", otherUsername)
-            putExtra("currentUsername", currentUsername)
-            putExtra("userIndex", userIndex)
-        }
-        startActivity(intent)
-    }
-
-    private fun loadContacts() {
-        if (_binding == null) return
-//        userListener = db.collection("Users").whereEqualTo("username", currentUsername)
-//            .addSnapshotListener { users, error ->
-//                if (error != null || users == null) return@addSnapshotListener
-//                if (_binding == null) return@addSnapshotListener
-//
-//                if (users.isEmpty()) {
-//                    binding.tvNoContacts.visibility = View.VISIBLE
-//                    binding.rvContacts.visibility = View.GONE
-//                    return@addSnapshotListener
-//                }
-//
-//                val user = users.first().toObject(User::class.java)
-//                val contactIds = user.contacts.filter { it.isNotBlank() }
-//
-//                if (contactIds.isEmpty()) {
-//                    binding.tvNoContacts.visibility = View.VISIBLE
-//                    binding.rvContacts.visibility = View.GONE
-//                    contactsList.clear()
-//                    contactsAdapter.notifyDataSetChanged()
-//                    return@addSnapshotListener
-//                }
-//
-//                contactsList.clear()
-//
-//                for (contactId in contactIds) {
-//                    db.collection("Users").document(contactId)
-//                        .get()
-//                        .addOnSuccessListener { doc ->
-//                            if (_binding == null) return@addOnSuccessListener
-//                            val username = doc.getString("username") ?: ""
-//                            val nickname = doc.getString("nickname") ?: ""
-//                            val avatarUrl = doc.getString("avatarUrl") ?: ""
-//                            // Используем nickname как отображаемое имя, если есть
-//                            val displayName = if (nickname.isNotEmpty()) nickname else username
-//                            contactsList.add(Contact(displayName, contactId, username, avatarUrl))
-//                            contactsAdapter.notifyDataSetChanged()
-//                            binding.tvNoContacts.visibility = View.GONE
-//                            binding.rvContacts.visibility = View.VISIBLE
-//                        }
-//                }
-//            }
+        Toast.makeText(requireContext(), "Чат с $otherUsername", Toast.LENGTH_SHORT).show()
+        // TODO: открыть чат с контактом
     }
 
     override fun onDestroyView() {
         super.onDestroyView()
-//        userListener?.remove()
         _binding = null
     }
 }

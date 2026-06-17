@@ -1,4 +1,4 @@
-package com.example.messenger.network
+package com.example.messenger.data.network
 
 import com.google.gson.annotations.SerializedName
 
