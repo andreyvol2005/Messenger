@@ -2,6 +2,7 @@ package com.example.messenger.UI.Fragments
 
 import android.annotation.SuppressLint
 import android.content.Context
+import android.content.Intent
 import android.os.Bundle
 import android.text.InputType
 import android.view.LayoutInflater
@@ -15,6 +16,7 @@ import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.messenger.UI.Adapters.ContactsAdapter
+import com.example.messenger.UI.Chat
 import com.example.messenger.data.local.database.AppDatabase
 import com.example.messenger.data.local.entities.ContactEntity
 import com.example.messenger.data.LocalRepository
@@ -108,8 +110,11 @@ class Contacts : Fragment() {
     }
 
     private fun openChatWithContact(contact: ContactEntity) {
-        Toast.makeText(requireContext(), "Чат с ${contact.nickname}", Toast.LENGTH_SHORT).show()
-        // TODO: открыть чат с контактом
+        val intent = Intent(requireContext(), Chat::class.java).apply {
+            putExtra("currentUserId", prefs.getInt("user_id", 0))
+            putExtra("otherUsername", contact.username)
+        }
+        startActivity(intent)
     }
 
     override fun onDestroyView() {

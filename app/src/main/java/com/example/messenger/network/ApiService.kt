@@ -40,4 +40,11 @@ interface ApiService {
     suspend fun getUserChats(
         @Path("userId") userId: Int
     ): List<ChatDto>
+
+    @POST("chats")
+    suspend fun createChat(
+        @Query("user_id") userId: Int,
+        @Query("type") type: String = "private",
+        @Query("partner_username") partnerUsername: String
+    ): ChatDto
 }

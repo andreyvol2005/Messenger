@@ -27,7 +27,7 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="Новый чат"
+            android:text="Написать сообщение"
             android:textSize="18sp"
             android:textStyle="bold"
             android:textColor="#000000"
@@ -43,48 +43,36 @@
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="horizontal"
+        android:orientation="vertical"
         android:padding="16dp"
         android:gravity="center"
         android:background="@color/white">
 
         <Button
             android:id="@+id/btnCreateGroup"
-            android:layout_width="0dp"
-            android:layout_height="48dp"
-            android:layout_weight="1"
-            android:layout_marginEnd="8dp"
+            android:layout_height="match_parent"
+            android:layout_width="match_parent"
             android:text="Создать группу"
             android:textSize="14sp"
-            android:textAllCaps="false"
             android:backgroundTint="#9E9E9E" />
 
         <Button
-            android:id="@+id/btnCreateChat"
-            android:layout_width="0dp"
-            android:layout_height="48dp"
-            android:layout_weight="1"
-            android:layout_marginStart="8dp"
-            android:text="Создать чат"
+            android:id="@+id/btnCreateContact"
+            android:layout_height="wrap_content"
+            android:layout_width="match_parent"
+            android:text="Создать контакт"
             android:textSize="14sp"
-            android:textAllCaps="false"
-            android:backgroundTint="#757575" />
+            android:backgroundTint="#777777" />
+
+        <Button
+            android:id="@+id/btnCreateChannel"
+            android:layout_height="wrap_content"
+            android:layout_width="match_parent"
+            android:text="Создать канал"
+            android:textSize="14sp"
+            android:backgroundTint="#555555" />
 
     </LinearLayout>
-
-    <!-- Заголовок списка контактов -->
-    <TextView
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="Ваши контакты"
-        android:textSize="16sp"
-        android:textStyle="bold"
-        android:textColor="#000000"
-        android:paddingStart="16dp"
-        android:paddingTop="16dp"
-        android:paddingEnd="16dp"
-        android:paddingBottom="8dp"
-        android:background="@color/white"/>
 
     <!-- Список контактов -->
     <androidx.recyclerview.widget.RecyclerView
