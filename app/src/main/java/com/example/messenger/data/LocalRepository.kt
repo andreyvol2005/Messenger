@@ -41,6 +41,9 @@ class LocalRepository(
     }
 
     // ===== Contacts =====
+    suspend fun getContactsForDialog(): List<ContactEntity> {
+        return db.contactDao().getAllContacts()
+    }
     suspend fun getContactsWithFallback(userId: Int): List<ContactEntity> {
         return db.contactDao().getAllContacts().takeIf { it.isNotEmpty() } ?: try {
             RetrofitClient.apiService.getContacts(userId).map {

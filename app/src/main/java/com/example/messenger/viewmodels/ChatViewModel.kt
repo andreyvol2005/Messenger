@@ -28,7 +28,6 @@ class ChatViewModel(
 
         viewModelScope.launch {
             try {
-                // Вся логика в Repository!
                 val result = repository.findOrCreatePrivateChat(userId, otherUsername)
                 _chatId.value = result.chatId
                 _chatTitle.value = result.partnerNickname

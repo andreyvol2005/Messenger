@@ -20,9 +20,11 @@ import com.example.messenger.UI.Chat
 import com.example.messenger.data.local.database.AppDatabase
 import com.example.messenger.data.local.entities.ContactEntity
 import com.example.messenger.data.LocalRepository
+import com.example.messenger.databinding.DialogAddContactBinding
 import com.example.messenger.databinding.FragmentContactsBinding
 import com.example.messenger.domain.viewmodels.ContactsViewModel
 import kotlinx.coroutines.launch
+import androidx.core.graphics.drawable.toDrawable
 
 class Contacts : Fragment() {
 
@@ -80,25 +82,32 @@ class Contacts : Fragment() {
     }
 
     private fun showAddContactDialog() {
-        val input = EditText(requireContext()).apply {
-            hint = "@username"
-            inputType = InputType.TYPE_CLASS_TEXT
+        val binding = DialogAddContactBinding.inflate(LayoutInflater.from(requireContext()))
+
+        val dialog = AlertDialog.Builder(requireContext())
+            .setView(binding.root)
+            .setCancelable(true)
+            .create()
+
+        binding.btnCancel.setOnClickListener {
+            dialog.dismiss()
         }
 
-        AlertDialog.Builder(requireContext())
-            .setTitle("Добавить контакт")
-            .setMessage("Введите имя пользователя")
-            .setView(input)
-            .setPositiveButton("Добавить") { _, _ ->
-                val username = input.text.toString().trim()
-                if (username.isNotEmpty()) {
-                    addContact(username)
-                } else {
-                    Toast.makeText(requireContext(), "Введите имя пользователя", Toast.LENGTH_SHORT).show()
-                }
+        binding.btnAdd.setOnClickListener {
+            val username = binding.etUsername.text.toString().trim()
+            if (username.isNotEmpty()) {
+                addContact(username)
+                dialog.dismiss()
+            } else {
+                Toast.makeText(requireContext(), "Введите имя пользователя", Toast.LENGTH_SHORT).show()
             }
-            .setNegativeButton("Отмена", null)
-            .show()
+        }
+
+        dialog.show()
+
+        dialog.window?.setBackgroundDrawable(
+            android.graphics.Color.TRANSPARENT.toDrawable()
+        )
     }
 
     private fun addContact(username: String) {
