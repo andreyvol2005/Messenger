@@ -16,9 +16,9 @@ import com.bumptech.glide.Glide
 import com.example.messenger.R
 import com.example.messenger.data.local.database.AppDatabase
 import com.example.messenger.data.local.entities.UserEntity
-import com.example.messenger.data.repository.LocalRepository
+import com.example.messenger.data.LocalRepository
 import com.example.messenger.databinding.ActivityUserProfileBinding
-import com.example.messenger.data.network.RetrofitClient
+import com.example.messenger.network.RetrofitClient
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -85,7 +85,7 @@ class UserProfile : AppCompatActivity() {
             } else {
                 try {
                     val api = RetrofitClient.apiService
-                    val user: com.example.messenger.data.models.User = api.getUser(userId)
+                    val user: com.example.messenger.data.models.UserDto = api.getUser(userId)
 
                     val userEntity = UserEntity(
                         id = user.id,

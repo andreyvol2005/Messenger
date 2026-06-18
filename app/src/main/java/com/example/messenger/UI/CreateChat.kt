@@ -231,7 +231,7 @@ class CreateChat : AppCompatActivity() {
 //                    return@addOnSuccessListener
 //                }
 //
-//                val user = users.first().toObject(User::class.java)
+//                val user = users.first().toObject(UserDto::class.java)
 //                // Фильтруем пустые ID
 //                val contactIds = user.contacts.filter { it.isNotBlank() }
 //

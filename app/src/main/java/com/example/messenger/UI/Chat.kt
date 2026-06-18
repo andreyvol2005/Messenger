@@ -67,7 +67,7 @@ class Chat : AppCompatActivity() {
 
 //        db.collection("Users").whereEqualTo("username", otherUsername).get()
 //            .addOnSuccessListener { users ->
-//                val user = users.first().toObject(User::class.java)
+//                val user = users.first().toObject(UserDto::class.java)
 //                otherUserNickname = if (user.nickname.isNotEmpty()) user.nickname else otherUsername
 //                binding.tvTitle.text = otherUserNickname
 //                // Обновляем адаптер с правильным ником
@@ -240,7 +240,7 @@ class Chat : AppCompatActivity() {
 //        db.collection("Users").whereEqualTo("username", otherUsername).get()
 //            .addOnSuccessListener { users ->
 //                if (users.isEmpty()) return@addOnSuccessListener
-//                val user = users.first().toObject(User::class.java)
+//                val user = users.first().toObject(UserDto::class.java)
 //                otherUserId = users.first().id
 //                otherUserNickname = if (user.nickname.isNotEmpty()) user.nickname else otherUsername
 //                binding.tvTitle.text = otherUserNickname

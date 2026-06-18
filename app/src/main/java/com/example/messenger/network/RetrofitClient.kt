@@ -1,4 +1,4 @@
-package com.example.messenger.data.network
+package com.example.messenger.network
 
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor

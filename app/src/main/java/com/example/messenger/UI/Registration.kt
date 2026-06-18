@@ -5,10 +5,10 @@ import android.os.Bundle
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import com.example.messenger.databinding.ActivityRegistrationBinding
-import com.example.messenger.data.network.LoginRequest
-import com.example.messenger.data.network.RegisterRequest
-import com.example.messenger.data.network.RetrofitClient
-import com.example.messenger.utils.PreferencesManager
+import com.example.messenger.network.LoginRequest
+import com.example.messenger.network.RegisterRequest
+import com.example.messenger.network.RetrofitClient
+import com.example.messenger.PreferencesManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch

@@ -2,7 +2,6 @@ package com.example.messenger.UI.Fragments
 
 import android.annotation.SuppressLint
 import android.content.Context
-import android.content.Intent
 import android.os.Bundle
 import android.text.InputType
 import android.view.LayoutInflater
@@ -15,12 +14,11 @@ import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.messenger.UI.Adapters.ContactsAdapter
-import com.example.messenger.UI.Chat
 import com.example.messenger.data.local.database.AppDatabase
 import com.example.messenger.data.local.entities.ContactEntity
-import com.example.messenger.data.network.AddContactRequest
-import com.example.messenger.data.network.RetrofitClient
-import com.example.messenger.data.repository.LocalRepository
+import com.example.messenger.network.AddContactRequest
+import com.example.messenger.network.RetrofitClient
+import com.example.messenger.data.LocalRepository
 import com.example.messenger.databinding.FragmentContactsBinding
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch

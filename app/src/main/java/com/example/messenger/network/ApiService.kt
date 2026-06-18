@@ -1,7 +1,8 @@
-package com.example.messenger.data.network
+package com.example.messenger.network
 
+import com.example.messenger.data.models.ChatDto
 import com.example.messenger.data.models.ContactDto
-import com.example.messenger.data.models.User
+import com.example.messenger.data.models.UserDto
 import retrofit2.http.*
 
 interface ApiService {
@@ -15,7 +16,7 @@ interface ApiService {
 
     // ===== Пользователи =====
     @GET("users/{userId}")
-    suspend fun getUser(@Path("userId") userId: Int): User
+    suspend fun getUser(@Path("userId") userId: Int): UserDto
 
     // ===== Контакты =====
     @GET("contacts/{userId}")
@@ -32,5 +33,11 @@ interface ApiService {
     @GET("users/by-username/{username}")
     suspend fun getUserByUsername(
         @Path("username") username: String
-    ): User
+    ): UserDto
+
+    // ===== Чаты =====
+    @GET("chats/user/{userId}")
+    suspend fun getUserChats(
+        @Path("userId") userId: Int
+    ): List<ChatDto>
 }

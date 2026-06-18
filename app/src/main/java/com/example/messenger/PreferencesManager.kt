@@ -1,4 +1,4 @@
-package com.example.messenger.utils
+package com.example.messenger
 
 import android.content.Context
 import android.content.SharedPreferences

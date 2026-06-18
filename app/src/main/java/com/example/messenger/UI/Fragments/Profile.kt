@@ -7,27 +7,31 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
+import androidx.core.content.edit
 import androidx.fragment.app.Fragment
-import androidx.lifecycle.lifecycleScope
+import androidx.fragment.app.viewModels
 import com.example.messenger.UI.Registration
 import com.example.messenger.data.local.database.AppDatabase
 import com.example.messenger.data.local.entities.UserEntity
-import com.example.messenger.data.repository.LocalRepository
+import com.example.messenger.data.LocalRepository
 import com.example.messenger.databinding.FragmentProfileBinding
-import com.example.messenger.data.network.RetrofitClient
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-import androidx.core.content.edit
+import com.example.messenger.domain.viewmodels.ProfileViewModel
 
 class Profile : Fragment() {
 
     private var _binding: FragmentProfileBinding? = null
     private val binding get() = _binding!!
-
-    private lateinit var localRepository: LocalRepository
     private val prefs by lazy { requireActivity().getSharedPreferences("app_prefs", Context.MODE_PRIVATE) }
-    private var currentUserId: Int = 0
+
+    private val viewModel: ProfileViewModel by viewModels {
+        object : androidx.lifecycle.ViewModelProvider.Factory {
+            override fun <T : androidx.lifecycle.ViewModel> create(modelClass: Class<T>): T {
+                val db = AppDatabase.getDatabase(requireContext())
+                val repository = LocalRepository(db)
+                return ProfileViewModel(repository) as T
+            }
+        }
+    }
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -40,73 +44,23 @@ class Profile : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        currentUserId = prefs.getInt("user_id", 0)
+        viewModel.user.observe(viewLifecycleOwner) { user ->
+            user?.let { displayUser(it) }
+        }
 
-        // Инициализация Room
-        val db = AppDatabase.getDatabase(requireContext())
-        localRepository = LocalRepository(db)
-
-        loadUserProfile()
-
-        // TODO: Редактирование профиля
-        // binding.editUsername.setOnClickListener { ... }
-        // binding.editNickname.setOnClickListener { ... }
-        // binding.editBio.setOnClickListener { ... }
-        // binding.editBirthDate.setOnClickListener { ... }
+        viewModel.loadUser(prefs.getInt("user_id", 0))
 
         binding.btnLogout.setOnClickListener {
-            lifecycleScope.launch {
-                localRepository.clearAllData()
-            }
+            viewModel.clearAllData()
             prefs.edit { clear() }
-            val intent = Intent(requireContext(), Registration::class.java)
-            intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-            startActivity(intent)
-            Toast.makeText(requireContext(), "Вы вышли из аккаунта", Toast.LENGTH_SHORT).show()
-        }
-    }
-
-    private fun loadUserProfile() {
-        lifecycleScope.launch {
-            // 1. Сначала пробуем загрузить из локальной БД
-            val localUser = localRepository.getUser(currentUserId)
-
-            if (localUser != null) {
-                displayUser(localUser)
-            }
-
-            // 2. Обновляем с сервера (в фоне)
-            try {
-                val api = RetrofitClient.apiService
-                val user = api.getUser(currentUserId)
-
-                val userEntity = UserEntity(
-                    id = user.id,
-                    username = user.username,
-                    nickname = user.nickname,
-                    bio = user.bio,
-                    birthDate = user.birthDate,
-                    avatarUrl = user.avatarUrl,
-                    createdAt = user.createdAt
-                )
-                localRepository.saveUser(userEntity)
-
-                withContext(Dispatchers.Main) {
-                    displayUser(userEntity)
-                }
-            } catch (e: Exception) {
-                if (localUser == null) {
-                    withContext(Dispatchers.Main) {
-                        Toast.makeText(requireContext(), "Ошибка загрузки профиля", Toast.LENGTH_SHORT).show()
-                    }
-                }
-            }
+            startActivity(Intent(requireContext(), Registration::class.java).apply {
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+            })
         }
     }
 
     private fun displayUser(user: UserEntity) {
-        val displayName = user.nickname.ifEmpty { user.username }
-        binding.tvDisplayName.text = displayName
+        binding.tvDisplayName.text = user.nickname.ifEmpty { user.username }
         binding.tvUsername.text = user.username
         binding.tvNickname.text = user.nickname.ifEmpty { "Не указано" }
         binding.tvBio.text = user.bio ?: "Нет описания"

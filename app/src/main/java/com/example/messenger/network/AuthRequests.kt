@@ -1,4 +1,4 @@
-package com.example.messenger.data.network
+package com.example.messenger.network
 
 data class RegisterRequest(
     val username: String,

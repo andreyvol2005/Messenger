@@ -1,5 +1,6 @@
 package com.example.messenger.UI.Fragments
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
@@ -8,11 +9,19 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.messenger.UI.Adapters.ChatAdapter
 import com.example.messenger.UI.CreateChat
-//import com.example.messenger.DataClasses.LS
+import com.example.messenger.data.local.database.AppDatabase
+import com.example.messenger.data.local.entities.ChatEntity
+import com.example.messenger.data.models.ChatDto
+import com.example.messenger.network.RetrofitClient
+import com.example.messenger.data.LocalRepository
 import com.example.messenger.databinding.FragmentChatsBinding
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class Chats : Fragment() {
 
@@ -20,10 +29,10 @@ class Chats : Fragment() {
     private val binding get() = _binding!!
 
     private lateinit var chatAdapter: ChatAdapter
+    private lateinit var localRepository: LocalRepository
     private val prefs by lazy { requireActivity().getSharedPreferences("app_prefs", Context.MODE_PRIVATE) }
-//    private val chatsList = mutableListOf<LS>()
-
-    private var currentUsername: String = ""
+    private val chatsList = mutableListOf<ChatEntity>()
+    private var currentUserId: Int = 0
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -36,121 +45,104 @@ class Chats : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        currentUsername = prefs.getString("user", "none") ?: "none"
+        currentUserId = prefs.getInt("user_id", 0)
 
-        if (currentUsername == "none") {
+        if (currentUserId == 0) {
             Toast.makeText(requireContext(), "Пользователь не авторизован", Toast.LENGTH_SHORT).show()
             return
         }
 
-//        chatAdapter = ChatAdapter(chatsList, currentUsername)
+        val db = AppDatabase.getDatabase(requireContext())
+        localRepository = LocalRepository(db)
+
+        chatAdapter = ChatAdapter(chatsList)
         binding.rvChats.layoutManager = LinearLayoutManager(requireContext())
         binding.rvChats.adapter = chatAdapter
 
         binding.btnAddChat.setOnClickListener {
             val intent = Intent(requireContext(), CreateChat::class.java)
-            intent.putExtra("currentUsername", currentUsername)
+            intent.putExtra("currentUserId", currentUserId)
             startActivity(intent)
         }
 
         loadUserChats()
     }
 
+    @SuppressLint("NotifyDataSetChanged")
     private fun loadUserChats() {
-//        db.collection("Users")
-//            .whereEqualTo("username", currentUsername)
-//            .get()
-//            .addOnSuccessListener { users ->
-//                if (users.isEmpty()) {
-//                    binding.tvNoChats.visibility = View.VISIBLE
-//                    binding.rvChats.visibility = View.GONE
-//                    return@addOnSuccessListener
-//                }
-//
-//                val user = users.first().toObject(User::class.java)
-//                val chatIds = user.chats
-//
-//                if (chatIds.isEmpty()) {
-//                    binding.tvNoChats.visibility = View.VISIBLE
-//                    binding.rvChats.visibility = View.GONE
-//                    return@addOnSuccessListener
-//                }
-//
-//                subscribeToChats(chatIds)
-//            }
-//            .addOnFailureListener {
-//                Toast.makeText(requireContext(), "Ошибка загрузки", Toast.LENGTH_SHORT).show()
-//            }
-    }
+        lifecycleScope.launch {
+            // 1. Сначала из локальной БД
+            val localChats = localRepository.getAllChats()
+            if (localChats.isNotEmpty()) {
+                chatsList.clear()
+                chatsList.addAll(localChats)
+                chatAdapter.notifyDataSetChanged()
+                binding.tvNoChats.visibility = View.GONE
+                binding.rvChats.visibility = View.VISIBLE
+            }
 
-    private fun subscribeToChats(chatIds: List<String>) {
-//        chatsList.clear()
-//        snapshots.clear()
+            // 2. Обновляем с сервера
+            try {
+                val api = RetrofitClient.apiService
+                val chats = api.getUserChats(currentUserId)
 
-        for (chatId in chatIds) {
-//            val listener = db.collection("LS").document(chatId)
-//                .addSnapshotListener { snapshot, error ->
-//                    if (error != null || snapshot == null) return@addSnapshotListener
-//                    if (_binding == null) return@addSnapshotListener
-//
-//                    if (snapshot.exists()) {
-//                        val chat = snapshot.toObject(LS::class.java)
-//                        if (chat != null) {
-//                            val chatWithId = chat.copy(id = snapshot.id)
-//
-//                            // Загружаем данные собеседника (nickname и avatarUrl)
-//                            val members = chatWithId.members
-//                            val otherUsername = members.find { it != currentUsername } ?: members.firstOrNull() ?: ""
-//
-//                            if (otherUsername.isNotEmpty()) {
-//                                db.collection("Users").whereEqualTo("username", otherUsername).get()
-//                                    .addOnSuccessListener { userDocs ->
-//                                        if (userDocs.isEmpty()) return@addOnSuccessListener
-//                                        val otherUser = userDocs.first().toObject(User::class.java)
-//
-//                                        val updatedChat = chatWithId.copy(
-//                                            members = listOf(otherUsername),
-//                                            partnerNickname = otherUser.nickname.ifEmpty { otherUsername },
-//                                            partnerAvatarUrl = otherUser.avatarUrl
-//                                        )
-//
-//                                        updateChatList(updatedChat)
-//                                    }
-//                            } else {
-//                                updateChatList(chatWithId)
-//                            }
-//                        }
-//                    }
-//                }
-//            snapshots.add(listener)
+                if (chats.isNotEmpty()) {
+                    val chatEntities = chats.map { it.toEntity() }
+                    localRepository.saveChats(chatEntities)
+
+                    chatsList.clear()
+                    chatsList.addAll(chatEntities)
+                    chatAdapter.notifyDataSetChanged()
+                    binding.tvNoChats.visibility = View.GONE
+                    binding.rvChats.visibility = View.VISIBLE
+                } else {
+                    if (chatsList.isEmpty()) {
+                        binding.tvNoChats.visibility = View.VISIBLE
+                        binding.rvChats.visibility = View.GONE
+                    }
+                }
+            } catch (e: Exception) {
+                if (chatsList.isEmpty()) {
+                    withContext(Dispatchers.Main) {
+                        Toast.makeText(requireContext(), "${e}", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            }
         }
     }
 
-//    private fun updateChatList(chat: LS) {
-//        if (_binding == null) return
-//        val index = chatsList.indexOfFirst { it.id == chat.id }
-//        if (index != -1) {
-//            chatsList[index] = chat
-//        } else {
-//            chatsList.add(chat)
-//        }
-//
-//        chatsList.sortByDescending { it.time }
-//        chatAdapter.notifyDataSetChanged()
-//
-//        if (chatsList.isEmpty()) {
-//            binding.tvNoChats.visibility = View.VISIBLE
-//            binding.rvChats.visibility = View.GONE
-//        } else {
-//            binding.tvNoChats.visibility = View.GONE
-//            binding.rvChats.visibility = View.VISIBLE
-//        }
-//    }
+    private fun ChatDto.toEntity(): ChatEntity {
+        return ChatEntity(
+            id = id,
+            type = type,
+            name = name,
+            lastMessageText = lastMessage?.text,
+            lastMessageTime = lastMessage?.createdAt?.let { parseTime(it) },
+            partnerId = partner?.id,
+            partnerUsername = partner?.username,
+            partnerNickname = partner?.nickname,
+            partnerAvatarUrl = partner?.avatarUrl,
+            unreadCount = unreadCount,
+            createdAt = null
+        )
+    }
+
+    private fun parseTime(timeString: String): Long? {
+        return try {
+            java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSSSS", java.util.Locale.getDefault())
+                .parse(timeString)?.time
+        } catch (e: Exception) {
+            try {
+                java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSSSSS", java.util.Locale.getDefault())
+                    .parse(timeString)?.time
+            } catch (e2: Exception) {
+                null
+            }
+        }
+    }
 
     override fun onDestroyView() {
         super.onDestroyView()
-//        snapshots.forEach { it.remove() }
-//        snapshots.clear()
         _binding = null
     }
 }
