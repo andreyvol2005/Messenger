@@ -8,7 +8,6 @@ import com.example.messenger.databinding.ItemContactBinding
 
 class ContactsAdapter(
     private val contacts: List<ContactEntity>,
-    private val currentUsername: String,
     private val onItemClick: (ContactEntity) -> Unit
 ) : RecyclerView.Adapter<ContactsAdapter.ContactViewHolder>() {
 
