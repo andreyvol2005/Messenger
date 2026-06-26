@@ -20,4 +20,7 @@ interface ChatDao {
 
     @Query("DELETE FROM chats")
     suspend fun deleteAllChats()
+
+    @Query("UPDATE chats SET lastMessageText = :text WHERE id = :chatId")
+    suspend fun updateLastMessage(chatId: Int, text: String)
 }

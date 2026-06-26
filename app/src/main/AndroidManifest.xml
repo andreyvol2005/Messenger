@@ -22,9 +22,6 @@
             android:name=".UI.UserProfile"
             android:exported="false" />
         <activity
-            android:name=".UI.CreateChat"
-            android:exported="false" />
-        <activity
             android:name=".UI.Chat"
             android:exported="false"
             android:windowSoftInputMode="adjustResize|stateVisible" />

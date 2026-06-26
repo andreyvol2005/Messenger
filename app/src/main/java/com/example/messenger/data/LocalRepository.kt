@@ -3,7 +3,9 @@ package com.example.messenger.data
 import com.example.messenger.data.local.database.AppDatabase
 import com.example.messenger.data.local.entities.ChatEntity
 import com.example.messenger.data.local.entities.ContactEntity
+import com.example.messenger.data.local.entities.MessageEntity
 import com.example.messenger.data.local.entities.UserEntity
+import com.example.messenger.data.models.SendMessageRequest
 import com.example.messenger.data.models.UserDto
 import com.example.messenger.network.AddContactRequest
 import com.example.messenger.network.RetrofitClient
@@ -151,6 +153,54 @@ class LocalRepository(
     }
     suspend fun saveChats(chats: List<ChatEntity>) = db.chatDao().insertAllChats(chats)
     suspend fun getAllChats() = db.chatDao().getAllChats()
+
+    // ===== Messages =====
+    suspend fun getMessagesWithFallback(chatId: Int): List<MessageEntity> {
+        val cached = db.messageDao().getMessagesForChat(chatId)
+        if (cached.isNotEmpty()) {
+            return cached
+        }
+
+        return try {
+            val api = RetrofitClient.apiService
+            val messages = api.getChatMessages(chatId)
+            val entities = messages.map {
+                MessageEntity(
+                    id = it.id,
+                    chatId = it.chatId,
+                    senderId = it.senderId,
+                    text = it.text,
+                    mediaUrl = it.mediaUrl,
+                    createdAt = it.createdAt,
+                    replyToId = it.replyToId,
+                    isDeleted = it.isDeleted,
+                    isRead = it.isRead
+                )
+            }
+            db.messageDao().insertAllMessages(entities)
+            entities
+        } catch (e: Exception) {
+            emptyList()
+        }
+    }
+
+    suspend fun sendMessage(chatId: Int, senderId: Int, text: String): Boolean {
+        return try {
+            val api = RetrofitClient.apiService
+            val response = api.sendMessage(
+                SendMessageRequest(
+                    chatId = chatId,
+                    senderId = senderId,
+                    text = text
+                )
+            )
+            // Обновляем последнее сообщение в чате
+            db.chatDao().updateLastMessage(chatId, text)
+            true
+        } catch (e: Exception) {
+            false
+        }
+    }
 
     // ===== Полная очистка =====
     suspend fun clearAllData() {

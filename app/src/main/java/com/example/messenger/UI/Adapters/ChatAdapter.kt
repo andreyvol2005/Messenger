@@ -38,6 +38,9 @@ class ChatAdapter(
             val intent = Intent(holder.itemView.context, Chat::class.java).apply {
                 putExtra("currentUserId", currentUserId)
                 putExtra("otherUsername", chat.partnerUsername ?: "")
+                if (chat.id != 0) {
+                    putExtra("chatId", chat.id)
+                }
             }
             holder.itemView.context.startActivity(intent)
         }

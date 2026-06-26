@@ -2,6 +2,9 @@ package com.example.messenger.network
 
 import com.example.messenger.data.models.ChatDto
 import com.example.messenger.data.models.ContactDto
+import com.example.messenger.data.models.MessageDto
+import com.example.messenger.data.models.MessageResponse
+import com.example.messenger.data.models.SendMessageRequest
 import com.example.messenger.data.models.UserDto
 import retrofit2.http.*
 
@@ -47,4 +50,16 @@ interface ApiService {
         @Query("type") type: String = "private",
         @Query("partner_username") partnerUsername: String
     ): ChatDto
+
+    @GET("messages/chat/{chatId}")
+    suspend fun getChatMessages(
+        @Path("chatId") chatId: Int,
+        @Query("limit") limit: Int = 50,
+        @Query("offset") offset: Int = 0
+    ): List<MessageDto>
+
+    @POST("messages")
+    suspend fun sendMessage(
+        @Body request: SendMessageRequest
+    ): MessageResponse
 }
