@@ -1,0 +1,28 @@
+<div class="chat-layout">
+    <aside class="chat-sidebar">
+        <div class="sidebar-header">
+            <span id="current-user"></span>
+            <button id="logout-btn" title="Выйти">⎋</button>
+        </div>
+        <ul id="chat-list" class="chat-list">
+            <li class="chat-item">Пока нет чатов</li>
+        </ul>
+        <button id="new-chat-btn" class="new-chat-btn">+ Новый чат</button>
+    </aside>
+
+    <main class="chat-main">
+        <div id="chat-placeholder" class="chat-placeholder">
+            Выберите чат, чтобы начать общение
+        </div>
+        <div id="chat-window" class="chat-window hidden">
+            <div class="chat-header">
+                <h3 id="chat-title"></h3>
+            </div>
+            <div id="messages" class="messages"></div>
+            <form id="message-form" class="message-form">
+                <input type="text" id="message-input" placeholder="Введите сообщение...">
+                <button type="submit">Отправить</button>
+            </form>
+        </div>
+    </main>
+</div>
