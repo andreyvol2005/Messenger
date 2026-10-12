@@ -2,12 +2,17 @@
     <aside class="chat-sidebar">
         <div class="sidebar-header">
             <span id="current-user"></span>
-            <button id="logout-btn" title="Выйти">⎋</button>
+            <div class="sidebar-actions">
+                <button id="new-chat-btn" class="icon-btn" title="Новый чат">＋</button>
+                <button id="logout-btn" class="icon-btn" title="Выйти">⎋</button>
+            </div>
         </div>
-        <ul id="chat-list" class="chat-list">
-            <li class="chat-item">Пока нет чатов</li>
-        </ul>
-        <button id="new-chat-btn" class="new-chat-btn">+ Новый чат</button>
+        <form id="new-chat-form" class="new-chat-form hidden">
+            <input type="text" id="new-chat-nickname" placeholder="Ник пользователя" autocomplete="off">
+            <button type="submit">Создать</button>
+        </form>
+        <p id="new-chat-error" class="error hidden"></p>
+        <ul id="chat-list" class="chat-list"></ul>
     </aside>
 
     <main class="chat-main">

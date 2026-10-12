@@ -2,7 +2,7 @@ fastapi
 uvicorn[standard]
 sqlalchemy
 psycopg2-binary
-passlib[bcrypt]
+bcrypt
 python-jose[cryptography]
 python-multipart
 websockets
