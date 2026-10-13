@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <title>Чаты — Messenger</title>
+    <link rel="stylesheet" href="/shared/base.css">
+    <link rel="stylesheet" href="/mobile/style.css">
+</head>
+<body>
+    <div class="m-page">
+        <header class="m-header">
+            <h1 class="m-title">Чаты</h1>
+            <div class="m-header-actions">
+                <button id="new-chat-btn" class="m-icon-btn" title="Новый чат">＋</button>
+                <button id="logout-btn" class="m-icon-btn" title="Выйти">⎋</button>
+            </div>
+        </header>
+
+        <form id="new-chat-form" class="m-new-chat hidden">
+            <input type="text" id="new-chat-nickname" placeholder="Ник пользователя" autocomplete="off">
+            <button type="submit">Создать</button>
+        </form>
+        <p id="new-chat-error" class="error hidden m-new-chat-error"></p>
+
+        <ul id="chat-list" class="m-chat-list"></ul>
+    </div>
+
+    <script src="/shared/common.js"></script>
+    <script src="/mobile/chats.js"></script>
+</body>
+</html>

@@ -85,13 +85,17 @@ CREATE INDEX idx_messages_favorites ON messages(created_at DESC) WHERE is_favori
 -- ====================================================
 -- При chat_id IS NULL (сообщение в «Избранном») UPDATE не совпадёт ни с одной
 -- строкой, поэтому папка в chats.last_message_id не попадёт.
+--
+-- search_path закреплён за функцией: pg_dump при загрузке данных выставляет пустой
+-- search_path, и без этого UPDATE не смог бы найти таблицу chats.
 CREATE OR REPLACE FUNCTION update_chat_last_message()
 RETURNS TRIGGER AS $$
 BEGIN
     UPDATE chats SET last_message_id = NEW.id WHERE id = NEW.chat_id;
     RETURN NEW;
 END;
-$$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql
+SET search_path = public, pg_temp;
 
 CREATE TRIGGER chat_last_message_trigger
 AFTER INSERT ON messages

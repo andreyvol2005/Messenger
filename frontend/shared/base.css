@@ -1,0 +1,82 @@
+/* Базовые стили, общие для десктопа и мобильной версии */
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    background: #1e1e1e;
+    color: #eee;
+}
+
+.hidden { display: none !important; }
+
+button {
+    cursor: pointer;
+    border: none;
+    border-radius: 6px;
+    padding: 10px 16px;
+    background: #007bff;
+    color: #fff;
+    font-size: 14px;
+    font-family: inherit;
+}
+button:hover { background: #0056b3; }
+button:active { background: #004494; }
+
+input {
+    padding: 10px;
+    border: 1px solid #444;
+    border-radius: 6px;
+    background: #2a2a2a;
+    color: #eee;
+    font-size: 16px; /* без 16px мобильные браузеры зумят страницу при фокусе */
+    font-family: inherit;
+    width: 100%;
+}
+input:focus { outline: none; border-color: #007bff; }
+
+.error { color: #ff5566; font-size: 13px; }
+
+.loading { padding: 40px; text-align: center; color: #888; }
+.empty-hint { color: #666; text-align: center; padding: 24px; }
+
+/* ============================
+   Экран авторизации (общий)
+   ============================ */
+.auth-container {
+    max-width: 360px;
+    margin: 80px auto;
+    padding: 32px;
+    background: #252525;
+    border-radius: 12px;
+}
+.auth-title { text-align: center; margin-bottom: 24px; font-size: 24px; }
+
+.auth-tabs { display: flex; gap: 8px; margin-bottom: 20px; }
+.tab {
+    flex: 1;
+    background: transparent;
+    color: #888;
+    border-bottom: 2px solid transparent;
+    border-radius: 0;
+}
+.tab:hover { background: transparent; }
+.tab.active { color: #fff; border-bottom-color: #007bff; }
+
+.auth-form { display: flex; flex-direction: column; gap: 12px; }
+.auth-form button[type="submit"] { margin-top: 8px; }
+
+@media (max-width: 768px) {
+    .auth-container {
+        margin: 0;
+        min-height: 100dvh;
+        max-width: none;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        border-radius: 0;
+        padding: 24px;
+    }
+}
