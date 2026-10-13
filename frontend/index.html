@@ -2,15 +2,16 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Messenger</title>
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="/shared/base.css">
 </head>
 <body>
-    <div id="app">
-        <div class="loading">Загрузка...</div>
-    </div>
-
-    <script src="script.js"></script>
+    <div class="loading">Загрузка…</div>
+    <script src="/shared/common.js"></script>
+    <script>
+        // Единая точка входа: смотрим, есть ли сессия, и уводим на нужную версию
+        window.location.replace(Session.token() ? Session.homePath() : PATHS.LOGIN);
+    </script>
 </body>
 </html>

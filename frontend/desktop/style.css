@@ -1,69 +1,5 @@
-/* ============================
-   Общие стили
-   ============================ */
-* { box-sizing: border-box; margin: 0; padding: 0; }
+/* Десктоп: сайдбар со списком чатов и окно переписки рядом */
 
-body {
-    font-family: -apple-system, BlinkMacSystemFont, sans-serif;
-    background: #1e1e1e;
-    color: #eee;
-    height: 100vh;
-}
-
-.hidden { display: none !important; }
-.loading { padding: 40px; text-align: center; color: #888; }
-
-button {
-    cursor: pointer;
-    border: none;
-    border-radius: 6px;
-    padding: 10px 16px;
-    background: #007bff;
-    color: #fff;
-    font-size: 14px;
-}
-button:hover { background: #0056b3; }
-
-input {
-    padding: 10px;
-    border: 1px solid #444;
-    border-radius: 6px;
-    background: #2a2a2a;
-    color: #eee;
-    font-size: 14px;
-    width: 100%;
-}
-
-.error { color: #ff5566; font-size: 13px; margin-top: 8px; }
-
-/* ============================
-   Экран авторизации
-   ============================ */
-.auth-container {
-    max-width: 360px;
-    margin: 80px auto;
-    padding: 32px;
-    background: #252525;
-    border-radius: 12px;
-}
-.auth-title { text-align: center; margin-bottom: 24px; font-size: 24px; }
-
-.auth-tabs { display: flex; gap: 8px; margin-bottom: 20px; }
-.tab {
-    flex: 1;
-    background: transparent;
-    color: #888;
-    border-bottom: 2px solid transparent;
-    border-radius: 0;
-}
-.tab.active { color: #fff; border-bottom-color: #007bff; }
-
-.auth-form { display: flex; flex-direction: column; gap: 12px; }
-.auth-form button[type="submit"] { margin-top: 8px; }
-
-/* ============================
-   Экран чатов
-   ============================ */
 .chat-layout { display: flex; height: 100vh; }
 
 .chat-sidebar {
@@ -98,7 +34,7 @@ input {
 }
 .new-chat-form input { flex: 1; padding: 6px 8px; font-size: 13px; }
 .new-chat-form button { padding: 6px 10px; font-size: 13px; }
-.new-chat-form + .error { padding: 0 12px; margin: 6px 0; }
+.new-chat-error { padding: 0 12px; margin: 6px 0; }
 
 .chat-list { flex: 1; list-style: none; overflow-y: auto; }
 .chat-item {
@@ -118,7 +54,6 @@ input {
 }
 .loading-item { color: #888; cursor: default; }
 .loading-item:hover { background: transparent; }
-.new-chat-btn { margin: 12px; }
 
 .chat-main { flex: 1; display: flex; flex-direction: column; }
 .chat-placeholder {
@@ -128,7 +63,7 @@ input {
     justify-content: center;
     color: #666;
 }
-.chat-window { flex: 1; display: flex; flex-direction: column; }
+.chat-window { flex: 1; display: flex; flex-direction: column; min-width: 0; }
 .chat-header { padding: 16px; border-bottom: 1px solid #333; }
 .messages { flex: 1; overflow-y: auto; padding: 16px; }
 .message-form {
@@ -139,9 +74,7 @@ input {
 }
 .message-form input { flex: 1; }
 
-/* ============================
-   Сообщения
-   ============================ */
+/* Сообщения */
 .message {
     position: relative;
     max-width: 70%;
@@ -150,10 +83,7 @@ input {
     background: #2a2a2a;
     border-radius: 10px;
 }
-.message.mine {
-    margin-left: auto;
-    background: #1f4d80;
-}
+.message.mine { margin-left: auto; background: #1f4d80; }
 .message-head { font-size: 11px; color: #999; margin-bottom: 4px; }
 .message-text { font-size: 14px; white-space: pre-wrap; word-break: break-word; }
 .message-star {
@@ -168,4 +98,3 @@ input {
 }
 .message-star:hover { background: transparent; color: #ffcc4d; }
 .message-star.active { color: #ffcc4d; }
-.empty-hint { color: #666; text-align: center; padding: 24px; }
