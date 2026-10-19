@@ -295,14 +295,24 @@ ADMIN_URL=postgresql://postgres@localhost:5432/postgres ./scripts/db.sh reset
 
 ```bash
 # кто автор коммитов (без этого git commit не сработает)
-git config user.name "andrikck"
-git config user.email "andrejvolodin35@gmail.com"
+git config user.name "P6I6kostya"
+git config user.email "pihtelevk@gmail.com"
 ```
+
+Уже настроено глобально — проверь `git config --global user.name`.
 
 Авторизация: HTTPS отдаёт на GitHub Credential Manager, при первом пуше
 откроется браузер, где нужно подтвердить вход. Токен создаётся сам:
 GitHub → Settings → Developer settings → Personal access tokens →
 Fine-grained tokens, доступ к репозиторию `Messenger`.
+
+Но раз установлен `gh`, проще войти через него — тогда токен создаётся сам
+и пуши идут без браузера:
+
+```powershell
+gh auth login
+gh auth setup-git
+```
 
 Если Git Credential Manager не настроен, альтернатива — SSH:
 
@@ -339,15 +349,26 @@ git pull origin main          # забрать чужие изменения п�
 Файлы с данными и секретами в репозиторий не попадут, но проверь
 `git status` перед `git add .` — лишнее лучше увидеть заранее.
 
-### Через GitHub CLI (необязательно)
+### Через GitHub CLI
 
-`gh` не установлен, но если понадобится:
+`gh` установлен: `C:\Program Files\GitHub CLI\gh.exe` (winget, версия 2.102.0),
+путь уже прописан в системном PATH — команда доступна в любом терминале.
+
+```powershell
+gh auth status          # проверить вход
+gh auth login           # войти, если нужно заново
+gh repo view --web      # открыть репозиторий в браузере
+gh pr list              # pull request'ы
+gh issue list           # задачи
+```
+
+Авторизация уже настроена на аккаунт `P6I6kostya` (HTTPS), токен лежит в
+Windows keyring. `gh auth setup-git` прописал git credential helper, поэтому
+пуши идут без браузера на каждый запрос.
+
+Если `gh` понадобится переустановить или обновить:
 
 ```powershell
 winget install --id GitHub.cli
-gh auth login
-gh repo view --web
+winget upgrade --id GitHub.cli
 ```
-
-`gh auth login` умеет и сам настроить `git` — тогда пуши пойдут без
-браузера на каждый запрос.
