@@ -1,6 +1,9 @@
 /* Десктоп: сайдбар со списком чатов и окно переписки рядом */
 
-.chat-layout { display: flex; height: 100vh; }
+.chat-layout {
+    display: flex;
+    height: 100vh;
+}
 
 .chat-sidebar {
     width: 280px;
@@ -9,6 +12,7 @@
     flex-direction: column;
     border-right: 1px solid #333;
 }
+
 .sidebar-header {
     padding: 16px;
     display: flex;
@@ -16,7 +20,12 @@
     align-items: center;
     border-bottom: 1px solid #333;
 }
-.sidebar-actions { display: flex; gap: 6px; }
+
+.sidebar-actions {
+    display: flex;
+    gap: 6px;
+}
+
 .icon-btn {
     padding: 4px 10px;
     background: transparent;
@@ -24,7 +33,11 @@
     font-size: 16px;
     line-height: 1;
 }
-.icon-btn:hover { background: #2f2f2f; color: #fff; }
+
+.icon-btn:hover {
+    background: #2f2f2f;
+    color: #fff;
+}
 
 .new-chat-form {
     display: flex;
@@ -32,19 +45,48 @@
     padding: 10px 12px;
     border-bottom: 1px solid #333;
 }
-.new-chat-form input { flex: 1; padding: 6px 8px; font-size: 13px; }
-.new-chat-form button { padding: 6px 10px; font-size: 13px; }
-.new-chat-error { padding: 0 12px; margin: 6px 0; }
 
-.chat-list { flex: 1; list-style: none; overflow-y: auto; }
+.new-chat-form input {
+    flex: 1;
+    padding: 6px 8px;
+    font-size: 13px;
+}
+
+.new-chat-form button {
+    padding: 6px 10px;
+    font-size: 13px;
+}
+
+.new-chat-error {
+    padding: 0 12px;
+    margin: 6px 0;
+}
+
+.chat-list {
+    flex: 1;
+    list-style: none;
+    overflow-y: auto;
+}
+
 .chat-item {
     padding: 12px 16px;
     cursor: pointer;
     border-bottom: 1px solid #2f2f2f;
 }
-.chat-item:hover { background: #2f2f2f; }
-.chat-item.active { background: #333; }
-.chat-item-title { font-size: 14px; margin-bottom: 4px; }
+
+.chat-item:hover {
+    background: #2f2f2f;
+}
+
+.chat-item.active {
+    background: #333;
+}
+
+.chat-item-title {
+    font-size: 14px;
+    margin-bottom: 4px;
+}
+
 .chat-item-preview {
     font-size: 12px;
     color: #888;
@@ -52,10 +94,22 @@
     overflow: hidden;
     text-overflow: ellipsis;
 }
-.loading-item { color: #888; cursor: default; }
-.loading-item:hover { background: transparent; }
 
-.chat-main { flex: 1; display: flex; flex-direction: column; }
+.loading-item {
+    color: #888;
+    cursor: default;
+}
+
+.loading-item:hover {
+    background: transparent;
+}
+
+.chat-main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
 .chat-placeholder {
     flex: 1;
     display: flex;
@@ -63,8 +117,19 @@
     justify-content: center;
     color: #666;
 }
-.chat-window { flex: 1; display: flex; flex-direction: column; min-width: 0; }
-.chat-header { padding: 16px; border-bottom: 1px solid #333; }
+
+.chat-window {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.chat-header {
+    padding: 16px;
+    border-bottom: 1px solid #333;
+}
+
 /* Лента сообщений — колонка: пузырь по ширине подстраивается под текст,
    а не растягивается на всю свободную ширину */
 .messages {
@@ -76,15 +141,23 @@
     align-items: flex-start;
     gap: 10px;
 }
+
 /* Служебные строки («Загрузка…», «Сообщений пока нет») по-прежнему во всю ширину */
-.messages > .loading, .messages > .empty-hint { align-self: stretch; }
+.messages>.loading,
+.messages>.empty-hint {
+    align-self: stretch;
+}
+
 .message-form {
     display: flex;
     gap: 8px;
     padding: 12px;
     border-top: 1px solid #333;
 }
-.message-form input { flex: 1; }
+
+.message-form input {
+    flex: 1;
+}
 
 /* Сообщения: текст, под ним часы в правом нижнем углу */
 .message {
@@ -94,16 +167,36 @@
     max-width: 70%;
     min-width: 0;
 }
-.message.mine { margin-left: auto; flex-direction: row-reverse; }
+
+.message.mine {
+    margin-left: auto;
+    flex-direction: row-reverse;
+}
+
 .message-bubble {
     min-width: 0;
     padding: 8px 12px;
     background: #2a2a2a;
     border-radius: 10px;
 }
-.message.mine .message-bubble { background: #1f4d80; }
-.message-text { font-size: 14px; white-space: pre-wrap; word-break: break-word; }
-.message-time { margin-top: 2px; font-size: 11px; color: #999; text-align: right; }
+
+.message.mine .message-bubble {
+    background: #1f4d80;
+}
+
+.message-text {
+    font-size: 14px;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+.message-time {
+    margin-top: 2px;
+    font-size: 11px;
+    color: #999;
+    text-align: right;
+}
+
 .message-star {
     flex-shrink: 0;
     padding: 2px 6px;
@@ -112,5 +205,12 @@
     font-size: 14px;
     line-height: 1;
 }
-.message-star:hover { background: transparent; color: #ffcc4d; }
-.message-star.active { color: #ffcc4d; }
+
+.message-star:hover {
+    background: transparent;
+    color: #ffcc4d;
+}
+
+.message-star.active {
+    color: #ffcc4d;
+}
