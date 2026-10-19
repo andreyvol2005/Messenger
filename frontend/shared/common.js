@@ -211,9 +211,10 @@ const Realtime = {
 // UI — общие мелочи для рендера
 // ============================
 const UI = {
-    formatTime(iso) {
-        return new Date(iso).toLocaleString("ru-RU", {
-            day: "2-digit", month: "2-digit",
+    // Только часы: в ленте дата под сообщением не нужна, время и так читается
+    // по вертикали переписки. Дата остаётся в title, если понадобится.
+    formatClock(iso) {
+        return new Date(iso).toLocaleTimeString("ru-RU", {
             hour: "2-digit", minute: "2-digit"
         });
     },

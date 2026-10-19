@@ -4,6 +4,31 @@
 
 ## Запуск
 
+### Windows (PowerShell)
+
+Нужны Python 3.10+ и Docker Desktop. PostgreSQL ставится в Docker, ставить
+его отдельно не нужно.
+
+```powershell
+# 1. Разово: окружение, зависимости, PostgreSQL в контейнере, схема из init.sql
+powershell -ExecutionPolicy Bypass -File scripts\setup.ps1
+
+# 2. Запуск: поднимает базу и стартует сервер
+powershell -ExecutionPolicy Bypass -File scripts\run.ps1
+```
+
+Открыть http://localhost:8000.
+
+Скрипты идемпотентны — `setup.ps1` можно запускать повторно, он доделает
+только недостающее и ничего не сломает. Схему он применяет только если в
+базе ещё нет таблиц, так что данные не пропадут.
+
+Другой порт: `scripts\run.ps1 -Port 8080`.
+
+Если Docker Desktop не запущен, `run.ps1` скажет об этом и остановится.
+
+### macOS / Linux
+
 ```bash
 # 1. Зависимости
 python3 -m venv .venv
@@ -22,6 +47,26 @@ cd backend && ../.venv/bin/uvicorn main:app --reload
 
 Открыть http://localhost:8000.
 
+### PostgreSQL в Docker (любая ОС)
+
+Если PostgreSQL ставить не хочется, базу можно поднять в контейнере.
+Реквизиты ниже совпадают с умолчаниями в `backend/database.py`:
+
+```bash
+docker run -d --name messenger-pg \
+  -e POSTGRES_USER=messenger_user \
+  -e POSTGRES_PASSWORD=pass \
+  -e POSTGRES_DB=messenger_db \
+  -p 5432:5432 \
+  postgres:16
+
+# схема из init.sql
+docker exec -i messenger-pg psql -U messenger_user -d messenger_db -v ON_ERROR_STOP=1 < init.sql
+```
+
+Контейнер останавливается вместе с Docker, данные лежат в нём же:
+`docker stop messenger-pg` / `docker start messenger-pg`.
+
 ### Доступ с других устройств
 
 По умолчанию uvicorn слушает только localhost, поэтому с телефона сайт не откроется.
@@ -31,15 +76,25 @@ cd backend && ../.venv/bin/uvicorn main:app --reload
 cd backend && ../.venv/bin/uvicorn main:app --host 0.0.0.0 --port 8000
 ```
 
+`scripts\run.ps1` уже стартует с `--host 0.0.0.0`, так что с телефоном
+в той же сети сайт откроется сразу.
+
 Дальше открыть на любом устройстве в той же сети `http://<ip-мака>:8000`.
 Свой IP можно узнать командой:
 
 ```bash
-ipconfig getifaddr en0    # Wi-Fi
+ipconfig getifaddr en0    # macOS, Wi-Fi
+```
+
+```powershell
+ipconfig | Select-String "IPv4"    # Windows
 ```
 
 IP меняется при переподключении к сети, поэтому адрес придётся уточнять.
 Файрвол macOS может спросить разрешение на входящие соединения — нужно ответить «Разрешить».
+В Windows firewall обычно пропускает Python при первом запуске; если страница
+не открывается, разреши входящие соединения для `python.exe` в настройках
+«Брандмауэр и защита сети → Параметры входящего подключения».
 PostgreSQL при этом продолжает слушать только localhost: браузер ходит напрямую
 в FastAPI, к базе он не подключается.
 
@@ -72,6 +127,12 @@ frontend/
     base.css       базовые стили: кнопки, инпуты, экран входа
   desktop/         две панели рядом: список чатов и переписка
   mobile/          список чатов и переписка на отдельных полноэкранных страницах
+
+scripts/
+  setup.ps1        разовая настройка на Windows: .venv, зависимости, база, схема
+  run.ps1          запуск на Windows: поднять базу и стартовать сервер
+  db.ps1           бэкапы и пересоздание базы на Windows
+  db.sh            то же самое для macOS / Linux
 ```
 
 Роутеры только разбирают HTTP и вызывают `services.py`, вся работа с БД — там.
@@ -114,6 +175,7 @@ frontend/
 
 Обычное сообщение тоже можно перенести в избранное, поставив ему флаг
 `POST /api/messages/{id}/favorite`. Флаг ставится только на свои сообщения.
+Внутри самого «Избранного» звезда не рисуется: там всё уже в избранном.
 
 ## API
 
@@ -166,6 +228,16 @@ frontend/
 ./scripts/db.sh reset             # бэкап → пересоздать по init.sql → вернуть данные
 ```
 
+На Windows то же самое делает `scripts/db.ps1`. Он ходит в базу через контейнер,
+поэтому `psql` на самой машине не нужен:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\db.ps1 backup
+powershell -ExecutionPolicy Bypass -File scripts\db.ps1 list
+powershell -ExecutionPolicy Bypass -File scripts\db.ps1 restore
+powershell -ExecutionPolicy Bypass -File scripts\db.ps1 reset
+```
+
 `reset` — это то, что нужно при смене схемы. Бэкапы лежат в `backups/` (папка в `.gitignore`),
 каждый сохраняется в двух видах: полный (схема + данные) и только данные.
 
@@ -179,6 +251,9 @@ frontend/
 ```bash
 ADMIN_URL=postgresql://postgres@localhost:5432/postgres ./scripts/db.sh reset
 ```
+
+В контейнере `POSTGRES_USER` — суперпользователь, поэтому `db.ps1` ходит в `postgres`
+под `messenger_user` и отдельный `ADMIN_URL` ему не нужен.
 
 ### Про циклический внешний ключ
 
@@ -210,3 +285,69 @@ ADMIN_URL=postgresql://postgres@localhost:5432/postgres ./scripts/db.sh reset
 Ограничение: соединения живут в памяти процесса, поэтому запускать uvicorn нужно
 в одном воркере (`--workers 1`). С несколькими воркерами клиент, подключённый к одному,
 не получит события, отправленные в другой.
+
+## Публикация на GitHub
+
+Репозиторий уже привязан к `https://github.com/andreyvol2005/Messenger.git`,
+ветка — `main`.
+
+### Разовая настройка
+
+```bash
+# кто автор коммитов (без этого git commit не сработает)
+git config user.name "andrikck"
+git config user.email "andrejvolodin35@gmail.com"
+```
+
+Авторизация: HTTPS отдаёт на GitHub Credential Manager, при первом пуше
+откроется браузер, где нужно подтвердить вход. Токен создаётся сам:
+GitHub → Settings → Developer settings → Personal access tokens →
+Fine-grained tokens, доступ к репозиторию `Messenger`.
+
+Если Git Credential Manager не настроен, альтернатива — SSH:
+
+```bash
+ssh-keygen -t ed25519 -C "andrejvolodin35@gmail.com"
+cat ~/.ssh/id_ed25519.pub   # вставить в GitHub → Settings → SSH keys
+git remote set-url origin git@github.com:andreyvol2005/Messenger.git
+```
+
+### Обычный цикл
+
+```bash
+git status                    # что изменилось
+git add .                     # добавить все изменения в индекс
+git commit -m "описание изменения"
+git push origin main          # отправить на GitHub
+```
+
+Частые мелочи:
+
+```bash
+git diff                      # посмотреть правки до коммита
+git commit -am "..."          # закоммитить всё, что уже отслеживается
+git log --oneline -10         # история коммитов
+git pull origin main          # забрать чужие изменения перед пушем
+```
+
+Если `git push` ругается на `non-fast-forward`, сначала `git pull --rebase origin main`,
+потом `git push origin main`.
+
+### Что не попадёт в репозиторий
+
+`.gitignore` закрывает `.venv`, `__pycache__`, `backups/` и `.env`.
+Файлы с данными и секретами в репозиторий не попадут, но проверь
+`git status` перед `git add .` — лишнее лучше увидеть заранее.
+
+### Через GitHub CLI (необязательно)
+
+`gh` не установлен, но если понадобится:
+
+```powershell
+winget install --id GitHub.cli
+gh auth login
+gh repo view --web
+```
+
+`gh auth login` умеет и сам настроить `git` — тогда пуши пойдут без
+браузера на каждый запрос.

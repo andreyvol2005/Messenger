@@ -93,10 +93,12 @@ const MobileChat = {
         const bubble = UI.el("div", "m-bubble");
 
         bubble.appendChild(UI.el("div", "m-message-text", msg.text));
-        bubble.appendChild(UI.el("div", "m-message-time", UI.formatTime(msg.created_at)));
+        bubble.appendChild(UI.el("div", "m-message-time", UI.formatClock(msg.created_at)));
         row.appendChild(bubble);
 
-        if (mine) {
+        // Звезда доступна только для своих сообщений — так же проверяет и бэкенд.
+        // В избранном она лишняя: там все сообщения уже в избранном.
+        if (mine && this.chatId !== CONFIG.FAVORITES_CHAT_ID) {
             const star = UI.el("button", "m-star" + (msg.is_favorite ? " active" : ""), "☆");
             if (msg.is_favorite) star.textContent = "★";
             star.title = "В избранное";

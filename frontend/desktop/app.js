@@ -127,14 +127,19 @@ const Chat = {
     },
 
     renderMessage(msg) {
-        const row = UI.el("div", "message" + (msg.sender_id === Session.userId() ? " mine" : ""));
+        const mine = msg.sender_id === Session.userId();
+        const row = UI.el("div", "message" + (mine ? " mine" : ""));
         row.dataset.msgId = msg.id;
-        row.appendChild(UI.el("div", "message-head",
-            `${msg.sender_nickname || "?"} · ${UI.formatTime(msg.created_at)}`));
-        row.appendChild(UI.el("div", "message-text", msg.text));
 
-        // Звезда доступна только для своих сообщений — так же проверяет и бэкенд
-        if (msg.sender_id === Session.userId()) {
+        // Пузырь по ширине подстраивается под текст, время — строкой ниже, справа
+        const bubble = UI.el("div", "message-bubble");
+        bubble.appendChild(UI.el("div", "message-text", msg.text));
+        bubble.appendChild(UI.el("div", "message-time", UI.formatClock(msg.created_at)));
+        row.appendChild(bubble);
+
+        // Звезда доступна только для своих сообщений — так же проверяет и бэкенд.
+        // В избранном она лишняя: там все сообщения уже в избранном.
+        if (mine && this.currentChatId !== CONFIG.FAVORITES_CHAT_ID) {
             const star = UI.el("button", "message-star" + (msg.is_favorite ? " active" : ""), "☆");
             if (msg.is_favorite) star.textContent = "★";
             star.title = "В избранное";
