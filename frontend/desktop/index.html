@@ -83,6 +83,35 @@
         </nav>
     </aside>
 
+    <!-- Диалог профиля: открывается поверх затемнённого интерфейса -->
+    <div id="profile-modal" class="modal" aria-hidden="true">
+        <div id="profile-backdrop" class="modal-backdrop"></div>
+
+        <div class="profile-dialog" role="dialog" aria-modal="true" aria-labelledby="profile-name">
+            <div id="profile-avatar" class="avatar avatar-xl">?</div>
+            <h2 id="profile-name" class="profile-name"></h2>
+            <p id="profile-since" class="profile-since"></p>
+
+            <label class="field">
+                <span class="field-label">Дата рождения</span>
+                <input type="date" id="profile-birth">
+            </label>
+
+            <label class="field">
+                <span class="field-label">О себе</span>
+                <textarea id="profile-bio" rows="3" maxlength="150"
+                          placeholder="Пара слов о себе"></textarea>
+            </label>
+
+            <p id="profile-error" class="error hidden"></p>
+
+            <div class="profile-actions">
+                <button type="button" id="profile-close" class="btn-ghost">Закрыть</button>
+                <button type="button" id="profile-save">Сохранить</button>
+            </div>
+        </div>
+    </div>
+
     <script src="/shared/common.js"></script>
     <script src="/desktop/app.js"></script>
 </body>

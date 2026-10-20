@@ -12,7 +12,7 @@ const Menu = {
 
         document.getElementById("menu-profile").onclick = () => {
             this.close();
-            UI.toast("Раздел «Профиль» пока в разработке");
+            Profile.open();
         };
         document.getElementById("menu-contacts").onclick = () => {
             UI.toast("Раздел «Контакты» пока в разработке");
@@ -52,6 +52,93 @@ const Menu = {
     }
 };
 
+// Диалог профиля: данные тянем с сервера, правим bio и дату рождения
+const Profile = {
+    init() {
+        this.modal = document.getElementById("profile-modal");
+
+        document.getElementById("profile-backdrop").onclick = () => this.close();
+        document.getElementById("profile-close").onclick = () => this.close();
+        document.getElementById("profile-save").onclick = () => this.save();
+
+        // Календарь не должен предлагать будущие даты
+        document.getElementById("profile-birth").max = new Date().toISOString().slice(0, 10);
+
+        document.addEventListener("keydown", (e) => {
+            if (e.key === "Escape" && this.isOpen()) this.close();
+        });
+    },
+
+    isOpen() {
+        return this.modal.classList.contains("open");
+    },
+
+    async open() {
+        this.modal.classList.add("open");
+        this.modal.setAttribute("aria-hidden", "false");
+        UI.hideError("profile-error");
+
+        // Сразу показываем ник из сессии, остальное подгрузим
+        this.fillBasic();
+        document.getElementById("profile-birth").value = "";
+        document.getElementById("profile-bio").value = "";
+        document.getElementById("profile-since").textContent = "";
+
+        try {
+            this.fill(await API.getMe());
+        } catch (err) {
+            UI.showError("profile-error", err.message);
+        }
+
+        document.getElementById("profile-close").focus();
+    },
+
+    fillBasic() {
+        const nickname = Session.nickname();
+        document.getElementById("profile-avatar").textContent = UI.initial(nickname);
+        document.getElementById("profile-name").textContent = nickname;
+    },
+
+    fill(me) {
+        document.getElementById("profile-avatar").textContent = UI.initial(me.nickname);
+        document.getElementById("profile-name").textContent = me.nickname;
+        document.getElementById("profile-bio").value = me.bio || "";
+        document.getElementById("profile-birth").value = me.birth_date || "";
+
+        const since = document.getElementById("profile-since");
+        since.textContent = me.created_at
+            ? "В Messenger с " + new Date(me.created_at).toLocaleDateString("ru-RU", {
+                day: "numeric", month: "long", year: "numeric"
+            })
+            : "";
+    },
+
+    async save() {
+        const button = document.getElementById("profile-save");
+        const birthDate = document.getElementById("profile-birth").value;
+        const bio = document.getElementById("profile-bio").value.trim();
+
+        button.disabled = true;
+        UI.hideError("profile-error");
+
+        try {
+            const me = await API.updateMe({ bio, birth_date: birthDate || null });
+            this.fill(me);
+            UI.toast("Профиль сохранён");
+            this.close();
+        } catch (err) {
+            UI.showError("profile-error", err.message);
+        } finally {
+            button.disabled = false;
+        }
+    },
+
+    close() {
+        this.modal.classList.remove("open");
+        this.modal.setAttribute("aria-hidden", "true");
+    }
+};
+
 const Chat = {
     currentChatId: null,
 
@@ -65,6 +152,7 @@ const Chat = {
         document.getElementById("new-chat-form").onsubmit = (e) => this.createChat(e);
 
         Menu.init();
+        Profile.init();
 
         Realtime.connect((msg) => this.onIncoming(msg));
         await this.loadChats();

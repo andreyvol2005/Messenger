@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
+from datetime import date
 
 import auth
 import models
@@ -51,3 +52,35 @@ def get_users(
     current_user: models.User = Depends(auth.get_current_user),
 ):
     return db.query(models.User).filter(models.User.id != current_user.id).all()
+
+
+@router.get("/me", response_model=schemas.ProfileResponse)
+def get_me(current_user: models.User = Depends(auth.get_current_user)):
+    # current_user уже загружен из базы зависимостью get_current_user
+    return current_user
+
+
+@router.patch("/me", response_model=schemas.ProfileResponse)
+def update_me(
+    payload: schemas.ProfileUpdate,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth.get_current_user),
+):
+    # exclude_unset: PATCH не должен затирать поля, которых нет в запросе
+    data = payload.model_dump(exclude_unset=True)
+
+    if "bio" in data:
+        bio = (data["bio"] or "").strip()
+        if len(bio) > 150:
+            raise HTTPException(status_code=400, detail="Информация о себе длиннее 150 символов")
+        current_user.bio = bio or None
+
+    if "birth_date" in data:
+        birth_date = data["birth_date"]
+        if birth_date and birth_date > date.today():
+            raise HTTPException(status_code=400, detail="Дата рождения не может быть в будущем")
+        current_user.birth_date = birth_date
+
+    db.commit()
+    db.refresh(current_user)
+    return current_user

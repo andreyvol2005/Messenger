@@ -89,6 +89,17 @@ const API = {
 
     toggleFavorite(messageId) {
         return this.request(`/api/messages/${messageId}/favorite`, { method: "POST" });
+    },
+
+    getMe() {
+        return this.request("/api/me");
+    },
+
+    updateMe(data) {
+        return this.request("/api/me", {
+            method: "PATCH",
+            body: JSON.stringify(data)
+        });
     }
 };
 

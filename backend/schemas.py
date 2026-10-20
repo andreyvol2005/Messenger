@@ -1,6 +1,6 @@
 from pydantic import BaseModel
 from typing import Optional, List
-from datetime import datetime
+from datetime import date, datetime
 
 
 class UserCreate(BaseModel):
@@ -22,6 +22,25 @@ class UserResponse(BaseModel):
 
     class Config:
         from_attributes = True  # позволяет читать данные из SQLAlchemy-объектов
+
+
+class ProfileResponse(BaseModel):
+    # Свой профиль: к данным UserResponse добавлена дата рождения
+    id: int
+    nickname: str
+    bio: Optional[str] = None
+    birth_date: Optional[date] = None
+    avatar_url: Optional[str] = None
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class ProfileUpdate(BaseModel):
+    # Оба поля необязательные: PATCH меняет только то, что пришло в запросе
+    bio: Optional[str] = None
+    birth_date: Optional[date] = None
 
 
 class ChatCreate(BaseModel):
