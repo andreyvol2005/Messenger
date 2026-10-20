@@ -42,6 +42,31 @@ input:focus { outline: none; border-color: #007bff; }
 .loading { padding: 40px; text-align: center; color: #888; }
 .empty-hint { color: #666; text-align: center; padding: 24px; }
 
+/* Всплывающее уведомление: заглушки разделов и подтверждения действий */
+.toast {
+    position: fixed;
+    left: 50%;
+    bottom: 28px;
+    z-index: 80;
+    max-width: 80vw;
+    padding: 10px 16px;
+    background: #333;
+    border: 1px solid #444;
+    border-radius: 8px;
+    color: #eee;
+    font-size: 13px;
+    text-align: center;
+    opacity: 0;
+    pointer-events: none;
+    transform: translate(-50%, 12px);
+    transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.toast.show {
+    opacity: 1;
+    transform: translate(-50%, 0);
+}
+
 /* ============================
    Экран авторизации (общий)
    ============================ */

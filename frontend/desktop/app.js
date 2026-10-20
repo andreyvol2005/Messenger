@@ -1,5 +1,57 @@
 // Десктопная версия: список чатов и окно переписки на одной странице.
 
+// Выдвижное меню слева: «гамбургер» в узкой колонке, затемнение и панель
+const Menu = {
+    init() {
+        this.menu = document.getElementById("side-menu");
+        this.backdrop = document.getElementById("menu-backdrop");
+        this.button = document.getElementById("menu-btn");
+
+        this.button.onclick = () => this.open();
+        this.backdrop.onclick = () => this.close();
+
+        document.getElementById("menu-profile").onclick = () => {
+            this.close();
+            UI.toast("Раздел «Профиль» пока в разработке");
+        };
+        document.getElementById("menu-contacts").onclick = () => {
+            UI.toast("Раздел «Контакты» пока в разработке");
+        };
+
+        document.addEventListener("keydown", (e) => {
+            if (e.key === "Escape" && this.isOpen()) this.close();
+        });
+    },
+
+    isOpen() {
+        return this.menu.classList.contains("open");
+    },
+
+    open() {
+        if (this.isOpen()) return;
+
+        // Ник и аватарка могли смениться, пока меню было закрыто
+        document.getElementById("menu-avatar").textContent = UI.initial(Session.nickname());
+        document.getElementById("menu-nickname").textContent = Session.nickname();
+
+        this.menu.classList.add("open");
+        this.backdrop.classList.add("open");
+        this.menu.setAttribute("aria-hidden", "false");
+        this.button.setAttribute("aria-expanded", "true");
+        document.getElementById("menu-profile").focus();
+    },
+
+    close() {
+        if (!this.isOpen()) return;
+
+        this.menu.classList.remove("open");
+        this.backdrop.classList.remove("open");
+        this.menu.setAttribute("aria-hidden", "true");
+        this.button.setAttribute("aria-expanded", "false");
+        this.button.focus();
+    }
+};
+
 const Chat = {
     currentChatId: null,
 
@@ -11,6 +63,8 @@ const Chat = {
         document.getElementById("message-form").onsubmit = (e) => this.sendMessage(e);
         document.getElementById("new-chat-btn").onclick = () => this.toggleNewChatForm();
         document.getElementById("new-chat-form").onsubmit = (e) => this.createChat(e);
+
+        Menu.init();
 
         Realtime.connect((msg) => this.onIncoming(msg));
         await this.loadChats();

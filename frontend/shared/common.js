@@ -231,6 +231,26 @@ const UI = {
         node.scrollTop = node.scrollHeight;
     },
 
+    // Первая буква ника — пока аватарки без картинок
+    initial(name) {
+        const text = (name || "").trim();
+        return text ? text.charAt(0).toUpperCase() : "?";
+    },
+
+    // Короткое уведомление внизу экрана: заглушки и подтверждения
+    toast(message) {
+        let node = document.getElementById("toast");
+        if (!node) {
+            node = UI.el("div", "toast");
+            node.id = "toast";
+            document.body.appendChild(node);
+        }
+        node.textContent = message;
+        node.classList.add("show");
+        clearTimeout(this.toastTimer);
+        this.toastTimer = setTimeout(() => node.classList.remove("show"), 2200);
+    },
+
     // Собирает частые вызовы в один: список чатов перерисовывать на каждое
     // сообщение из всех чатов сразу было бы расточительно
     debounce(fn, ms = 300) {
