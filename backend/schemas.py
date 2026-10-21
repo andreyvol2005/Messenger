@@ -4,18 +4,17 @@ from datetime import date, datetime
 
 
 class UserCreate(BaseModel):
-    username: str
+    nickname: str
     password: str
 
 
 class UserLogin(BaseModel):
-    username: str
+    nickname: str
     password: str
 
 
 class UserResponse(BaseModel):
     id: int
-    username: str
     nickname: str
     bio: Optional[str] = None
     avatar_url: Optional[str] = None
@@ -28,7 +27,6 @@ class UserResponse(BaseModel):
 class ProfileResponse(BaseModel):
     # Свой профиль: к данным UserResponse добавлена дата рождения
     id: int
-    username: str
     nickname: str
     bio: Optional[str] = None
     birth_date: Optional[date] = None
@@ -40,15 +38,13 @@ class ProfileResponse(BaseModel):
 
 
 class ProfileUpdate(BaseModel):
-    # Все поля необязательные: PATCH меняет только то, что пришло в запросе
-    username: Optional[str] = None
-    nickname: Optional[str] = None
+    # Оба поля необязательные: PATCH меняет только то, что пришло в запросе
     bio: Optional[str] = None
     birth_date: Optional[date] = None
 
 
 class ChatCreate(BaseModel):
-    username: str
+    nickname: str
 
 
 class ChatResponse(BaseModel):

@@ -26,10 +26,9 @@
                 </div>
             </div>
             <form id="new-chat-form" class="new-chat-form hidden">
-                <input type="text" id="new-chat-username" placeholder="Username (без @)" autocomplete="off">
+                <input type="text" id="new-chat-nickname" placeholder="Ник пользователя" autocomplete="off">
                 <button type="submit">Создать</button>
             </form>
-            <ul id="user-search-results" class="user-search-results hidden"></ul>
             <p id="new-chat-error" class="error hidden new-chat-error"></p>
             <ul id="chat-list" class="chat-list"></ul>
         </aside>
@@ -66,7 +65,7 @@
             <div id="menu-avatar" class="avatar avatar-lg">?</div>
             <div class="side-menu-user-text">
                 <div id="menu-nickname" class="side-menu-name"></div>
-                <div id="menu-username" class="side-menu-sub"></div>
+                <div class="side-menu-sub">это вы</div>
             </div>
         </div>
 
@@ -98,21 +97,6 @@
             <div id="profile-avatar" class="avatar avatar-xl">?</div>
             <h2 id="profile-name" class="profile-name"></h2>
             <p id="profile-since" class="profile-since"></p>
-
-            <label class="field">
-                <span class="field-label">Username</span>
-                <div class="input-with-prefix">
-                    <span class="input-prefix">@</span>
-                    <input type="text" id="profile-username" maxlength="15"
-                           autocomplete="username" placeholder="username">
-                </div>
-            </label>
-
-            <label class="field">
-                <span class="field-label">Nickname</span>
-                <input type="text" id="profile-nickname" maxlength="15"
-                       autocomplete="nickname" placeholder="nickname">
-            </label>
 
             <label class="field">
                 <span class="field-label">Дата рождения</span>
