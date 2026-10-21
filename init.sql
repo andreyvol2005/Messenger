@@ -108,3 +108,13 @@ SET search_path = public, pg_temp;
 CREATE TRIGGER chat_last_message_trigger
 AFTER INSERT ON messages
 FOR EACH ROW EXECUTE FUNCTION update_chat_last_message();
+
+-- ====================================================
+-- 6. Учёт миграций
+-- ====================================================
+-- Таблицу также создаёт backend/migrate.py для уже существующих баз.
+-- Здесь она нужна, чтобы db.sh reset мог вернуть данные вместе с историей.
+CREATE TABLE schema_migrations (
+    version TEXT PRIMARY KEY,
+    applied_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
