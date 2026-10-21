@@ -1,7 +1,19 @@
-// Мобильная версия: один чат на весь экран. Открывается как chats.html?id=N,
+// Мобильная версия: один чат на весь экран. Открывается как chat.html?id=N,
 // где -1 — виртуальное «Избранное».
 
-const MobileChat = {
+import { API } from "../shared/api.js";
+import { CONFIG, PATHS } from "../shared/config.js";
+import { Realtime } from "../shared/realtime.js";
+import { Session } from "../shared/session.js";
+import { UI } from "../shared/ui.js";
+import {
+    appendIncoming,
+    appendMessage,
+    loadMessageHistory,
+    MESSAGE_CLASSES
+} from "../shared/messages.js";
+
+export const MobileChat = {
     chatId: null,
 
     async init() {
@@ -27,24 +39,19 @@ const MobileChat = {
         document.getElementById("message-input").focus();
     },
 
+    // Параметры общего рендера: мобильные классы, звезда только вне избранного
+    messageOptions() {
+        return {
+            classes: MESSAGE_CLASSES.mobile,
+            showStar: this.chatId !== CONFIG.FAVORITES_CHAT_ID,
+            onToggleFavorite: (star, msg) => this.onToggleFavorite(star, msg)
+        };
+    },
+
     onIncoming(msg) {
         // В избранное сервер шлёт отправителю, у него chat_id = -1
         if (msg.chat_id !== this.chatId) return;
-
-        const box = document.getElementById("messages");
-        const hint = box.querySelector(".empty-hint");
-        if (hint) hint.remove();
-        this.appendMessage(msg, box);
-
-        const nearBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 120;
-        if (nearBottom) UI.scrollToBottom(box);
-    },
-
-    // Ответ на отправку и событие из сокета несут одно сообщение, порядок прихода
-    // неизвестен — сверяемся по id, чтобы не показать его дважды
-    appendMessage(msg, box) {
-        if (box.querySelector(`[data-msg-id="${msg.id}"]`)) return;
-        box.appendChild(this.renderMessage(msg));
+        appendIncoming(document.getElementById("messages"), msg, this.messageOptions());
     },
 
     // Заголовок берём из списка чатов — так он всегда совпадает с тем, что видит собеседник
@@ -66,46 +73,11 @@ const MobileChat = {
     },
 
     async loadMessages() {
-        const box = document.getElementById("messages");
-        box.innerHTML = "";
-        box.appendChild(UI.el("div", "loading", "Загрузка…"));
-
-        try {
-            const items = await API.getMessages(this.chatId);
-            box.innerHTML = "";
-            if (!items.length) {
-                box.appendChild(UI.el("div", "empty-hint", "Сообщений пока нет"));
-            }
-            for (const msg of items) {
-                box.appendChild(this.renderMessage(msg));
-            }
-            UI.scrollToBottom(box);
-        } catch (err) {
-            box.innerHTML = "";
-            box.appendChild(UI.el("div", "empty-hint", err.message));
-        }
-    },
-
-    renderMessage(msg) {
-        const mine = msg.sender_id === Session.userId();
-        const row = UI.el("div", "m-message" + (mine ? " mine" : ""));
-        row.dataset.msgId = msg.id;
-        const bubble = UI.el("div", "m-bubble");
-
-        bubble.appendChild(UI.el("div", "m-message-text", msg.text));
-        bubble.appendChild(UI.el("div", "m-message-time", UI.formatClock(msg.created_at)));
-        row.appendChild(bubble);
-
-        // Звезда доступна только для своих сообщений — так же проверяет и бэкенд.
-        // В избранном она лишняя: там все сообщения уже в избранном.
-        if (mine && this.chatId !== CONFIG.FAVORITES_CHAT_ID) {
-            const star = UI.el("button", "m-star" + (msg.is_favorite ? " active" : ""), "☆");
-            if (msg.is_favorite) star.textContent = "★";
-            star.title = "В избранное";
-            star.onclick = () => this.onToggleFavorite(star, msg);
-            row.appendChild(star);
-        }
-        return row;
+        await loadMessageHistory(
+            document.getElementById("messages"),
+            this.chatId,
+            this.messageOptions()
+        );
     },
 
     async onToggleFavorite(star, msg) {
@@ -131,7 +103,7 @@ const MobileChat = {
             const box = document.getElementById("messages");
             const hint = box.querySelector(".empty-hint");
             if (hint) hint.remove();
-            this.appendMessage(msg, box);
+            appendMessage(box, msg, this.messageOptions());
             UI.scrollToBottom(box);
         } catch (err) {
             input.value = text;
