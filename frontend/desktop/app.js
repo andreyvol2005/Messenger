@@ -139,6 +139,75 @@ const Profile = {
     }
 };
 
+const Sidebar = {
+    MIN:0,
+    MAX:560,
+    DEFAULT:280,
+    KEY: "messenger_sidebar_width",
+
+    init() {
+        this.sidebar = document.querySelector(".chat-sidebar");
+        this.handle = document.getElementById("sidebar-resizer");
+        if (!this.sidebar || !this.handle) return;
+
+        // 0 — допустимая ширина (панель свёрнута), поэтому проверяем не на
+        // truthy, а на то, что значение вообще сохранено и является числом
+        const raw = localStorage.getItem(this.KEY);
+        if (raw !== null && raw !== "") {
+            const saved = Number(raw);
+            if (Number.isFinite(saved)) this.apply(this.clamp(saved));
+        }
+
+        this.handle.addEventListener("pointerdown", (e) => this.start(e));
+
+        this.handle.addEventListener("dblclick", () => {
+            localStorage.removeItem(this.KEY);
+            this.apply(this.DEFAULT);
+        });
+    },
+
+    clamp(width) {
+        return Math.min(this.MAX, Math.max(this.MIN, width));
+    },
+
+    apply(width) {
+        document.documentElement.style.setProperty("--sidebar-width", `${width}px`);
+        // На нуле убираем разделительную рамку, чтобы панель исчезла полностью
+        if (this.sidebar) {
+            this.sidebar.classList.toggle("collapsed", width <= 0);
+        }
+    },
+
+    start(e) {
+        e.preventDefault();
+        this.startX = e.clientX;
+        this.startWidth = this.sidebar.getBoundingClientRect().width;
+        document.body.classList.add("resizing");
+        this.handle.classList.add("active");
+        this.handle.setPointerCapture(e.pointerId);
+
+        this.onMove = (ev) => {
+            this.apply(this.clamp(this.startWidth + ev.clientX - this.startX));
+        };
+        this.onUp = () => this.stop();
+
+        this.handle.addEventListener("pointermove", this.onMove);
+        this.handle.addEventListener("pointerup", this.onUp);
+        this.handle.addEventListener("pointercancel", this.onUp);
+    },
+
+    stop() {
+        document.body.classList.remove("resizing");
+        this.handle.classList.remove("active");
+        this.handle.removeEventListener("pointermove", this.onMove);
+        this.handle.removeEventListener("pointerup", this.onUp);
+        this.handle.removeEventListener("pointercancel", this.onUp);
+
+        const width = Math.round(this.sidebar.getBoundingClientRect().width);
+        localStorage.setItem(this.KEY, String(width));
+    }
+};
+
 const Chat = {
     currentChatId: null,
 
@@ -153,6 +222,7 @@ const Chat = {
 
         Menu.init();
         Profile.init();
+        Sidebar.init();
 
         Realtime.connect((msg) => this.onIncoming(msg));
         await this.loadChats();

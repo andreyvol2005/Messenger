@@ -303,11 +303,37 @@
 }
 
 .chat-sidebar {
-    width: 280px;
+    width: var(--sidebar-width, 280px);
+    flex-shrink: 0;
     background: #252525;
     display: flex;
     flex-direction: column;
+    overflow: hidden; /* иначе flex-элемент не сожмётся ниже содержимого */
     border-right: 1px solid #333;
+}
+
+/* Полностью свёрнутая панель: ширины 0 недостаточно — осталась бы рамка */
+.chat-sidebar.collapsed {
+    border-right: 0;
+}
+
+.resizer {
+    width: 6px;
+    flex-shrink: 0;
+    cursor: col-resize;
+    background: #2a2a2a;
+    transition: background 0.15s ease;
+    touch-action: none;
+}
+
+.resizer:hover,
+.resizer.active {
+    background: #007bff;
+}
+
+body.resizing {
+    user-select: none;
+    cursor: col-resize;
 }
 
 .sidebar-header {
@@ -318,8 +344,16 @@
     border-bottom: 1px solid #333;
 }
 
+.sidebar-header #current-user {
+    min-width: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
 .sidebar-actions {
     display: flex;
+    flex-shrink: 0;
     gap: 6px;
 }
 
@@ -382,6 +416,9 @@
 .chat-item-title {
     font-size: 14px;
     margin-bottom: 4px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .chat-item-preview {
@@ -454,6 +491,31 @@
 
 .message-form input {
     flex: 1;
+    border-radius: 999px;
+    padding: 10px 16px;
+}
+
+.message-form button {
+    flex-shrink: 0;
+    width: 42px;
+    height: 42px;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+}
+
+.message-form button svg {
+    width: 20px;
+    height: 20px;
+    /* Оптическое центрирование: самолётик кажется смещённым вправо-вверх */
+    transform: translate(-1px, 1px);
+    fill: none;
+    stroke: #fff;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
 }
 
 /* Сообщения: текст, под ним часы в правом нижнем углу */
