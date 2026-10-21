@@ -123,11 +123,37 @@ backend/
 frontend/
   index.html       точка входа: уводит на нужную версию
   login.html       экран входа по username, общий для обеих версий
+  pages/
+    index.js       редирект на нужную версию
+    login.js       вход и регистрация
   shared/
-    common.js      CONFIG, API, сессия, Realtime, LoginPage, Validation
+    config.js      CONFIG, PATHS
+    session.js     токен, localStorage, переходы
+    api.js         HTTP-клиент
+    realtime.js    WebSocket и переподключение
+    ui.js          DOM-хелперы, toast, debounce
+    validation.js  проверки username и nickname
+    messages.js    общий рендер сообщений и истории
+    user-search.js поиск пользователей и создание чата
     base.css       базовые стили: кнопки, инпуты, экран входа
-  desktop/         две панели рядом: список чатов и переписка
-  mobile/          список чатов и переписка на отдельных полноэкранных страницах
+  desktop/
+    index.html     разметка: две панели рядом
+    app.js         запуск десктопных виджетов
+    menu.js        выдвижное меню
+    profile.js     диалог профиля
+    sidebar.js     изменение ширины панели
+    chat.js        список чатов и переписка
+    css/
+      layout.css   каркас, меню, аватарки
+      profile.css  диалог профиля
+      sidebar.css  панель чатов и поиск
+      chat.css     окно переписки и сообщения
+  mobile/
+    chats.html     список чатов на весь экран
+    chats.js       логика списка чатов
+    chat.html      переписка на весь экран
+    chat.js        логика переписки
+    style.css      стили мобильной версии
 
 scripts/
   setup.ps1        разовая настройка на Windows: .venv, зависимости, база, схема
@@ -135,6 +161,9 @@ scripts/
   db.ps1           бэкапы и пересоздание базы на Windows
   db.sh            то же самое для macOS / Linux
 ```
+
+Фронтенд подключается как ES-модули (`<script type="module">`): сборщик не нужен,
+зависимости видны в `import`, порядок тегов не важен.
 
 Роутеры только разбирают HTTP и вызывают `services.py`, вся работа с БД — там.
 Роут, который тоже лезет в базу, — повод перенести логику в `services`.

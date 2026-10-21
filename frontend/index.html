@@ -8,10 +8,6 @@
 </head>
 <body>
     <div class="loading">Загрузка…</div>
-    <script src="/shared/common.js"></script>
-    <script>
-        // Единая точка входа: смотрим, есть ли сессия, и уводим на нужную версию
-        window.location.replace(Session.token() ? Session.homePath() : PATHS.LOGIN);
-    </script>
+    <script type="module" src="/pages/index.js"></script>
 </body>
 </html>

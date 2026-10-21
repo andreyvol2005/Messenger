@@ -1,0 +1,171 @@
+/* ============================
+   Диалог профиля
+   ============================ */
+.modal {
+    position: fixed;
+    inset: 0;
+    z-index: 60;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.18s ease;
+}
+
+.modal.open {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.modal-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.62);
+}
+
+.profile-dialog {
+    position: relative;
+    width: 100%;
+    max-width: 380px;
+    max-height: 100%;
+    overflow-y: auto;
+    padding: 28px 24px 20px;
+    background: #252525;
+    border: 1px solid #333;
+    border-radius: 14px;
+    box-shadow: 0 18px 50px rgba(0, 0, 0, 0.45);
+    text-align: center;
+    transform: translateY(10px) scale(0.98);
+    transition: transform 0.18s ease;
+    color-scheme: dark;
+}
+
+.modal.open .profile-dialog {
+    transform: none;
+}
+
+.avatar-xl {
+    width: 88px;
+    height: 88px;
+    font-size: 36px;
+    margin: 0 auto;
+}
+
+.profile-name {
+    margin-top: 14px;
+    font-size: 20px;
+    font-weight: 600;
+    word-break: break-word;
+}
+
+.profile-since {
+    margin-top: 4px;
+    font-size: 12px;
+    color: #888;
+    min-height: 15px;
+}
+
+.field {
+    display: block;
+    margin-top: 16px;
+    text-align: left;
+}
+
+.field-label {
+    display: block;
+    margin-bottom: 6px;
+    font-size: 12px;
+    color: #999;
+}
+
+.profile-dialog input,
+.profile-dialog textarea {
+    width: 100%;
+    padding: 9px 10px;
+    background: #2a2a2a;
+    border: 1px solid #444;
+    border-radius: 6px;
+    color: #eee;
+    font-size: 14px;
+    font-family: inherit;
+}
+
+.profile-dialog textarea {
+    resize: vertical;
+    min-height: 74px;
+}
+
+.profile-dialog input:focus,
+.profile-dialog textarea:focus {
+    outline: none;
+    border-color: #007bff;
+}
+
+/* В поле username сам «@» — статичный префикс, вводится только handle */
+.input-with-prefix {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    padding-left: 10px;
+    background: #2a2a2a;
+    border: 1px solid #444;
+    border-radius: 6px;
+}
+
+.input-with-prefix:focus-within {
+    border-color: #007bff;
+}
+
+.input-prefix {
+    flex-shrink: 0;
+    color: #888;
+    font-size: 14px;
+}
+
+.input-with-prefix input {
+    padding-left: 3px;
+    background: transparent;
+    border: 0;
+}
+
+.input-with-prefix input:focus {
+    border-color: transparent;
+}
+
+.profile-dialog .error {
+    margin-top: 10px;
+}
+
+.profile-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: 20px;
+}
+
+#profile-logout {
+    margin-right: auto;
+    color: #ff6b7a;
+}
+
+#profile-logout:hover {
+    background: rgba(255, 85, 102, 0.12);
+    color: #ff8a99;
+}
+
+.btn-ghost {
+    background: transparent;
+    color: #bbb;
+}
+
+.btn-ghost:hover {
+    background: #333;
+    color: #fff;
+}
+
+#profile-save:disabled {
+    opacity: 0.6;
+    cursor: default;
+}
