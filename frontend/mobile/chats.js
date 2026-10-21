@@ -18,24 +18,21 @@ const MobileChats = {
         const form = document.getElementById("new-chat-form");
         const willShow = form.classList.contains("hidden");
         form.classList.toggle("hidden", !willShow);
-        UI.hideError("new-chat-error");
         if (willShow) {
-            document.getElementById("new-chat-username").focus();
+            document.getElementById("new-chat-nickname").focus();
+        } else {
+            UI.hideError("new-chat-error");
         }
     },
 
     async createChat(e) {
         e.preventDefault();
-        const input = document.getElementById("new-chat-username");
-        const username = input.value.trim();
-        const error = Validation.username(username);
-        if (error) {
-            UI.showError("new-chat-error", error);
-            return;
-        }
+        const input = document.getElementById("new-chat-nickname");
+        const nickname = input.value.trim();
+        if (!nickname) return;
 
         try {
-            await API.createChat(username);
+            await API.createChat(nickname);
             input.value = "";
             document.getElementById("new-chat-form").classList.add("hidden");
             UI.hideError("new-chat-error");
