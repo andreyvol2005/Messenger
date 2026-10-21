@@ -317,7 +317,7 @@ ADMIN_URL=postgresql://postgres@localhost:5432/postgres ./scripts/db.sh reset
 даже если сокет по какой-то причине не подключён. Событие о нём уходит после сохранения,
 из `routers/messages.py`.
 
-Как это устроено на клиенте (`shared/common.js`):
+Как это устроено на клиенте (`shared/realtime.js`):
 
 - `Realtime.connect(handler)` открывает `ws://<хост>/ws/<user_id>?token=...`;
 - при обрыве соединение поднимается заново с паузой от 1 до 15 секунд, после разлогина — нет;
