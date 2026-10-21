@@ -92,6 +92,13 @@ input:focus { outline: none; border-color: #007bff; }
 
 .auth-form { display: flex; flex-direction: column; gap: 12px; }
 .auth-form button[type="submit"] { margin-top: 8px; }
+.auth-hint {
+    margin-top: 10px;
+    color: #888;
+    font-size: 12px;
+    line-height: 1.4;
+    text-align: center;
+}
 
 @media (max-width: 768px) {
     .auth-container {
