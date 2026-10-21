@@ -38,7 +38,7 @@ python3 -m venv .venv
 psql -d postgres -c "CREATE ROLE messenger_user LOGIN PASSWORD 'pass';"
 psql -d postgres -c "CREATE DATABASE messenger_db OWNER messenger_user;"
 
-# 3. Схема. init.sql — единственный источник правды, таблицы создаются только тут
+# 3. Схема новой базы. init.sql создаёт её с нуля, migrations/ обновляет существующую
 psql "postgresql://messenger_user:pass@localhost:5432/messenger_db" -f init.sql
 
 # 4. Сервер (раздаёт и API, и фронтенд с /)
@@ -112,6 +112,7 @@ backend/
   events.py        рассылка событий по WebSocket
   auth.py          bcrypt, JWT, get_current_user
   database.py      подключение, SessionLocal, get_db
+  migrate.py       применение SQL-миграций к существующей базе
   models.py        ORM-модели
   schemas.py       схемы Pydantic
   routers/
@@ -154,6 +155,9 @@ frontend/
     chat.html      переписка на весь экран
     chat.js        логика переписки
     style.css      стили мобильной версии
+
+migrations/
+  001_users_username.sql  миграции уже работающей базы (по порядку номеров)
 
 scripts/
   setup.ps1        разовая настройка на Windows: .venv, зависимости, база, схема
@@ -258,6 +262,29 @@ nickname собеседника.
 а несколько `NULL` в `UNIQUE` не конфликтуют.
 
 Список чатов сортируется по времени последнего сообщения, чаты без сообщений — по дате создания.
+
+## Миграции базы
+
+`init.sql` создаёт схему новой базы. Уже работающую базу обновляют файлы из
+`migrations/`: `backend/migrate.py` применяет ещё не выполненные файлы по
+порядку, каждый — в отдельной транзакции. Учёт идёт в таблице
+`schema_migrations`, поэтому повторный запуск ничего не делает.
+
+Новая миграция — обычный SQL-файл с номером, например
+`migrations/002_add_something.sql`. Его проверяют на копии базы и пушат в
+`main`: деплой сам сделает бэкап, применит миграцию и только потом перезапустит
+сервис. Вручную на сервере ничего выполнять не нужно. Если миграция упадёт,
+она откатится целиком, а старый код и сервис останутся работать.
+
+Локальную базу, созданную раньше, можно обновить вручную:
+
+```bash
+cd backend && ../.venv/bin/python migrate.py
+```
+
+Миграции пишите совместимыми со старым кодом: сначала добавьте колонку или
+таблицу, а удаляйте старое отдельным коммитом, когда новый код уже выкачен.
+
 ## Бэкапы и пересоздание базы
 
 Меняешь `init.sql`, а потом хочется применить новую схему, не потеряв людей и переписку.
@@ -419,10 +446,17 @@ winget upgrade --id GitHub.cli
 ## Деплой на сервер
 
 Каждый пуш в `main` автоматически выкатывается на сервер через GitHub Actions
-(`.github/workflows/deploy.yml`). Workflow заходит по SSH, делает
-`git fetch` и `git reset --hard origin/main` в `/root/Messenger`, доставляет
-зависимости из `backend/requirements.txt` и перезапускает `messenger.service`.
-После перезапуска проверяется `GET /api/health`.
+(`.github/workflows/deploy.yml`). Workflow заходит по SSH и в `/root/Messenger`:
+
+1. делает `git fetch` и запоминает новый коммит;
+2. сохраняет бэкап базы в `/root/messenger-backups/` (хранятся 10 последних);
+3. применяет миграции из нового коммита, ещё не трогая рабочее дерево;
+4. делает `git reset --hard`, ставит зависимости из `backend/requirements.txt`
+   и перезапускает `messenger.service`.
+
+После перезапуска проверяются `GET /api/health`, главная страница и вход с
+заведомо неверным паролем. Последняя проверка должна вернуть `401`, а не `500`:
+так деплой замечает, что код обновился, а схема базы — нет.
 
 Разовая настройка — GitHub → Settings → Secrets and variables → Actions:
 
@@ -435,6 +469,16 @@ winget upgrade --id GitHub.cli
 Повторно выкатить текущий `main`, не создавая коммит: Actions → Deploy to server →
 Run workflow. Пуш в другую ветку деплой не запускает — сначала влей изменения в `main`.
 
-Схема базы (`init.sql`) автоматически не применяется: миграции выполняются вручную,
-чтобы случайно не потерять данные. Если менялись зависимости, они доставятся
-следующим деплоем; venv на сервере лежит отдельно и git его не перезаписывает.
+Схема новой базы создаётся из `init.sql`. На сервере `init.sql` повторно не
+выполняется: изменения существующей базы накатываются только через
+`migrations/`, автоматически и в транзакции. Восстановить бэкап можно так:
+
+```bash
+systemctl stop messenger
+PGPASSWORD=pass pg_restore -h localhost -U messenger_user -d messenger_db \
+  --clean --if-exists /root/messenger-backups/messenger-....dump
+systemctl start messenger
+```
+
+Если менялись зависимости, они доставятся следующим деплоем; venv на сервере
+лежит отдельно и git его не перезаписывает.

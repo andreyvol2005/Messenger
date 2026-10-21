@@ -44,7 +44,39 @@ jobs:
           echo "Было: $(git rev-parse --short HEAD)"
 
           git fetch --prune origin main
-          git reset --hard origin/main
+          NEW_COMMIT=$(git rev-parse origin/main)
+          echo "Новый коммит: $(git log -1 --oneline "$NEW_COMMIT")"
+
+          # Реквизиты совпадают с умолчаниями backend/database.py. Если на
+          # сервере они переопределены, задайте DB_* в окружении workflow.
+          DB_NAME="${DB_NAME:-messenger_db}"
+          DB_USER="${DB_USER:-messenger_user}"
+          DB_PASSWORD="${DB_PASSWORD:-pass}"
+          DB_HOST="${DB_HOST:-localhost}"
+          DB_PORT="${DB_PORT:-5432}"
+          export DB_NAME DB_USER DB_PASSWORD DB_HOST DB_PORT
+
+          # Бэкап до миграций: даже неудачная схема не останется без копии.
+          BACKUP_DIR=/root/messenger-backups
+          mkdir -p "$BACKUP_DIR"
+          BACKUP_FILE="$BACKUP_DIR/messenger-$(date +%Y%m%d-%H%M%S).dump"
+          echo "Бэкап базы: $BACKUP_FILE"
+          PGPASSWORD="$DB_PASSWORD" pg_dump \
+            -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" \
+            --format=custom --file="$BACKUP_FILE"
+          # Храним десять последних бэкапов.
+          ls -1t "$BACKUP_DIR"/messenger-*.dump 2>/dev/null \
+            | tail -n +11 | xargs -r rm -f
+
+          # Миграции берём из нового коммита, но рабочее дерево пока не трогаем.
+          # Если миграция упадёт, старый код и старый сервис останутся на месте.
+          MIGRATE_DIR=$(mktemp -d)
+          trap 'rm -rf "$MIGRATE_DIR"' EXIT
+          git archive "$NEW_COMMIT" backend/migrate.py migrations \
+            | tar -x -C "$MIGRATE_DIR"
+          ./backend/venv/bin/python "$MIGRATE_DIR/backend/migrate.py"
+
+          git reset --hard "$NEW_COMMIT"
           echo "Стало: $(git log -1 --oneline)"
 
           # Зависимости ставятся в venv на сервере, он в .gitignore и не перезаписывается.
@@ -54,17 +86,29 @@ jobs:
 
           systemctl restart messenger
 
-          # Ждём, пока uvicorn поднимется, и проверяем реальный ответ приложения.
+          # /api/health проверяет только, что uvicorn жив. Логин с заведомо
+          # неверным паролем должен вернуть 401: это значит, что запрос дошёл
+          # до таблицы users и схема совпадает с кодом. При старой схеме будет 500.
+          PROBE_USER="deploy_probe_$(date +%s)_${RANDOM}"
           for i in $(seq 1 30); do
-            if curl -fsS http://127.0.0.1:8000/api/health >/dev/null 2>&1; then
-              echo "Health check: OK"
+            health=$(curl -sS -o /dev/null -w '%{http_code}' \
+              http://127.0.0.1:8000/api/health 2>/dev/null || true)
+            page=$(curl -sS -o /dev/null -w '%{http_code}' \
+              http://127.0.0.1:8000/ 2>/dev/null || true)
+            login=$(curl -sS -o /dev/null -w '%{http_code}' \
+              -H 'Content-Type: application/json' \
+              --data "{\"username\":\"$PROBE_USER\",\"password\":\"wrong\"}" \
+              http://127.0.0.1:8000/api/login 2>/dev/null || true)
+
+            if [ "$health" = "200" ] && [ "$page" = "200" ] && [ "$login" = "401" ]; then
+              echo "Smoke check: health=200, page=200, db-login=401 — OK"
               exit 0
             fi
             sleep 1
           done
 
-          echo "Health check: FAILED" >&2
+          echo "Smoke check: FAILED (health=$health, page=$page, db-login=$login)" >&2
           systemctl status messenger --no-pager -l || true
-          tail -n 50 /root/Messenger/uvicorn.log || true
+          tail -n 80 /root/Messenger/uvicorn.log || true
           exit 1
           REMOTE
