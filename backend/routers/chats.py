@@ -24,4 +24,4 @@ def create_chat(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user),
 ):
-    return services.create_or_get_chat(db, current_user, payload.nickname)
+    return services.create_or_get_chat(db, current_user, payload.username)

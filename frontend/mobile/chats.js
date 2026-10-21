@@ -5,8 +5,16 @@ const MobileChats = {
         if (!Session.requireAuth()) return;
 
         document.getElementById("logout-btn").onclick = () => Session.logout();
-        document.getElementById("new-chat-btn").onclick = () => this.toggleNewChatForm();
         document.getElementById("new-chat-form").onsubmit = (e) => this.createChat(e);
+
+        const searchInput = document.getElementById("new-chat-username");
+        searchInput.addEventListener("input", UI.debounce(() => this.searchUsers(), 250));
+        searchInput.addEventListener("keydown", (e) => {
+            if (e.key === "Escape") {
+                this.clearSearch();
+                searchInput.blur();
+            }
+        });
 
         // Список сам обновляется, когда в любом чате появляется сообщение
         Realtime.connect(() => this.refreshList());
@@ -14,31 +22,102 @@ const MobileChats = {
         await this.loadChats();
     },
 
-    toggleNewChatForm() {
-        const form = document.getElementById("new-chat-form");
-        const willShow = form.classList.contains("hidden");
-        form.classList.toggle("hidden", !willShow);
-        if (willShow) {
-            document.getElementById("new-chat-nickname").focus();
-        } else {
-            UI.hideError("new-chat-error");
-        }
+    showChatList() {
+        document.getElementById("chat-list").classList.remove("hidden");
+    },
+
+    hideChatList() {
+        document.getElementById("chat-list").classList.add("hidden");
+    },
+
+    clearSearch() {
+        document.getElementById("new-chat-username").value = "";
+        this.hideSearchResults();
+        UI.hideError("new-chat-error");
+        this.showChatList();
+    },
+
+    hideSearchResults() {
+        const results = document.getElementById("user-search-results");
+        results.classList.add("hidden");
+        results.innerHTML = "";
     },
 
     async createChat(e) {
         e.preventDefault();
-        const input = document.getElementById("new-chat-nickname");
-        const nickname = input.value.trim();
-        if (!nickname) return;
+        const input = document.getElementById("new-chat-username");
+        const username = input.value.trim();
+        const error = Validation.username(username);
+        if (error) {
+            UI.showError("new-chat-error", error);
+            return;
+        }
+        await this.openChat(username);
+    },
+
+    async openChat(username) {
+        const handle = (username || "").replace(/^@/, "").trim();
 
         try {
-            await API.createChat(nickname);
-            input.value = "";
-            document.getElementById("new-chat-form").classList.add("hidden");
-            UI.hideError("new-chat-error");
-            await this.loadChats();
+            const chat = await API.createChat(handle);
+            this.clearSearch();
+            window.location.href = Session.chatUrl(chat.id);
         } catch (err) {
             UI.showError("new-chat-error", err.message);
+        }
+    },
+
+    async searchUsers() {
+        const input = document.getElementById("new-chat-username");
+        const query = input.value.trim();
+        const results = document.getElementById("user-search-results");
+
+        if (!query) {
+            this.hideSearchResults();
+            UI.hideError("new-chat-error");
+            this.showChatList();
+            return;
+        }
+
+        this.hideChatList();
+        if (query.includes("@")) {
+            this.hideSearchResults();
+            UI.showError("new-chat-error", "Пишите имя пользователя без символа @");
+            return;
+        }
+
+        UI.hideError("new-chat-error");
+
+        try {
+            const users = await API.searchUsers(query);
+            // Пока шёл запрос, пользователь мог изменить строку
+            if (input.value.trim() !== query) return;
+
+            results.innerHTML = "";
+            if (!users.length) {
+                results.appendChild(UI.el("li", "user-search-empty", "Никого не найдено"));
+            } else {
+                for (const user of users) {
+                    const item = UI.el("li", "user-search-item");
+                    item.appendChild(
+                        UI.el("div", "user-search-avatar", UI.initial(user.nickname))
+                    );
+
+                    const text = UI.el("div", "user-search-text");
+                    text.appendChild(UI.el("div", "user-search-name", user.nickname));
+                    text.appendChild(UI.el("div", "user-search-username", user.username));
+                    item.appendChild(text);
+
+                    item.onclick = () => this.openChat(user.username);
+                    results.appendChild(item);
+                }
+            }
+            results.classList.remove("hidden");
+        } catch (err) {
+            if (input.value.trim() === query) {
+                this.hideSearchResults();
+                this.showChatList();
+            }
         }
     },
 

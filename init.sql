@@ -7,15 +7,23 @@
 -- ====================================================
 -- 1. Пользователи
 -- ====================================================
--- Логин и отображаемое имя — один и тот же никнейм
+-- username — уникальный логин, хранится с ведущим «@» (до 30 символов без него).
+-- nickname — неуникальное отображаемое имя до 30 символов.
+-- UNIQUE в PostgreSQL регистрозависимый, поэтому Ivan и ivan — разные аккаунты.
 CREATE TABLE users (
     id SERIAL PRIMARY KEY,
-    nickname VARCHAR(50) UNIQUE NOT NULL,
+    username VARCHAR(31) UNIQUE NOT NULL,
+    nickname VARCHAR(30) NOT NULL,
     password_hash TEXT NOT NULL,
     bio VARCHAR(150) DEFAULT NULL,
     birth_date DATE DEFAULT NULL,
     avatar_url TEXT DEFAULT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    -- На уровне базы дополнительно держим префикс и непустые значения.
+    -- Набор символов проверяет backend/validation.py.
+    CONSTRAINT users_username_prefix CHECK (username LIKE '@%'),
+    CONSTRAINT users_username_not_empty CHECK (char_length(username) >= 2),
+    CONSTRAINT users_nickname_not_empty CHECK (char_length(nickname) >= 1)
 );
 
 -- ====================================================

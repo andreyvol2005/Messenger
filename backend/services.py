@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session, aliased
 
 import models
 import schemas
+import validation
 from constants import FAVORITES_CHAT_ID, FAVORITES_TITLE
 
 
@@ -98,13 +99,15 @@ def _other_nickname(db: Session, chat_id: int, user_id: int) -> str | None:
     )
 
 
-def create_or_get_chat(db: Session, user: models.User, nickname: str) -> schemas.ChatResponse:
+def create_or_get_chat(db: Session, user: models.User, username: str) -> schemas.ChatResponse:
     """Создаёт личный чат с пользователем или возвращает уже существующий."""
-    other = db.query(models.User).filter(models.User.nickname == nickname.strip()).first()
+    # Поиск строго по username и с учётом регистра: nickname не уникален.
+    stored_username = validation.normalize_username(username)
+    other = db.query(models.User).filter(models.User.username == stored_username).first()
     if not other:
-        raise HTTPException(status_code=404, detail="User with this nickname not found")
+        raise HTTPException(status_code=404, detail="Пользователь с таким username не найден")
     if other.id == user.id:
-        raise HTTPException(status_code=400, detail="Cannot create chat with yourself")
+        raise HTTPException(status_code=400, detail="Нельзя создать чат с самим собой")
 
     pair_key = f"{min(user.id, other.id)}:{max(user.id, other.id)}"
     chat = db.query(models.Chat).filter(models.Chat.pair_key == pair_key).first()

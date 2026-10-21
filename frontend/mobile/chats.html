@@ -12,15 +12,21 @@
         <header class="m-header">
             <h1 class="m-title">Чаты</h1>
             <div class="m-header-actions">
-                <button id="new-chat-btn" class="m-icon-btn" title="Новый чат">＋</button>
                 <button id="logout-btn" class="m-icon-btn" title="Выйти">⎋</button>
             </div>
         </header>
 
-        <form id="new-chat-form" class="m-new-chat hidden">
-            <input type="text" id="new-chat-nickname" placeholder="Ник пользователя" autocomplete="off">
-            <button type="submit">Создать</button>
+        <form id="new-chat-form" class="m-search-form" role="search">
+            <div class="m-search-field">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <circle cx="11" cy="11" r="7"></circle>
+                    <path d="m20 20-3.5-3.5"></path>
+                </svg>
+                <input type="text" id="new-chat-username" placeholder="Поиск"
+                       aria-label="Поиск по имени пользователя" autocomplete="off">
+            </div>
         </form>
+        <ul id="user-search-results" class="user-search-results hidden"></ul>
         <p id="new-chat-error" class="error hidden m-new-chat-error"></p>
 
         <ul id="chat-list" class="m-chat-list"></ul>
