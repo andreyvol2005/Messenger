@@ -19,16 +19,16 @@
 
         <aside class="chat-sidebar">
             <div class="sidebar-header">
-                <span id="current-user"></span>
-                <div class="sidebar-actions">
-                    <button id="new-chat-btn" class="icon-btn" title="Новый чат">＋</button>
-                    <button id="logout-btn" class="icon-btn" title="Выйти">⎋</button>
-                </div>
+                <form id="new-chat-form" class="sidebar-search" role="search">
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <circle cx="11" cy="11" r="7"></circle>
+                        <path d="m20 20-3.5-3.5"></path>
+                    </svg>
+                    <input type="text" id="new-chat-username" placeholder="Поиск"
+                           aria-label="Поиск по имени пользователя" autocomplete="off">
+                </form>
             </div>
-            <form id="new-chat-form" class="new-chat-form hidden">
-                <input type="text" id="new-chat-nickname" placeholder="Ник пользователя" autocomplete="off">
-                <button type="submit">Создать</button>
-            </form>
+            <ul id="user-search-results" class="user-search-results hidden"></ul>
             <p id="new-chat-error" class="error hidden new-chat-error"></p>
             <ul id="chat-list" class="chat-list"></ul>
         </aside>
@@ -65,7 +65,7 @@
             <div id="menu-avatar" class="avatar avatar-lg">?</div>
             <div class="side-menu-user-text">
                 <div id="menu-nickname" class="side-menu-name"></div>
-                <div class="side-menu-sub">это вы</div>
+                <div id="menu-username" class="side-menu-sub"></div>
             </div>
         </div>
 
@@ -99,6 +99,21 @@
             <p id="profile-since" class="profile-since"></p>
 
             <label class="field">
+                <span class="field-label">Имя пользователя</span>
+                <div class="input-with-prefix">
+                    <span class="input-prefix">@</span>
+                    <input type="text" id="profile-username" maxlength="30"
+                           autocomplete="username" placeholder="Имя пользователя">
+                </div>
+            </label>
+
+            <label class="field">
+                <span class="field-label">Имя</span>
+                <input type="text" id="profile-nickname" maxlength="30"
+                       autocomplete="nickname" placeholder="Имя">
+            </label>
+
+            <label class="field">
                 <span class="field-label">Дата рождения</span>
                 <input type="date" id="profile-birth">
             </label>
@@ -112,6 +127,8 @@
             <p id="profile-error" class="error hidden"></p>
 
             <div class="profile-actions">
+                <button type="button" id="profile-logout" class="btn-ghost"
+                        title="Выйти из аккаунта">Выйти</button>
                 <button type="button" id="profile-close" class="btn-ghost">Закрыть</button>
                 <button type="button" id="profile-save">Сохранить</button>
             </div>

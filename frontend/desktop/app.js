@@ -33,6 +33,7 @@ const Menu = {
         // Ник и аватарка могли смениться, пока меню было закрыто
         document.getElementById("menu-avatar").textContent = UI.initial(Session.nickname());
         document.getElementById("menu-nickname").textContent = Session.nickname();
+        document.getElementById("menu-username").textContent = Session.username();
 
         this.menu.classList.add("open");
         this.backdrop.classList.add("open");
@@ -60,9 +61,19 @@ const Profile = {
         document.getElementById("profile-backdrop").onclick = () => this.close();
         document.getElementById("profile-close").onclick = () => this.close();
         document.getElementById("profile-save").onclick = () => this.save();
+        document.getElementById("profile-logout").onclick = () => Session.logout();
 
         // Календарь не должен предлагать будущие даты
         document.getElementById("profile-birth").max = new Date().toISOString().slice(0, 10);
+
+        // Пока профиль грузится, пользователь уже может начать редактировать
+        // поля. Тогда ответ сервера не должен затирать его ввод.
+        this.dirty = false;
+        for (const id of ["profile-username", "profile-nickname", "profile-bio", "profile-birth"]) {
+            document.getElementById(id).addEventListener("input", () => {
+                this.dirty = true;
+            });
+        }
 
         document.addEventListener("keydown", (e) => {
             if (e.key === "Escape" && this.isOpen()) this.close();
@@ -79,13 +90,15 @@ const Profile = {
         UI.hideError("profile-error");
 
         // Сразу показываем ник из сессии, остальное подгрузим
+        this.dirty = false;
         this.fillBasic();
         document.getElementById("profile-birth").value = "";
         document.getElementById("profile-bio").value = "";
         document.getElementById("profile-since").textContent = "";
 
         try {
-            this.fill(await API.getMe());
+            const me = await API.getMe();
+            if (!this.dirty) this.fill(me);
         } catch (err) {
             UI.showError("profile-error", err.message);
         }
@@ -97,11 +110,15 @@ const Profile = {
         const nickname = Session.nickname();
         document.getElementById("profile-avatar").textContent = UI.initial(nickname);
         document.getElementById("profile-name").textContent = nickname;
+        document.getElementById("profile-username").value = Session.username().replace(/^@/, "");
+        document.getElementById("profile-nickname").value = nickname;
     },
 
     fill(me) {
         document.getElementById("profile-avatar").textContent = UI.initial(me.nickname);
         document.getElementById("profile-name").textContent = me.nickname;
+        document.getElementById("profile-username").value = (me.username || "").replace(/^@/, "");
+        document.getElementById("profile-nickname").value = me.nickname;
         document.getElementById("profile-bio").value = me.bio || "";
         document.getElementById("profile-birth").value = me.birth_date || "";
 
@@ -111,18 +128,35 @@ const Profile = {
                 day: "numeric", month: "long", year: "numeric"
             })
             : "";
+        this.dirty = false;
     },
 
     async save() {
         const button = document.getElementById("profile-save");
+        const username = document.getElementById("profile-username").value.trim();
+        const nickname = document.getElementById("profile-nickname").value.trim();
         const birthDate = document.getElementById("profile-birth").value;
         const bio = document.getElementById("profile-bio").value.trim();
+
+        const error = Validation.username(username) || Validation.nickname(nickname);
+        if (error) {
+            UI.showError("profile-error", error);
+            return;
+        }
 
         button.disabled = true;
         UI.hideError("profile-error");
 
         try {
-            const me = await API.updateMe({ bio, birth_date: birthDate || null });
+            const me = await API.updateMe({
+                username,
+                nickname,
+                bio,
+                birth_date: birthDate || null
+            });
+
+            // JWT привязан к id пользователя, поэтому сессия остаётся живой
+            Session.setIdentity(me.username, me.nickname);
             this.fill(me);
             UI.toast("Профиль сохранён");
             this.close();
@@ -143,6 +177,9 @@ const Sidebar = {
     MIN:0,
     MAX:560,
     DEFAULT:280,
+    // При сужении панель останавливается на 150 px, а при дальнейшем
+    // движении курсора влево сразу схлопывается полностью — как в Telegram.
+    SNAP:150,
     KEY: "messenger_sidebar_width",
 
     init() {
@@ -155,7 +192,7 @@ const Sidebar = {
         const raw = localStorage.getItem(this.KEY);
         if (raw !== null && raw !== "") {
             const saved = Number(raw);
-            if (Number.isFinite(saved)) this.apply(this.clamp(saved));
+            if (Number.isFinite(saved)) this.apply(this.snap(saved));
         }
 
         this.handle.addEventListener("pointerdown", (e) => this.start(e));
@@ -168,6 +205,14 @@ const Sidebar = {
 
     clamp(width) {
         return Math.min(this.MAX, Math.max(this.MIN, width));
+    },
+
+    snap(width) {
+        // Ширины от 1 до 149 px не показываем: панель либо остаётся
+        // 150-пиксельной полосой, либо закрывается полностью.
+        if (width <= 0) return 0;
+        if (width < this.SNAP) return this.SNAP;
+        return this.clamp(width);
     },
 
     apply(width) {
@@ -187,7 +232,7 @@ const Sidebar = {
         this.handle.setPointerCapture(e.pointerId);
 
         this.onMove = (ev) => {
-            this.apply(this.clamp(this.startWidth + ev.clientX - this.startX));
+            this.apply(this.snap(this.startWidth + ev.clientX - this.startX));
         };
         this.onUp = () => this.stop();
 
@@ -214,11 +259,17 @@ const Chat = {
     async init() {
         if (!Session.requireAuth()) return;
 
-        document.getElementById("current-user").textContent = Session.nickname();
-        document.getElementById("logout-btn").onclick = () => Session.logout();
         document.getElementById("message-form").onsubmit = (e) => this.sendMessage(e);
-        document.getElementById("new-chat-btn").onclick = () => this.toggleNewChatForm();
         document.getElementById("new-chat-form").onsubmit = (e) => this.createChat(e);
+
+        const searchInput = document.getElementById("new-chat-username");
+        searchInput.addEventListener("input", UI.debounce(() => this.searchUsers(), 250));
+        searchInput.addEventListener("keydown", (e) => {
+            if (e.key === "Escape") {
+                this.clearSearch();
+                searchInput.blur();
+            }
+        });
 
         Menu.init();
         Profile.init();
@@ -252,31 +303,102 @@ const Chat = {
 
     // ---------- Список чатов ----------
 
-    toggleNewChatForm() {
-        const form = document.getElementById("new-chat-form");
-        const willShow = form.classList.contains("hidden");
-        form.classList.toggle("hidden", !willShow);
-        if (willShow) {
-            document.getElementById("new-chat-nickname").focus();
-        } else {
-            UI.hideError("new-chat-error");
-        }
+    showChatList() {
+        document.getElementById("chat-list").classList.remove("hidden");
+    },
+
+    hideChatList() {
+        document.getElementById("chat-list").classList.add("hidden");
+    },
+
+    clearSearch() {
+        document.getElementById("new-chat-username").value = "";
+        this.hideSearchResults();
+        UI.hideError("new-chat-error");
+        this.showChatList();
+    },
+
+    hideSearchResults() {
+        const results = document.getElementById("user-search-results");
+        results.classList.add("hidden");
+        results.innerHTML = "";
     },
 
     async createChat(e) {
         e.preventDefault();
-        const input = document.getElementById("new-chat-nickname");
-        const nickname = input.value.trim();
-        if (!nickname) return;
+        const input = document.getElementById("new-chat-username");
+        const username = input.value.trim();
+        const error = Validation.username(username);
+        if (error) {
+            UI.showError("new-chat-error", error);
+            return;
+        }
+        await this.createChatWith(username);
+    },
+
+    async createChatWith(username) {
+        const handle = (username || "").replace(/^@/, "").trim();
 
         try {
-            const chat = await API.createChat(nickname);
-            input.value = "";
-            document.getElementById("new-chat-form").classList.add("hidden");
-            UI.hideError("new-chat-error");
+            const chat = await API.createChat(handle);
+            this.clearSearch();
             await this.openChat(chat.id, chat.title);
         } catch (err) {
             UI.showError("new-chat-error", err.message);
+        }
+    },
+
+    async searchUsers() {
+        const input = document.getElementById("new-chat-username");
+        const query = input.value.trim();
+        const results = document.getElementById("user-search-results");
+
+        if (!query) {
+            this.hideSearchResults();
+            UI.hideError("new-chat-error");
+            this.showChatList();
+            return;
+        }
+
+        this.hideChatList();
+        if (query.includes("@")) {
+            this.hideSearchResults();
+            UI.showError("new-chat-error", "Пишите имя пользователя без символа @");
+            return;
+        }
+
+        UI.hideError("new-chat-error");
+
+        try {
+            const users = await API.searchUsers(query);
+            // Пока шёл запрос, пользователь мог изменить строку
+            if (input.value.trim() !== query) return;
+
+            results.innerHTML = "";
+            if (!users.length) {
+                results.appendChild(UI.el("li", "user-search-empty", "Никого не найдено"));
+            } else {
+                for (const user of users) {
+                    const item = UI.el("li", "user-search-item");
+                    item.appendChild(
+                        UI.el("div", "user-search-avatar", UI.initial(user.nickname))
+                    );
+
+                    const text = UI.el("div", "user-search-text");
+                    text.appendChild(UI.el("div", "user-search-name", user.nickname));
+                    text.appendChild(UI.el("div", "user-search-username", user.username));
+                    item.appendChild(text);
+
+                    item.onclick = () => this.createChatWith(user.username);
+                    results.appendChild(item);
+                }
+            }
+            results.classList.remove("hidden");
+        } catch (err) {
+            if (input.value.trim() === query) {
+                this.hideSearchResults();
+                this.showChatList();
+            }
         }
     },
 

@@ -45,18 +45,53 @@
 .m-back-btn:hover { background: transparent; }
 
 /* ============================
-   Создание чата
+   Поиск пользователей
    ============================ */
-.m-new-chat {
+.m-search-form {
     flex-shrink: 0;
-    display: flex;
-    gap: 8px;
     padding: 10px 12px;
     background: #252525;
     border-bottom: 1px solid #333;
 }
-.m-new-chat input { flex: 1; }
-.m-new-chat button { padding: 10px 14px; }
+
+.m-search-field {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0 12px;
+    background: #2a2a2a;
+    border: 1px solid transparent;
+    border-radius: 999px;
+}
+
+.m-search-field:focus-within {
+    border-color: #007bff;
+}
+
+.m-search-field svg {
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+    fill: none;
+    stroke: #888;
+    stroke-width: 1.8;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+.m-search-field input {
+    flex: 1;
+    min-width: 0;
+    padding: 9px 0;
+    border: 0;
+    background: transparent;
+    font-size: 15px;
+}
+
+.m-search-field input:focus {
+    border-color: transparent;
+}
+
 .m-new-chat-error { padding: 8px 14px; background: #252525; }
 
 /* ============================
@@ -167,8 +202,6 @@
     gap: 8px;
     padding: 10px 12px;
     padding-bottom: calc(10px + env(safe-area-inset-bottom));
-    background: #252525;
-    border-top: 1px solid #333;
 }
 .m-composer input { 
     flex: 1;
