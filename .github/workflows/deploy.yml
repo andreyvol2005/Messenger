@@ -48,7 +48,7 @@ jobs:
           echo "Новый коммит: $(git log -1 --oneline "$NEW_COMMIT")"
 
           # Реквизиты совпадают с умолчаниями backend/database.py. Если на
-          # сервере они переопределены, задайте DB_* в окружении workflow.
+          # сервере они другие, поменяйте значения здесь.
           DB_NAME="${DB_NAME:-messenger_db}"
           DB_USER="${DB_USER:-messenger_user}"
           DB_PASSWORD="${DB_PASSWORD:-pass}"
