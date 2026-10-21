@@ -8,6 +8,7 @@ const CONFIG = {
     STORAGE: {
         TOKEN: "messenger_token",
         USER_ID: "messenger_user_id",
+        USERNAME: "messenger_username",
         NICKNAME: "messenger_nickname"
     }
 };
@@ -42,17 +43,17 @@ const API = {
         return data;
     },
 
-    register(nickname, password) {
+    register(username, password) {
         return this.request("/api/register", {
             method: "POST",
-            body: JSON.stringify({ nickname, password })
+            body: JSON.stringify({ username, password })
         });
     },
 
-    login(nickname, password) {
+    login(username, password) {
         return this.request("/api/login", {
             method: "POST",
-            body: JSON.stringify({ nickname, password })
+            body: JSON.stringify({ username, password })
         });
     },
 
@@ -60,14 +61,18 @@ const API = {
         return this.request("/api/users");
     },
 
+    searchUsers(query) {
+        return this.request(`/api/users?q=${encodeURIComponent(query)}`);
+    },
+
     getChats() {
         return this.request("/api/chats");
     },
 
-    createChat(nickname) {
+    createChat(username) {
         return this.request("/api/chats", {
             method: "POST",
-            body: JSON.stringify({ nickname })
+            body: JSON.stringify({ username })
         });
     },
 
@@ -124,6 +129,10 @@ const Session = {
         return localStorage.getItem(CONFIG.STORAGE.TOKEN);
     },
 
+    username() {
+        return localStorage.getItem(CONFIG.STORAGE.USERNAME) || "";
+    },
+
     nickname() {
         return localStorage.getItem(CONFIG.STORAGE.NICKNAME) || "?";
     },
@@ -135,7 +144,14 @@ const Session = {
     save(data) {
         localStorage.setItem(CONFIG.STORAGE.TOKEN, data.access_token);
         localStorage.setItem(CONFIG.STORAGE.USER_ID, data.user_id);
-        localStorage.setItem(CONFIG.STORAGE.NICKNAME, data.nickname);
+        localStorage.setItem(CONFIG.STORAGE.USERNAME, data.username || "");
+        localStorage.setItem(CONFIG.STORAGE.NICKNAME, data.nickname || "");
+    },
+
+    // После смены username/nickname сессия не сбрасывается: JWT привязан к id
+    setIdentity(username, nickname) {
+        localStorage.setItem(CONFIG.STORAGE.USERNAME, username || "");
+        localStorage.setItem(CONFIG.STORAGE.NICKNAME, nickname || "");
     },
 
     logout() {
@@ -285,6 +301,52 @@ const UI = {
     }
 };
 
+// Проверки совпадают с серверными: пользователь видит ошибку сразу,
+// а бэкенд всё равно проверяет то же самое ещё раз.
+const Validation = {
+    USERNAME_MAX: 15,
+    NICKNAME_MAX: 15,
+
+    allowedChars(value) {
+        // Тот же набор, что и на сервере: латиница, кириллица, цифры, _.
+        // Для кириллицы проверяем и диапазон, и то, что это именно буква:
+        // в U+0400–U+04FF есть служебные знаки.
+        for (const char of value) {
+            if (/[A-Za-z0-9_]/.test(char)) continue;
+            const code = char.codePointAt(0);
+            if (code >= 0x0400 && code <= 0x04ff && /\p{L}/u.test(char)) continue;
+            return false;
+        }
+        return true;
+    },
+
+    username(value) {
+        const text = (value || "").trim();
+        if (!text) return "Введите username";
+        if (text.includes("@")) return "Пишите username без символа @";
+        if (text.length > this.USERNAME_MAX) {
+            return `Username не может быть длиннее ${this.USERNAME_MAX} символов`;
+        }
+        if (!this.allowedChars(text)) {
+            return "Username: только латиница, кириллица, цифры и _";
+        }
+        return "";
+    },
+
+    nickname(value) {
+        const text = (value || "").trim();
+        if (!text) return "Введите nickname";
+        if (text.includes("@")) return "Пишите nickname без символа @";
+        if (text.length > this.NICKNAME_MAX) {
+            return `Nickname не может быть длиннее ${this.NICKNAME_MAX} символов`;
+        }
+        if (!this.allowedChars(text)) {
+            return "Nickname: только латиница, кириллица, цифры и _";
+        }
+        return "";
+    }
+};
+
 // Общий код страницы входа: используется и из login.html
 const LoginPage = {
     mode: "login",
@@ -305,21 +367,39 @@ const LoginPage = {
             isLogin ? "Войти" : "Зарегистрироваться";
         document.getElementById("password").autocomplete =
             isLogin ? "current-password" : "new-password";
+        document.getElementById("auth-hint").textContent = isLogin
+            ? "Вход по username, без символа @"
+            : "Nickname создастся автоматически из username";
         UI.hideError("auth-error");
     },
 
     async submit(e) {
         e.preventDefault();
-        const nickname = document.getElementById("nickname").value.trim();
+        const input = document.getElementById("username");
+        const username = input.value.trim();
         const password = document.getElementById("password").value;
+
+        UI.hideError("auth-error");
+
+        const usernameError = Validation.username(username);
+        if (usernameError) {
+            UI.showError("auth-error", usernameError);
+            return;
+        }
+        if (!password) {
+            UI.showError("auth-error", "Введите пароль");
+            return;
+        }
 
         try {
             if (this.mode === "register") {
-                await API.register(nickname, password);
-                alert("Успешно! Теперь войдите.");
+                await API.register(username, password);
+                alert("Аккаунт создан. Теперь войдите.");
                 this.setMode("login");
+                input.value = username;
+                document.getElementById("password").focus();
             } else {
-                const data = await API.login(nickname, password);
+                const data = await API.login(username, password);
                 Session.save(data);
                 window.location.replace(Session.homePath());
             }

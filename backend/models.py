@@ -6,8 +6,10 @@ from database import Base
 class User(Base):
     __tablename__ = "users"
     id = Column(Integer, primary_key=True, index=True)
-    # Никнейм одновременно логин и отображаемое имя
-    nickname = Column(String(50), unique=True, index=True, nullable=False)
+    # Логин: уникальный, хранится с ведущим «@», регистр учитывается
+    username = Column(String(16), unique=True, index=True, nullable=False)
+    # Отображаемое имя: может повторяться, без «@»
+    nickname = Column(String(15), nullable=False)
     password_hash = Column(Text, nullable=False)
     bio = Column(String(150), nullable=True)
     birth_date = Column(Date, nullable=True)
