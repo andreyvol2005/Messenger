@@ -386,3 +386,26 @@ Windows keyring. `gh auth setup-git` прописал git credential helper, п�
 winget install --id GitHub.cli
 winget upgrade --id GitHub.cli
 ```
+
+## Деплой на сервер
+
+Каждый пуш в `main` автоматически выкатывается на сервер через GitHub Actions
+(`.github/workflows/deploy.yml`). Workflow заходит по SSH, делает
+`git fetch` и `git reset --hard origin/main` в `/root/Messenger`, доставляет
+зависимости из `backend/requirements.txt` и перезапускает `messenger.service`.
+После перезапуска проверяется `GET /api/health`.
+
+Разовая настройка — GitHub → Settings → Secrets and variables → Actions:
+
+| Secret | Значение |
+|---|---|
+| `SSH_HOST` | IP или домен сервера |
+| `SSH_USER` | пользователь, под которым идёт деплой (`root`) |
+| `SSH_PRIVATE_KEY` | приватный SSH-ключ, публичная часть которого лежит в `~/.ssh/authorized_keys` на сервере |
+
+Повторно выкатить текущий `main`, не создавая коммит: Actions → Deploy to server →
+Run workflow. Пуш в другую ветку деплой не запускает — сначала влей изменения в `main`.
+
+Схема базы (`init.sql`) автоматически не применяется: миграции выполняются вручную,
+чтобы случайно не потерять данные. Если менялись зависимости, они доставятся
+следующим деплоем; venv на сервере лежит отдельно и git его не перезаписывает.

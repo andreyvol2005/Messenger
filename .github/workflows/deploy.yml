@@ -1,0 +1,70 @@
+name: Deploy to server
+
+# Выкатываем каждый пуш в main. Пуш в feature-ветку деплой не запускает:
+# сначала изменения нужно влить в main.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# Два деплоя одновременно не нужны: они будут выполняться по очереди.
+concurrency:
+  group: deploy-messenger
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: Deploy
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Deploy over SSH
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+        run: |
+          set -euo pipefail
+
+          install -m 700 -d "$HOME/.ssh"
+          printf '%s\n' "$SSH_PRIVATE_KEY" > "$HOME/.ssh/deploy_key"
+          chmod 600 "$HOME/.ssh/deploy_key"
+
+          ssh -i "$HOME/.ssh/deploy_key" \
+              -o IdentitiesOnly=yes \
+              -o StrictHostKeyChecking=accept-new \
+              "$SSH_USER@$SSH_HOST" 'bash -s' <<'REMOTE'
+          set -euo pipefail
+
+          cd /root/Messenger
+          echo "Было: $(git rev-parse --short HEAD)"
+
+          git fetch --prune origin main
+          git reset --hard origin/main
+          echo "Стало: $(git log -1 --oneline)"
+
+          # Зависимости ставятся в venv на сервере, он в .gitignore и не перезаписывается.
+          ./backend/venv/bin/python -m pip install \
+            --quiet --disable-pip-version-check \
+            -r backend/requirements.txt
+
+          systemctl restart messenger
+
+          # Ждём, пока uvicorn поднимется, и проверяем реальный ответ приложения.
+          for i in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:8000/api/health >/dev/null 2>&1; then
+              echo "Health check: OK"
+              exit 0
+            fi
+            sleep 1
+          done
+
+          echo "Health check: FAILED" >&2
+          systemctl status messenger --no-pager -l || true
+          tail -n 50 /root/Messenger/uvicorn.log || true
+          exit 1
+          REMOTE
