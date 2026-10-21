@@ -32,7 +32,8 @@
             <p id="new-chat-error" class="error hidden new-chat-error"></p>
             <ul id="chat-list" class="chat-list"></ul>
         </aside>
-
+        <div id="sidebar-resizer" class="resizer" role="separator"
+            aria-orientation="vertical" title="Потяните, чтобы изменить ширину"></div>
         <main class="chat-main">
             <div id="chat-placeholder" class="chat-placeholder">
                 Выберите чат, чтобы начать общение
@@ -43,8 +44,13 @@
                 </div>
                 <div id="messages" class="messages"></div>
                 <form id="message-form" class="message-form">
-                    <input type="text" id="message-input" placeholder="Введите сообщение...">
-                    <button type="submit">Отправить</button>
+                <input type="text" id="message-input" placeholder="Введите сообщение...">
+                <button type="submit" title="Отправить" aria-label="Отправить">
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M22 2 11 13"/>
+                        <path d="M22 2 15 22 11 13 2 9 22 2z"/>
+                    </svg>
+                </button>
                 </form>
             </div>
         </main>

@@ -170,10 +170,31 @@
     background: #252525;
     border-top: 1px solid #333;
 }
-.m-composer input { flex: 1; }
-.m-send-btn {
+.m-composer input { 
+    flex: 1;
+    border-radius: 999px;
     padding: 10px 16px;
+}
+.m-send-btn {
     flex-shrink: 0;
+    width: 42px;
+    height: 42px;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
     background: #007bff;
-    font-size: 16px;
+}
+
+.m-send-btn svg {
+    width: 20px;
+    height: 20px;
+    /* Оптическое центрирование: самолётик кажется смещённым вправо-вверх */
+    transform: translate(-1px, 1px);
+    fill: none;
+    stroke: #fff;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
 }
