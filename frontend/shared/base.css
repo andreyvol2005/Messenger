@@ -201,6 +201,72 @@ textarea:-webkit-autofill:active {
     font-size: 12px;
 }
 
+/* ============================
+   Подсказка «добавить в контакты»
+   ============================ */
+.contact-suggestion {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 16px;
+    background: #1e2d3d;
+    border-bottom: 1px solid #2d4560;
+    color: #cfe4ff;
+    font-size: 13px;
+}
+
+.contact-suggestion-text {
+    flex: 1;
+    min-width: 0;
+}
+
+.contact-suggestion-error {
+    display: block;
+    margin-top: 2px;
+    color: #ff8a99;
+    font-size: 12px;
+}
+
+.contact-suggestion-add {
+    flex-shrink: 0;
+    padding: 7px 11px;
+    border-radius: 6px;
+    background: #2563eb;
+    color: #fff;
+    font-size: 12px;
+}
+
+.contact-suggestion-add:hover {
+    background: #1d4ed8;
+}
+
+.contact-suggestion-add:active {
+    background: #1e40af;
+}
+
+.contact-suggestion-add:disabled {
+    opacity: 0.6;
+    cursor: default;
+}
+
+.contact-suggestion-close {
+    flex-shrink: 0;
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    border-radius: 50%;
+    background: transparent;
+    color: #8fa7bf;
+    font-size: 20px;
+    line-height: 1;
+}
+
+.contact-suggestion-close:hover {
+    background: rgba(255, 255, 255, 0.08);
+    color: #fff;
+}
+
 @media (max-width: 768px) {
     .auth-container {
         margin: 0;

@@ -2,6 +2,7 @@
 
 import { API } from "../shared/api.js";
 import { CONFIG } from "../shared/config.js";
+import { ContactSuggestion } from "../shared/contact-suggestion.js";
 import { Realtime } from "../shared/realtime.js";
 import { Session } from "../shared/session.js";
 import { UI } from "../shared/ui.js";
@@ -15,10 +16,21 @@ import { UserSearch } from "../shared/user-search.js";
 
 export const Chat = {
     currentChatId: null,
+    peerUsername: null,
+    peerIsContact: false,
 
     async init() {
         document.getElementById("message-form").onsubmit = (e) => this.sendMessage(e);
-        UserSearch.init((chat) => this.openChat(chat.id, chat.title));
+        document.getElementById("chat-contact-banner-add").onclick =
+            () => this.addPeerToContacts();
+        document.getElementById("chat-contact-banner-close").onclick =
+            () => this.dismissContactSuggestion();
+        UserSearch.init((chat) => this.openChat(
+            chat.id,
+            chat.title,
+            chat.peer_username,
+            chat.is_contact
+        ));
 
         Realtime.connect((msg) => this.onIncoming(msg));
         await this.loadChats();
@@ -62,7 +74,12 @@ export const Chat = {
                     chat.is_favorites ? "★ " + chat.title : chat.title));
                 item.appendChild(UI.el("div", "chat-item-preview",
                     chat.last_message || "Нет сообщений"));
-                item.onclick = () => this.openChat(chat.id, chat.title);
+                item.onclick = () => this.openChat(
+                    chat.id,
+                    chat.title,
+                    chat.peer_username,
+                    chat.is_contact
+                );
                 list.appendChild(item);
             }
         } catch (err) {
@@ -72,8 +89,11 @@ export const Chat = {
 
     // ---------- Окно переписки ----------
 
-    async openChat(chatId, title) {
+    async openChat(chatId, title, peerUsername = null, isContact = false) {
         this.currentChatId = chatId;
+        this.peerUsername = peerUsername || null;
+        this.peerIsContact = Boolean(isContact);
+        this.updateContactSuggestion();
 
         document.getElementById("chat-placeholder").classList.add("hidden");
         document.getElementById("chat-window").classList.remove("hidden");
@@ -82,6 +102,54 @@ export const Chat = {
         const box = document.getElementById("messages");
         await loadMessageHistory(box, chatId, this.messageOptions());
         await this.loadChats();
+    },
+
+    updateContactSuggestion() {
+        const banner = document.getElementById("chat-contact-banner");
+        const button = document.getElementById("chat-contact-banner-add");
+        const show = Boolean(this.peerUsername)
+            && !this.peerIsContact
+            && !ContactSuggestion.isDismissed(this.peerUsername);
+
+        banner.classList.toggle("hidden", !show);
+        button.disabled = false;
+        UI.hideError("chat-contact-banner-error");
+    },
+
+    dismissContactSuggestion() {
+        if (!this.peerUsername) return;
+        ContactSuggestion.dismiss(this.peerUsername);
+        this.updateContactSuggestion();
+        document.getElementById("message-input").focus();
+    },
+
+    async addPeerToContacts() {
+        if (!this.peerUsername) return;
+
+        const button = document.getElementById("chat-contact-banner-add");
+        button.disabled = true;
+        UI.hideError("chat-contact-banner-error");
+
+        try {
+            await ContactSuggestion.add(this.peerUsername);
+            this.peerIsContact = true;
+            this.updateContactSuggestion();
+            UI.toast("Контакт добавлен");
+            await this.loadChats();
+        } catch (err) {
+            UI.showError("chat-contact-banner-error", err.message);
+        } finally {
+            button.disabled = false;
+        }
+    },
+
+    markContactAdded(username) {
+        const normalized = (username || "").replace(/^@/, "").trim();
+        const current = (this.peerUsername || "").replace(/^@/, "").trim();
+        if (!current || normalized !== current) return;
+
+        this.peerIsContact = true;
+        this.updateContactSuggestion();
     },
 
     async onToggleFavorite(star, msg) {

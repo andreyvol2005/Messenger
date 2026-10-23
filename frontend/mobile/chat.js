@@ -3,6 +3,7 @@
 
 import { API } from "../shared/api.js";
 import { CONFIG, PATHS } from "../shared/config.js";
+import { ContactSuggestion } from "../shared/contact-suggestion.js";
 import { Realtime } from "../shared/realtime.js";
 import { Session } from "../shared/session.js";
 import { UI } from "../shared/ui.js";
@@ -15,6 +16,8 @@ import {
 
 export const MobileChat = {
     chatId: null,
+    peerUsername: null,
+    peerIsContact: false,
 
     async init() {
         if (!Session.requireAuth()) return;
@@ -30,6 +33,10 @@ export const MobileChat = {
 
         document.getElementById("back-btn").onclick = () => window.location.href = PATHS.MOBILE_CHATS;
         document.getElementById("message-form").onsubmit = (e) => this.sendMessage(e);
+        document.getElementById("chat-contact-banner-add").onclick =
+            () => this.addPeerToContacts();
+        document.getElementById("chat-contact-banner-close").onclick =
+            () => this.dismissContactSuggestion();
 
         // Собеседник пишет — сообщение появляется здесь без перезагрузки
         Realtime.connect((msg) => this.onIncoming(msg));
@@ -67,8 +74,49 @@ export const MobileChat = {
                 return;
             }
             titleEl.textContent = found.title;
+            this.peerUsername = found.peer_username || null;
+            this.peerIsContact = Boolean(found.is_contact);
+            this.updateContactSuggestion();
         } catch (err) {
             titleEl.textContent = "Чат";
+        }
+    },
+
+    updateContactSuggestion() {
+        const banner = document.getElementById("chat-contact-banner");
+        const button = document.getElementById("chat-contact-banner-add");
+        const show = Boolean(this.peerUsername)
+            && !this.peerIsContact
+            && !ContactSuggestion.isDismissed(this.peerUsername);
+
+        banner.classList.toggle("hidden", !show);
+        button.disabled = false;
+        UI.hideError("chat-contact-banner-error");
+    },
+
+    dismissContactSuggestion() {
+        if (!this.peerUsername) return;
+        ContactSuggestion.dismiss(this.peerUsername);
+        this.updateContactSuggestion();
+        document.getElementById("message-input").focus();
+    },
+
+    async addPeerToContacts() {
+        if (!this.peerUsername) return;
+
+        const button = document.getElementById("chat-contact-banner-add");
+        button.disabled = true;
+        UI.hideError("chat-contact-banner-error");
+
+        try {
+            await ContactSuggestion.add(this.peerUsername);
+            this.peerIsContact = true;
+            this.updateContactSuggestion();
+            UI.toast("Контакт добавлен");
+        } catch (err) {
+            UI.showError("chat-contact-banner-error", err.message);
+        } finally {
+            button.disabled = false;
         }
     },
 
