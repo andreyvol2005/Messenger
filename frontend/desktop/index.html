@@ -9,6 +9,7 @@
     <link rel="stylesheet" href="/desktop/css/profile.css">
     <link rel="stylesheet" href="/desktop/css/sidebar.css">
     <link rel="stylesheet" href="/desktop/css/chat.css">
+    <link rel="stylesheet" href="/desktop/css/contacts.css">
 </head>
 <body>
     <div class="chat-layout">
@@ -44,6 +45,18 @@
             <div id="chat-window" class="chat-window hidden">
                 <div class="chat-header">
                     <h3 id="chat-title"></h3>
+                </div>
+                <div id="chat-contact-banner" class="contact-suggestion hidden">
+                    <div class="contact-suggestion-text">
+                        <span>Этот пользователь не в контактах.</span>
+                        <span id="chat-contact-banner-error"
+                              class="contact-suggestion-error hidden"></span>
+                    </div>
+                    <button type="button" id="chat-contact-banner-add"
+                            class="contact-suggestion-add">Добавить контакт</button>
+                    <button type="button" id="chat-contact-banner-close"
+                            class="contact-suggestion-close"
+                            aria-label="Скрыть" title="Скрыть">×</button>
                 </div>
                 <div id="messages" class="messages"></div>
                 <form id="message-form" class="message-form">
@@ -135,6 +148,39 @@
                 <button type="button" id="profile-close" class="btn-ghost">Закрыть</button>
                 <button type="button" id="profile-save">Сохранить</button>
             </div>
+        </div>
+    </div>
+
+    <!-- Экран контактов: список сохранённых контактов поверх затемнённого интерфейса -->
+    <div id="contacts-modal" class="modal" aria-hidden="true">
+        <div id="contacts-backdrop" class="modal-backdrop"></div>
+
+        <div class="contacts-dialog" role="dialog" aria-modal="true" aria-labelledby="contacts-title">
+            <div class="contacts-header">
+                <h2 id="contacts-title" class="contacts-title">Контакты</h2>
+                <button type="button" id="contacts-close" class="contacts-close"
+                        aria-label="Закрыть контакты" title="Закрыть">×</button>
+            </div>
+
+            <button type="button" id="contacts-add-toggle" class="contacts-add-toggle">
+                <span class="contacts-add-plus">＋</span>
+                <span>Добавить контакт</span>
+            </button>
+
+            <form id="contact-add-form" class="contact-add-form hidden">
+                <div class="contact-add-row">
+                    <input type="text" id="contact-search" maxlength="30"
+                           placeholder="Имя пользователя (без @)"
+                           aria-label="Имя пользователя для добавления в контакты"
+                           autocomplete="off">
+                    <button type="submit">Добавить</button>
+                </div>
+                <ul id="contact-search-results"
+                    class="user-search-results contact-search-results hidden"></ul>
+            </form>
+
+            <p id="contacts-error" class="error hidden contacts-error"></p>
+            <ul id="contacts-list" class="contacts-list"></ul>
         </div>
     </div>
 

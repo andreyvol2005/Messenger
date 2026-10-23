@@ -2,6 +2,7 @@
 
 import { Session } from "../shared/session.js";
 import { UI } from "../shared/ui.js";
+import { Contacts } from "./contacts.js";
 import { Profile } from "./profile.js";
 
 export const Menu = {
@@ -18,7 +19,8 @@ export const Menu = {
             Profile.open();
         };
         document.getElementById("menu-contacts").onclick = () => {
-            UI.toast("Раздел «Контакты» пока в разработке");
+            this.close();
+            Contacts.open();
         };
 
         document.addEventListener("keydown", (e) => {

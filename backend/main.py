@@ -4,7 +4,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
-from routers import accounts, chats, messages, ws
+from routers import accounts, chats, contacts, messages, ws
 
 # Схема создаётся через init.sql — он же единственный источник правды
 
@@ -20,6 +20,7 @@ app.add_middleware(
 
 app.include_router(accounts.router)
 app.include_router(chats.router)
+app.include_router(contacts.router)
 app.include_router(messages.router)
 app.include_router(ws.router)
 

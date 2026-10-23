@@ -47,6 +47,10 @@ class ProfileUpdate(BaseModel):
     birth_date: Optional[date] = None
 
 
+class ContactCreate(BaseModel):
+    username: str
+
+
 class ChatCreate(BaseModel):
     username: str
 
@@ -58,6 +62,9 @@ class ChatResponse(BaseModel):
     is_favorites: bool = False
     last_message: Optional[str] = None
     last_message_at: Optional[datetime] = None
+    # Только для личных чатов: собеседник и признак того, что он уже в контактах
+    peer_username: Optional[str] = None
+    is_contact: bool = False
 
 
 class ChatListResponse(BaseModel):

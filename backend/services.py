@@ -1,4 +1,4 @@
-"""Бизнес-логика чатов и сообщений. Роутеры только разбирают HTTP и зовут сюда."""
+"""Бизнес-логика чатов, сообщений и контактов. Роутеры только разбирают HTTP и зовут сюда."""
 from typing import List
 
 from fastapi import HTTPException
@@ -40,6 +40,60 @@ def chat_member_ids(db: Session, chat_id: int) -> List[int]:
 
 
 # ==========================================
+# Контакты
+# ==========================================
+
+def list_contacts(db: Session, user: models.User) -> List[models.User]:
+    # Только явно сохранённые записи из contacts, а не все пользователи
+    # и не участники чатов.
+    return (
+        db.query(models.User)
+        .join(models.Contact, models.Contact.contact_user_id == models.User.id)
+        .filter(models.Contact.user_id == user.id)
+        .order_by(models.User.nickname)
+        .all()
+    )
+
+
+def add_contact(db: Session, user: models.User, username: str) -> models.User:
+    stored_username = validation.normalize_username(username)
+    contact_user = db.query(models.User).filter(models.User.username == stored_username).first()
+    if not contact_user:
+        raise HTTPException(
+            status_code=404,
+            detail="Пользователь с таким именем пользователя не найден",
+        )
+    if contact_user.id == user.id:
+        raise HTTPException(status_code=400, detail="Нельзя добавить себя в контакты")
+
+    existing = (
+        db.query(models.Contact)
+        .filter(
+            models.Contact.user_id == user.id,
+            models.Contact.contact_user_id == contact_user.id,
+        )
+        .first()
+    )
+    if existing:
+        raise HTTPException(status_code=409, detail="Этот пользователь уже в контактах")
+
+    db.add(
+        models.Contact(
+            user_id=user.id,
+            contact_user_id=contact_user.id,
+        )
+    )
+    try:
+        db.commit()
+    except IntegrityError:
+        # Гонка: контакт успели добавить параллельным запросом
+        db.rollback()
+        raise HTTPException(status_code=409, detail="Этот пользователь уже в контактах")
+
+    return contact_user
+
+
+# ==========================================
 # Чаты
 # ==========================================
 
@@ -61,6 +115,14 @@ def list_chats(db: Session, user: models.User) -> schemas.ChatListResponse:
         )
     ]
 
+    # Один запрос на все контакты, чтобы не проверять каждого собеседника отдельно
+    contact_ids = {
+        row.contact_user_id
+        for row in db.query(models.Contact.contact_user_id)
+        .filter(models.Contact.user_id == user.id)
+        .all()
+    }
+
     last_msg = aliased(models.Message)
     rows = (
         db.query(models.Chat, last_msg.text, last_msg.created_at)
@@ -74,8 +136,16 @@ def list_chats(db: Session, user: models.User) -> schemas.ChatListResponse:
 
     for chat, last_text, last_at in rows:
         title = chat.name
+        peer_username = None
+        is_contact = False
         if chat.type == "private":
-            title = _other_nickname(db, chat.id, user.id) or chat.name or "Личный чат"
+            peer = _other_user(db, chat.id, user.id)
+            if peer:
+                title = peer.nickname
+                peer_username = peer.username
+                is_contact = peer.id in contact_ids
+            else:
+                title = chat.name or "Личный чат"
         chats.append(
             schemas.ChatResponse(
                 id=chat.id,
@@ -83,19 +153,21 @@ def list_chats(db: Session, user: models.User) -> schemas.ChatListResponse:
                 is_favorites=False,
                 last_message=last_text,
                 last_message_at=last_at,
+                peer_username=peer_username,
+                is_contact=is_contact,
             )
         )
 
     return schemas.ChatListResponse(chats=chats)
 
 
-def _other_nickname(db: Session, chat_id: int, user_id: int) -> str | None:
-    """Ник собеседника в личном чате (у группы вернёт None)."""
+def _other_user(db: Session, chat_id: int, user_id: int) -> models.User | None:
+    """Собеседник в личном чате (у группы вернёт None)."""
     return (
-        db.query(models.User.nickname)
+        db.query(models.User)
         .join(models.ChatMember, models.ChatMember.user_id == models.User.id)
         .filter(models.ChatMember.chat_id == chat_id, models.User.id != user_id)
-        .scalar()
+        .first()
     )
 
 
@@ -115,12 +187,24 @@ def create_or_get_chat(db: Session, user: models.User, username: str) -> schemas
     if not chat:
         chat = _insert_private_chat(db, pair_key, user.id, other.id)
 
+    is_contact = (
+        db.query(models.Contact)
+        .filter(
+            models.Contact.user_id == user.id,
+            models.Contact.contact_user_id == other.id,
+        )
+        .first()
+        is not None
+    )
+
     return schemas.ChatResponse(
         id=chat.id,
         title=other.nickname,
         is_favorites=False,
         last_message=None,
         last_message_at=None,
+        peer_username=other.username,
+        is_contact=is_contact,
     )
 
 

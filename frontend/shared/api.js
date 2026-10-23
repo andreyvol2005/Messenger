@@ -61,6 +61,17 @@ export const API = {
         return this.request(`/api/users?q=${encodeURIComponent(query)}`);
     },
 
+    getContacts() {
+        return this.request("/api/contacts");
+    },
+
+    addContact(username) {
+        return this.request("/api/contacts", {
+            method: "POST",
+            body: JSON.stringify({ username })
+        });
+    },
+
     getChats() {
         return this.request("/api/chats");
     },
