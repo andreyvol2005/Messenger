@@ -1,4 +1,5 @@
 """Бизнес-логика чатов, сообщений и контактов. Роутеры только разбирают HTTP и зовут сюда."""
+from datetime import datetime, timezone
 from typing import List
 
 from fastapi import HTTPException
@@ -6,10 +7,74 @@ from sqlalchemy import func
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, aliased
 
+import auth
 import models
 import schemas
 import validation
 from constants import FAVORITES_CHAT_ID, FAVORITES_TITLE
+
+
+# ==========================================
+# Константы удаления аккаунта
+# ==========================================
+
+CONFIRM_PHRASE = "УДАЛИТЬ АККАУНТ"
+DELETED_DISPLAY_NAME = "Удалённый пользователь"
+
+
+# ==========================================
+# Удаление аккаунта
+# ==========================================
+
+def schedule_delete_account(
+    db: Session,
+    user: models.User,
+    password: str,
+    confirmation_phrase: str,
+    two_fa_token: str | None = None,
+) -> models.User:
+    """Помечает аккаунт удалённым (tombstone) и ставит задачу на физическую очистку.
+
+    Идемпотентен: повторный вызов на уже удалённом аккаунте не создаёт новую джобу.
+    """
+    if user.deleted_at is not None:
+        # Уже удалён — ничего не дублируем.
+        return user
+
+    # 1. Пароль
+    if not auth.verify_password(password, user.password_hash):
+        raise HTTPException(status_code=400, detail="Неверный пароль")
+
+    # 2. Контрольная фраза — защита от случайного нажатия
+    if confirmation_phrase.strip() != CONFIRM_PHRASE:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Контрольная фраза не совпадает. Напишите ровно: {CONFIRM_PHRASE}",
+        )
+
+    # 3. 2FA (заглушка — подключить реальную проверку при внедрении 2FA)
+    if two_fa_token is not None:
+        if not _verify_two_fa(user.id, two_fa_token):
+            raise HTTPException(status_code=401, detail="Неверный код 2FA")
+
+    # 4. Транзакция: мягкое удаление + outbox-джоба
+    user.deleted_at = datetime.now(timezone.utc)
+    user.deleted_reason = "user_requested"
+    user.password_hash = None  # стираем учётные данные сразу
+    user.nickname = DELETED_DISPLAY_NAME  # анти-impersonation + отображение в чатах
+    db.add(user)
+
+    job = models.AccountDeletionJob(user_id=user.id, status="pending")
+    db.add(job)
+    db.commit()
+    db.refresh(user)
+
+    return user
+
+
+def _verify_two_fa(user_id: int, token: str) -> bool:
+    """Заглушка проверки 2FA. Реализовать при подключении реального 2FA-провайдера."""
+    return True
 
 
 # ==========================================
@@ -22,6 +87,8 @@ def is_favorites(chat_id: int) -> bool:
 
 def can_access_chat(db: Session, user: models.User, chat_id: int) -> bool:
     """Доступ к обычному чату — только через участие в нём."""
+    if user.deleted_at is not None:
+        return False
     if is_favorites(chat_id):
         return True
     member = (
@@ -44,12 +111,14 @@ def chat_member_ids(db: Session, chat_id: int) -> List[int]:
 # ==========================================
 
 def list_contacts(db: Session, user: models.User) -> List[models.User]:
-    # Только явно сохранённые записи из contacts, а не все пользователи
-    # и не участники чатов.
+    # Удалённые пользователи не видны в контактах.
     return (
         db.query(models.User)
         .join(models.Contact, models.Contact.contact_user_id == models.User.id)
-        .filter(models.Contact.user_id == user.id)
+        .filter(
+            models.Contact.user_id == user.id,
+            models.User.deleted_at.is_(None),
+        )
         .order_by(models.User.nickname)
         .all()
     )
@@ -57,7 +126,11 @@ def list_contacts(db: Session, user: models.User) -> List[models.User]:
 
 def add_contact(db: Session, user: models.User, username: str) -> models.User:
     stored_username = validation.normalize_username(username)
-    contact_user = db.query(models.User).filter(models.User.username == stored_username).first()
+    contact_user = (
+        db.query(models.User)
+        .filter(models.User.username == stored_username, models.User.deleted_at.is_(None))
+        .first()
+    )
     if not contact_user:
         raise HTTPException(
             status_code=404,
@@ -115,7 +188,6 @@ def list_chats(db: Session, user: models.User) -> schemas.ChatListResponse:
         )
     ]
 
-    # Один запрос на все контакты, чтобы не проверять каждого собеседника отдельно
     contact_ids = {
         row.contact_user_id
         for row in db.query(models.Contact.contact_user_id)
@@ -129,7 +201,6 @@ def list_chats(db: Session, user: models.User) -> schemas.ChatListResponse:
         .join(models.ChatMember, models.ChatMember.chat_id == models.Chat.id)
         .outerjoin(last_msg, models.Chat.last_message_id == last_msg.id)
         .filter(models.ChatMember.user_id == user.id)
-        # свежие чаты всплывают наверх, без сообщений — по дате создания
         .order_by(func.coalesce(last_msg.created_at, models.Chat.created_at).desc())
         .all()
     )
@@ -141,6 +212,7 @@ def list_chats(db: Session, user: models.User) -> schemas.ChatListResponse:
         if chat.type == "private":
             peer = _other_user(db, chat.id, user.id)
             if peer:
+                # Удалённый собеседник отображается как «Удалённый пользователь»
                 title = peer.nickname
                 peer_username = peer.username
                 is_contact = peer.id in contact_ids
@@ -162,7 +234,8 @@ def list_chats(db: Session, user: models.User) -> schemas.ChatListResponse:
 
 
 def _other_user(db: Session, chat_id: int, user_id: int) -> models.User | None:
-    """Собеседник в личном чате (у группы вернёт None)."""
+    """Собеседник в личном чате (у группы вернёт None). Удалённые возвращаются тоже —
+    их nickname уже заменён на «Удалённый пользователь» при удалении."""
     return (
         db.query(models.User)
         .join(models.ChatMember, models.ChatMember.user_id == models.User.id)
@@ -173,9 +246,13 @@ def _other_user(db: Session, chat_id: int, user_id: int) -> models.User | None:
 
 def create_or_get_chat(db: Session, user: models.User, username: str) -> schemas.ChatResponse:
     """Создаёт личный чат с пользователем или возвращает уже существующий."""
-    # Поиск строго по username и с учётом регистра: nickname не уникален.
+    # Нельзя создать чат с удалённым пользователем.
     stored_username = validation.normalize_username(username)
-    other = db.query(models.User).filter(models.User.username == stored_username).first()
+    other = (
+        db.query(models.User)
+        .filter(models.User.username == stored_username, models.User.deleted_at.is_(None))
+        .first()
+    )
     if not other:
         raise HTTPException(status_code=404, detail="Пользователь с таким username не найден")
     if other.id == user.id:

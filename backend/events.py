@@ -30,6 +30,15 @@ class ConnectionManager:
         if not sockets:
             self.active.pop(user_id, None)
 
+    def disconnect_all(self, user_id: int):
+        """Разрывает все WebSocket-соединения пользователя (например, при удалении аккаунта)."""
+        sockets = self.active.pop(user_id, [])
+        for ws in list(sockets):
+            try:
+                ws.close()
+            except Exception:
+                pass
+
     async def send_to_users(self, user_ids: List[int], message: dict):
         payload = json.dumps(message, default=str)
         for user_id in user_ids:

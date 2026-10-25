@@ -1,10 +1,12 @@
 import os
+import asyncio
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
 from routers import accounts, chats, contacts, messages, ws
+from jobs import worker_loop
 
 # Схема создаётся через init.sql — он же единственный источник правды
 
@@ -23,6 +25,26 @@ app.include_router(chats.router)
 app.include_router(contacts.router)
 app.include_router(messages.router)
 app.include_router(ws.router)
+
+# Фоновый воркер очистки данных удалённых аккаунтов (S3, Redis, индекс, push).
+_worker_task: asyncio.Task | None = None
+
+
+@app.on_event("startup")
+async def _startup():
+    global _worker_task
+    _worker_task = asyncio.create_task(worker_loop())
+
+
+@app.on_event("shutdown")
+async def _shutdown():
+    global _worker_task
+    if _worker_task:
+        _worker_task.cancel()
+        try:
+            await _worker_task
+        except asyncio.CancelledError:
+            pass
 
 
 @app.get("/api/health")
