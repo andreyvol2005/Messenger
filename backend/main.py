@@ -7,8 +7,12 @@ from fastapi.staticfiles import StaticFiles
 
 from routers import accounts, chats, contacts, messages, ws
 from jobs import worker_loop
+import media
 
 # Схема создаётся через init.sql — он же единственный источник правды
+
+# Папка должна существовать до app.mount: StaticFiles не создаёт её сам
+media.ensure_images_dir()
 
 app = FastAPI(title="Messenger API")
 
@@ -50,6 +54,15 @@ async def _shutdown():
 @app.get("/api/health")
 def health():
     return {"status": "ok", "message": "Server is running"}
+
+
+# Загруженные картинки. Монтируется до раздачи фронтенда с "/", иначе
+# catch-all перехватил бы /uploads/* первым.
+app.mount(
+    "/uploads",
+    StaticFiles(directory=media.UPLOADS_ROOT),
+    name="uploads",
+)
 
 
 # ==========================================

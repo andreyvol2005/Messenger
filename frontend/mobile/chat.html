@@ -30,6 +30,10 @@
         <div id="messages" class="m-messages"></div>
 
         <form id="message-form" class="m-composer">
+            <button type="button" id="attach-btn" class="m-attach-btn"
+                    title="Прикрепить изображение"
+                    aria-label="Прикрепить изображение">📎</button>
+            <input type="file" id="image-input" accept="image/*" hidden>
             <input type="text" id="message-input" placeholder="Сообщение..." autocomplete="off">
             <button type="submit" class="m-send-btn" aria-label="Отправить" title="Отправить">
                 <svg viewBox="0 0 24 24" aria-hidden="true">

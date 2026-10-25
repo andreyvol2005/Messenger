@@ -183,7 +183,11 @@ def list_chats(db: Session, user: models.User) -> schemas.ChatListResponse:
             id=FAVORITES_CHAT_ID,
             title=FAVORITES_TITLE,
             is_favorites=True,
-            last_message=last_favorite.text if last_favorite else None,
+            last_message=(
+                _message_preview(last_favorite.text, last_favorite.media_url)
+                if last_favorite
+                else None
+            ),
             last_message_at=last_favorite.created_at if last_favorite else None,
         )
     ]
@@ -197,7 +201,7 @@ def list_chats(db: Session, user: models.User) -> schemas.ChatListResponse:
 
     last_msg = aliased(models.Message)
     rows = (
-        db.query(models.Chat, last_msg.text, last_msg.created_at)
+        db.query(models.Chat, last_msg.text, last_msg.media_url, last_msg.created_at)
         .join(models.ChatMember, models.ChatMember.chat_id == models.Chat.id)
         .outerjoin(last_msg, models.Chat.last_message_id == last_msg.id)
         .filter(models.ChatMember.user_id == user.id)
@@ -205,7 +209,7 @@ def list_chats(db: Session, user: models.User) -> schemas.ChatListResponse:
         .all()
     )
 
-    for chat, last_text, last_at in rows:
+    for chat, last_text, last_media, last_at in rows:
         title = chat.name
         peer_username = None
         is_contact = False
@@ -223,7 +227,7 @@ def list_chats(db: Session, user: models.User) -> schemas.ChatListResponse:
                 id=chat.id,
                 title=title or "Без названия",
                 is_favorites=False,
-                last_message=last_text,
+                last_message=_message_preview(last_text, last_media),
                 last_message_at=last_at,
                 peer_username=peer_username,
                 is_contact=is_contact,
@@ -231,6 +235,15 @@ def list_chats(db: Session, user: models.User) -> schemas.ChatListResponse:
         )
 
     return schemas.ChatListResponse(chats=chats)
+
+
+def _message_preview(text: str | None, media_url: str | None) -> str | None:
+    """Превью для списка чатов: у сообщения только с картинкой текста нет."""
+    if text:
+        return text
+    if media_url:
+        return "📷 Изображение"
+    return None
 
 
 def _other_user(db: Session, chat_id: int, user_id: int) -> models.User | None:
@@ -317,6 +330,7 @@ def serialize_message(msg: models.Message, nickname: str | None) -> schemas.Mess
         sender_id=msg.sender_id,
         sender_nickname=nickname,
         text=msg.text,
+        media_url=msg.media_url,
         created_at=msg.created_at,
         reply_to_id=msg.reply_to_id,
         is_favorite=msg.is_favorite,
@@ -348,6 +362,29 @@ def list_messages(
     return [serialize_message(msg, nickname) for msg, nickname in rows]
 
 
+def _insert_message(
+    db: Session,
+    user: models.User,
+    chat_id: int,
+    text: str | None,
+    reply_to_id: int | None,
+    media_url: str | None = None,
+) -> models.Message:
+    # В избранном chat_id не хранится — строка в chats просто не нужна
+    msg = models.Message(
+        chat_id=None if is_favorites(chat_id) else chat_id,
+        sender_id=user.id,
+        text=text,
+        media_url=media_url,
+        reply_to_id=reply_to_id,
+        is_favorite=is_favorites(chat_id),
+    )
+    db.add(msg)
+    db.commit()
+    db.refresh(msg)
+    return msg
+
+
 def create_message(
     db: Session,
     user: models.User,
@@ -360,17 +397,25 @@ def create_message(
     if not can_access_chat(db, user, chat_id):
         raise HTTPException(status_code=403, detail="No access to this chat")
 
-    # В избранном chat_id не хранится — строка в chats просто не нужна
-    msg = models.Message(
-        chat_id=None if is_favorites(chat_id) else chat_id,
-        sender_id=user.id,
-        text=text,
-        reply_to_id=reply_to_id,
-        is_favorite=is_favorites(chat_id),
-    )
-    db.add(msg)
-    db.commit()
-    db.refresh(msg)
+    msg = _insert_message(db, user, chat_id, text, reply_to_id)
+    return serialize_message(msg, user.nickname)
+
+
+def create_image_message(
+    db: Session,
+    user: models.User,
+    chat_id: int,
+    media_url: str,
+    caption: str | None = None,
+    reply_to_id: int | None = None,
+) -> schemas.MessageResponse:
+    """Сообщение с картинкой: файл уже лежит на диске, в БД пишем только путь."""
+    if not can_access_chat(db, user, chat_id):
+        raise HTTPException(status_code=403, detail="No access to this chat")
+
+    # Подпись необязательна: у сообщения только с картинкой text остаётся NULL
+    text = caption.strip() if caption and caption.strip() else None
+    msg = _insert_message(db, user, chat_id, text, reply_to_id, media_url=media_url)
     return serialize_message(msg, user.nickname)
 
 

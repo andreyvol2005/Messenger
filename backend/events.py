@@ -71,6 +71,7 @@ def build_event(msg, chat_id: int, sender_nickname: str | None) -> dict:
         "sender_id": msg.sender_id,
         "sender_nickname": sender_nickname,
         "text": msg.text,
+        "media_url": msg.media_url,
         # Именно isoformat, а не str: браузер не понимает "2026-10-13 10:16:18"
         # через пробел и показал бы Invalid Date. Формат совпадает с REST.
         "created_at": msg.created_at.isoformat(),

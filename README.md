@@ -215,6 +215,24 @@ scripts/
 `POST /api/messages/{id}/favorite`. Флаг ставится только на свои сообщения.
 Внутри самого «Избранного» звезда не рисуется: там всё уже в избранном.
 
+## Изображения в сообщениях
+
+Скрепка 📎 рядом с полем ввода открывает выбор файла (`accept="image/*"`),
+и выбранная картинка сразу уходит на сервер через `FormData` — отдельной
+кнопки «отправить» не нужно.
+
+- `POST /api/messages/upload` принимает `multipart/form-data`: `chat_id`,
+  `file`, необязательные `caption` и `reply_to_id`.
+- Сервер проверяет, что файл действительно картинка (JPEG, PNG, GIF, WEBP,
+  BMP — по сигнатуре, а не по расширению), и что он не больше 5 МБ.
+- Имя генерируется через `uuid`, файл кладётся в `uploads/images/`
+  (папка в `.gitignore`), а в `messages.media_url` пишется только
+  относительный путь `/uploads/images/<uuid>.<ext>`.
+- Папка раздаётся как статика: `app.mount("/uploads", StaticFiles(...))`
+  в `backend/main.py`.
+- Событие по WebSocket содержит `media_url`, клиент рисует `<img>` с
+  `max-width: 100%` и скруглёнными углами.
+
 ## API
 
 | Метод | Путь | Назначение |
@@ -228,6 +246,7 @@ scripts/
 | POST | `/api/chats` | создать/открыть личный чат по username собеседника |
 | GET | `/api/messages/{chat_id}` | история сообщений (`chat_id = -1` — избранное) |
 | POST | `/api/messages` | отправить сообщение |
+| POST | `/api/messages/upload` | отправить изображение (`multipart/form-data`) |
 | POST | `/api/messages/{id}/favorite` | переключить избранное |
 | WS | `/ws/{user_id}?token=...` | real-time, рассылает только участникам чата |
 

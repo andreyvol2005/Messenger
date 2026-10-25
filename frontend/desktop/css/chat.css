@@ -77,6 +77,23 @@
     stroke-linejoin: round;
 }
 
+/* Скрепка: нейтральная кнопка слева от поля ввода, а не синий круг */
+.message-form .attach-btn {
+    background: transparent;
+    color: #bbb;
+    font-size: 20px;
+    line-height: 1;
+}
+
+.message-form .attach-btn:hover {
+    background: #2f2f2f;
+    color: #fff;
+}
+
+.message-form .attach-btn:active {
+    background: #333;
+}
+
 /* Сообщения: текст, под ним часы в правом нижнем углу */
 .message {
     display: flex;
@@ -106,6 +123,14 @@
     font-size: 14px;
     white-space: pre-wrap;
     word-break: break-word;
+}
+
+/* Картинка не выходит за пузырь, углы скруглены */
+.message-image {
+    display: block;
+    max-width: 100%;
+    margin-bottom: 4px;
+    border-radius: 8px;
 }
 
 .message-time {
