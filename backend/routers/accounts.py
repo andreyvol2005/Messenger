@@ -7,6 +7,7 @@ from datetime import date
 import auth
 import models
 import schemas
+import services
 import validation
 from database import get_db
 
@@ -44,8 +45,14 @@ def register(user: schemas.UserCreate, db: Session = Depends(get_db)):
 @router.post("/login")
 def login(credentials: schemas.UserLogin, db: Session = Depends(get_db)):
     username = validation.normalize_username(credentials.username)
-    user = db.query(models.User).filter(models.User.username == username).first()
+    user = (
+        db.query(models.User)
+        .filter(models.User.username == username, models.User.deleted_at.is_(None))
+        .first()
+    )
     if not user or not auth.verify_password(credentials.password, user.password_hash):
+        # Одинаковая ошибка для несуществующего, удалённого и неверного пароля —
+        # не даём возможность перечислять аккаунты.
         raise HTTPException(status_code=401, detail="Неверный username или пароль")
 
     # sub хранит username для читаемости, а доступ к аккаунту привязан к user_id:
@@ -60,13 +67,43 @@ def login(credentials: schemas.UserLogin, db: Session = Depends(get_db)):
     }
 
 
+@router.post("/account/delete")
+def delete_account(
+    payload: schemas.AccountDeleteRequest,
+    current_user: models.User = Depends(auth.get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Безвозвратное удаление аккаунта.
+
+    Требует пароля и контрольной фразы «УДАЛИТЬ АККАУНТ».
+    Аккаунт переходит в состояние deleted (tombstone), сессии инвалидируются,
+    запускается фоновая физическая очистка данных.
+    """
+    user = services.schedule_delete_account(
+        db,
+        current_user,
+        payload.password,
+        payload.confirmation_phrase,
+        payload.two_fa_token,
+    )
+    return {
+        "status": "deletion_scheduled",
+        "user_id": user.id,
+        "deleted_at": user.deleted_at.isoformat() if user.deleted_at else None,
+    }
+
+
 @router.get("/users", response_model=list[schemas.UserResponse])
 def get_users(
     q: str = "",
     db: Session = Depends(get_db),
     current_user: models.User = Depends(auth.get_current_user),
 ):
-    query = db.query(models.User).filter(models.User.id != current_user.id)
+    # Удалённые пользователи не видны в выдаче.
+    query = db.query(models.User).filter(
+        models.User.id != current_user.id,
+        models.User.deleted_at.is_(None),
+    )
     term = q.strip().lstrip("@")
     if term:
         like = f"%{term}%"

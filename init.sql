@@ -19,12 +19,39 @@ CREATE TABLE users (
     birth_date DATE DEFAULT NULL,
     avatar_url TEXT DEFAULT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    deleted_at TIMESTAMP WITH TIME ZONE DEFAULT NULL,
+    deleted_reason TEXT DEFAULT NULL,
     -- На уровне базы дополнительно держим префикс и непустые значения.
     -- Набор символов проверяет backend/validation.py.
     CONSTRAINT users_username_prefix CHECK (username LIKE '@%'),
     CONSTRAINT users_username_not_empty CHECK (char_length(username) >= 2),
     CONSTRAINT users_nickname_not_empty CHECK (char_length(nickname) >= 1)
 );
+
+-- Индекс только на активных пользователях: частые запросы фильтруют deleted_at IS NULL.
+CREATE INDEX ix_users_active ON users(id) WHERE deleted_at IS NULL;
+-- Индекс на удалённых: для аудита и регламентного удаления бэкапов.
+CREATE INDEX ix_users_deleted_at ON users(deleted_at) WHERE deleted_at IS NOT NULL;
+
+-- ====================================================
+-- 8. Задачи на физическое удаление данных (outbox для фонового воркера)
+-- ====================================================
+-- Гарантирует, что асинхронная очистка (S3, Redis, поисковый индекс, push)
+-- не потеряется при падении воркера. Принцип at-least-once + идемпотентность.
+CREATE TABLE account_deletion_jobs (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    status VARCHAR(20) NOT NULL DEFAULT 'pending',   -- pending | done | failed
+    attempts INTEGER NOT NULL DEFAULT 0,
+    max_attempts INTEGER NOT NULL DEFAULT 5,
+    last_error TEXT DEFAULT NULL,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+);
+
+-- Только необработанные джобы — воркеры берут их через FOR UPDATE SKIP LOCKED.
+CREATE INDEX ix_account_deletion_jobs_pending
+    ON account_deletion_jobs(user_id, status) WHERE status = 'pending';
 
 -- ====================================================
 -- 2. Чаты

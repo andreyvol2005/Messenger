@@ -47,6 +47,13 @@ class ProfileUpdate(BaseModel):
     birth_date: Optional[date] = None
 
 
+class AccountDeleteRequest(BaseModel):
+    """Запрос на безвозвратное удаление аккаунта."""
+    password: str
+    confirmation_phrase: str
+    two_fa_token: Optional[str] = None
+
+
 class ContactCreate(BaseModel):
     username: str
 

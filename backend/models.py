@@ -10,11 +10,35 @@ class User(Base):
     username = Column(String(31), unique=True, index=True, nullable=False)
     # Отображаемое имя: может повторяться, без «@»
     nickname = Column(String(30), nullable=False)
-    password_hash = Column(Text, nullable=False)
+    # При безвозвратном удалении стираем (становится NULL) — вход невозможен.
+    password_hash = Column(Text, nullable=True)
     bio = Column(String(150), nullable=True)
     birth_date = Column(Date, nullable=True)
     avatar_url = Column(Text, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
+    # Мягкое удаление: deleted_at != NULL означает аккаунт безвозвратно удалён.
+    # Мы не удаляем строку физически, чтобы не ломать FK messages.sender_id -> users(id)
+    # и не 파괴ть историю групповチャтов (сообщения остаются, автор — «Удалённый пользователь»).
+    deleted_at = Column(DateTime(timezone=True), nullable=True, index=True)
+    deleted_reason = Column(Text, nullable=True)
+
+
+class AccountDeletionJob(Base):
+    """Outbox/Saga: гарантирует, что асинхронная очистка (S3, Redis, поиск, push)
+    не потеряется при падении воркера. Принцип at-least-once + идемпотентность."""
+    __tablename__ = "account_deletion_jobs"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    status = Column(String(20), nullable=False, default="pending")  # pending | done | failed
+    attempts = Column(Integer, default=0)
+    max_attempts = Column(Integer, default=5)
+    last_error = Column(Text, nullable=True)
+    created_at = Column(DateTime(timezone=True), default=datetime.utcnow)
+    updated_at = Column(DateTime(timezone=True), default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    user = relationship("User")
+
 
 class Chat(Base):
     __tablename__ = "chats"

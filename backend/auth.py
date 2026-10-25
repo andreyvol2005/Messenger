@@ -57,11 +57,14 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    user = db.query(models.User).filter(models.User.id == payload.get("user_id")).first()
+    user = db.query(models.User).filter(
+        models.User.id == payload.get("user_id"),
+        models.User.deleted_at.is_(None),   # удалённые не могут войти
+    ).first()
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="User not found",
+            detail="Invalid or expired token",
             headers={"WWW-Authenticate": "Bearer"},
         )
     return user
