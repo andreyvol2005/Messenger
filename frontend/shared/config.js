@@ -5,6 +5,8 @@ export const CONFIG = {
     // Виртуальный чат: на бэке он соответствует chat_id = NULL, is_favorite = true
     FAVORITES_CHAT_ID: -1,
     MOBILE_MAX_WIDTH: 768,
+    // Лимит совпадает с проверкой на бэкенде (backend/media.py)
+    MAX_IMAGE_BYTES: 5 * 1024 * 1024,
     STORAGE: {
         TOKEN: "messenger_token",
         USER_ID: "messenger_user_id",

@@ -196,6 +196,14 @@
 .m-message.mine .m-bubble { background: #1f4d80; border-radius: 12px 12px 4px 12px; }
 
 .m-message-text { font-size: 15px; white-space: pre-wrap; word-break: break-word; }
+
+/* Картинка не выходит за пузырь, углы скруглены */
+.m-message-image {
+    display: block;
+    max-width: 100%;
+    margin-bottom: 4px;
+    border-radius: 10px;
+}
 .m-message-time { margin-top: 3px; font-size: 10px; color: #999; text-align: right; }
 
 .m-star {
@@ -224,6 +232,21 @@
     border-radius: 999px;
     padding: 10px 16px;
 }
+
+/* Скрепка: нейтральная кнопка слева от поля ввода */
+.m-attach-btn {
+    flex-shrink: 0;
+    width: 42px;
+    height: 42px;
+    padding: 0;
+    background: transparent;
+    color: #bbb;
+    font-size: 20px;
+    line-height: 1;
+    border-radius: 50%;
+}
+.m-attach-btn:hover { background: #2f2f2f; color: #fff; }
+.m-attach-btn:active { background: #333; }
 .m-send-btn {
     flex-shrink: 0;
     width: 42px;

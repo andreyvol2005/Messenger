@@ -22,7 +22,12 @@ function localizeErrorMessage(message) {
 
 export const API = {
     async request(url, options = {}) {
-        const headers = { "Content-Type": "application/json" };
+        const headers = {};
+        // FormData: Content-Type с boundary браузер выставляет сам, вручную
+        // его задавать нельзя — иначе сервер не разберёт multipart.
+        if (!(options.body instanceof FormData)) {
+            headers["Content-Type"] = "application/json";
+        }
         const token = Session.token();
         if (token) headers["Authorization"] = `Bearer ${token}`;
 
@@ -101,6 +106,22 @@ export const API = {
 
     toggleFavorite(messageId) {
         return this.request(`/api/messages/${messageId}/favorite`, { method: "POST" });
+    },
+
+    uploadImage(chatId, file, caption = "") {
+        const form = new FormData();
+        form.append("chat_id", chatId);
+        form.append("file", file);
+        if (caption) form.append("caption", caption);
+
+        return this.request("/api/messages/upload", {
+            method: "POST",
+            body: form
+        }).then((msg) => {
+            // Как и у текстового сообщения: своё не показываем дважды
+            Realtime.markSeen(msg.id);
+            return msg;
+        });
     },
 
     getMe() {
