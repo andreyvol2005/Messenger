@@ -21,6 +21,10 @@ export const Chat = {
 
     async init() {
         document.getElementById("message-form").onsubmit = (e) => this.sendMessage(e);
+        document.getElementById("attach-btn").onclick = () =>
+            document.getElementById("image-input").click();
+        document.getElementById("image-input").onchange = (e) =>
+            this.sendImage(e.target);
         document.getElementById("chat-contact-banner-add").onclick =
             () => this.addPeerToContacts();
         document.getElementById("chat-contact-banner-close").onclick =
@@ -182,6 +186,35 @@ export const Chat = {
             await this.loadChats();
         } catch (err) {
             input.value = text;
+            alert(err.message);
+        }
+    },
+
+    // Скрепка: файл выбран — сразу отправляем, без промежуточной формы
+    async sendImage(input) {
+        const file = input.files && input.files[0];
+        // Сбрасываем значение, иначе повторный выбор того же файла не сработает
+        input.value = "";
+        if (!file || this.currentChatId === null) return;
+
+        if (!file.type.startsWith("image/")) {
+            alert("Можно отправлять только изображения");
+            return;
+        }
+        if (file.size > CONFIG.MAX_IMAGE_BYTES) {
+            alert("Файл больше 5 МБ");
+            return;
+        }
+
+        try {
+            const msg = await API.uploadImage(this.currentChatId, file);
+            const box = document.getElementById("messages");
+            const hint = box.querySelector(".empty-hint");
+            if (hint) hint.remove();
+            appendMessage(box, msg, this.messageOptions());
+            UI.scrollToBottom(box);
+            await this.loadChats();
+        } catch (err) {
             alert(err.message);
         }
     }

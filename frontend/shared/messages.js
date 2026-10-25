@@ -1,6 +1,7 @@
 // Общий рендер сообщений и загрузка истории для десктопной и мобильной версий.
 
 import { API } from "./api.js";
+import { CONFIG } from "./config.js";
 import { Session } from "./session.js";
 import { UI } from "./ui.js";
 
@@ -10,6 +11,7 @@ export const MESSAGE_CLASSES = {
         row: "message",
         bubble: "message-bubble",
         text: "message-text",
+        image: "message-image",
         time: "message-time",
         star: "message-star"
     },
@@ -17,6 +19,7 @@ export const MESSAGE_CLASSES = {
         row: "m-message",
         bubble: "m-bubble",
         text: "m-message-text",
+        image: "m-message-image",
         time: "m-message-time",
         star: "m-star"
     }
@@ -29,7 +32,20 @@ export function renderMessage(msg, { classes, showStar, onToggleFavorite }) {
 
     // Пузырь по ширине подстраивается под текст, время — строкой ниже, справа
     const bubble = UI.el("div", classes.bubble);
-    bubble.appendChild(UI.el("div", classes.text, msg.text));
+
+    // Картинка идёт первой, подпись (если есть) — под ней
+    if (msg.media_url) {
+        const image = UI.el("img", classes.image);
+        image.src = CONFIG.API_BASE + msg.media_url;
+        image.alt = "Изображение";
+        image.loading = "lazy";
+        bubble.appendChild(image);
+    }
+
+    // У сообщения только с картинкой текста нет — пустой div не нужен
+    if (msg.text) {
+        bubble.appendChild(UI.el("div", classes.text, msg.text));
+    }
     bubble.appendChild(UI.el("div", classes.time, UI.formatClock(msg.created_at)));
     row.appendChild(bubble);
 

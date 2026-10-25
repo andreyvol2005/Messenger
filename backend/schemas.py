@@ -90,6 +90,8 @@ class MessageResponse(BaseModel):
     sender_id: int
     sender_nickname: Optional[str] = None
     text: Optional[str]
+    # Относительный путь вида /uploads/images/<uuid>.jpg; None у текстовых сообщений
+    media_url: Optional[str] = None
     created_at: datetime
     reply_to_id: Optional[int] = None
     is_favorite: bool = False

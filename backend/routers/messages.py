@@ -1,10 +1,19 @@
-from fastapi import APIRouter, BackgroundTasks, Depends
+from fastapi import (
+    APIRouter,
+    BackgroundTasks,
+    Depends,
+    File,
+    Form,
+    HTTPException,
+    UploadFile,
+)
 from sqlalchemy.orm import Session
 
+import events
+import media
 import models
 import schemas
 import services
-import events
 from auth import get_current_user
 from database import get_db
 
@@ -38,6 +47,49 @@ def send_message(
     # сессия базы не передаётся — к её выполнению она уже может быть закрыта.
     recipients = events.recipients_for(db, result, payload.chat_id)
     event = events.build_event(result, payload.chat_id, current_user.nickname)
+    background_tasks.add_task(events.publish, recipients, event)
+
+    return result
+
+
+@router.post("/upload", response_model=schemas.MessageResponse)
+async def upload_image(
+    background_tasks: BackgroundTasks,
+    chat_id: int = Form(...),
+    file: UploadFile = File(...),
+    caption: str | None = Form(None),
+    reply_to_id: int | None = Form(None),
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user),
+):
+    """Загрузка изображения: файл на диск, в messages — только относительный путь."""
+    if file.content_type and not file.content_type.startswith("image/"):
+        raise HTTPException(status_code=400, detail="Можно отправлять только изображения")
+
+    # Читаем на байт больше лимита: файл целиком в память не тянем, но и
+    # превышение замечаем сразу, не дожидаясь конца загрузки.
+    data = await file.read(media.MAX_IMAGE_SIZE + 1)
+    if len(data) > media.MAX_IMAGE_SIZE:
+        raise HTTPException(status_code=413, detail="Файл больше 5 МБ")
+    if not data:
+        raise HTTPException(status_code=400, detail="Пустой файл")
+
+    extension = media.detect_image_extension(data[:16])
+    if extension is None:
+        raise HTTPException(status_code=400, detail="Файл не является изображением")
+
+    media_url = media.save_image(data, extension)
+    try:
+        result = services.create_image_message(
+            db, current_user, chat_id, media_url, caption, reply_to_id
+        )
+    except Exception:
+        # Сообщение не сохранилось — файл-сирота на диске не нужен
+        media.delete_image(media_url)
+        raise
+
+    recipients = events.recipients_for(db, result, chat_id)
+    event = events.build_event(result, chat_id, current_user.nickname)
     background_tasks.add_task(events.publish, recipients, event)
 
     return result
