@@ -10,7 +10,9 @@ import {
     appendIncoming,
     appendMessage,
     loadMessageHistory,
-    MESSAGE_CLASSES
+    MESSAGE_CLASSES,
+    Receipts,
+    updateMessageStatuses
 } from "../shared/messages.js";
 import { UserSearch } from "../shared/user-search.js";
 
@@ -18,6 +20,9 @@ export const Chat = {
     currentChatId: null,
     peerUsername: null,
     peerIsContact: false,
+    // Последние отметки по чатам: событие может прийти раньше, чем ответ
+    // на отправку добавит сообщение в DOM. Тогда применим их после рендера.
+    statusBounds: new Map(),
 
     async init() {
         document.getElementById("message-form").onsubmit = (e) => this.sendMessage(e);
@@ -36,24 +41,77 @@ export const Chat = {
             chat.is_contact
         ));
 
-        Realtime.connect((msg) => this.onIncoming(msg));
+        Realtime.connect(
+            (msg) => this.onIncoming(msg),
+            (status) => this.onStatus(status)
+        );
+
+        // Вернулись на вкладку — всё, что пришло в открытый чат, стало прочитано
+        document.addEventListener("visibilitychange", () => {
+            if (document.visibilityState === "visible") {
+                this.markCurrentChatRead();
+            }
+        });
+
         await this.loadChats();
     },
 
-    // Параметры общего рендера: классы десктопа, звезда только вне избранного
+    // Параметры общего рендера: классы десктопа, звезда только вне избранного.
+    // В «Избранном» галочки не нужны: там нет собеседника.
     messageOptions() {
         return {
             classes: MESSAGE_CLASSES.desktop,
             showStar: this.currentChatId !== CONFIG.FAVORITES_CHAT_ID,
+            showStatus: this.currentChatId !== CONFIG.FAVORITES_CHAT_ID,
             onToggleFavorite: (star, msg) => this.onToggleFavorite(star, msg)
         };
     },
 
     // Сообщение от другого человека пришло по сокету
-    onIncoming(msg) {
+    async onIncoming(msg) {
+        const mine = msg.sender_id === Session.userId();
         if (msg.chat_id === this.currentChatId) {
             appendIncoming(document.getElementById("messages"), msg, this.messageOptions());
+            if (mine) this.applyCachedStatuses(msg.chat_id);
+            if (!mine) {
+                // Чат открыт: если вкладка видима — сообщение сразу прочитано.
+                // Ждём отметку, иначе список успеет показать бейдж непрочитанного.
+                await Receipts.acknowledgeMessage(msg.chat_id, msg.id, true);
+            }
+        } else if (!mine) {
+            // Чат закрыт, но сообщение получено — отмечаем доставку
+            Receipts.markDelivered(msg.chat_id, msg.id);
         }
+        this.refreshList();
+    },
+
+    // Собеседник получил или прочитал наши сообщения — обновляем галочки
+    onStatus(status) {
+        this.statusBounds.set(status.chat_id, {
+            delivered: status.last_delivered_message_id || 0,
+            read: status.last_read_message_id || 0
+        });
+        if (status.chat_id !== this.currentChatId) return;
+        this.applyCachedStatuses(status.chat_id);
+    },
+
+    applyCachedStatuses(chatId) {
+        const bounds = this.statusBounds.get(chatId);
+        if (!bounds) return;
+        updateMessageStatuses(
+            document.getElementById("messages"),
+            bounds.delivered,
+            bounds.read
+        );
+    },
+
+    async markCurrentChatRead() {
+        if (this.currentChatId === null) return;
+        await Receipts.acknowledgeHistory(
+            document.getElementById("messages"),
+            this.currentChatId
+        );
+        // Бейдж непрочитанных в списке тоже должен исчезнуть
         this.refreshList();
     },
 
@@ -74,10 +132,27 @@ export const Chat = {
             for (const chat of chats) {
                 const item = UI.el("li", "chat-item");
                 if (chat.id === this.currentChatId) item.classList.add("active");
-                item.appendChild(UI.el("div", "chat-item-title",
+
+                const body = UI.el("div", "chat-item-body");
+                body.appendChild(UI.el("div", "chat-item-title",
                     chat.is_favorites ? "★ " + chat.title : chat.title));
-                item.appendChild(UI.el("div", "chat-item-preview",
+                body.appendChild(UI.el("div", "chat-item-preview",
                     chat.last_message || "Нет сообщений"));
+                item.appendChild(body);
+
+                // Бейдж — отдельный элемент строки, поэтому выравнивается
+                // по её вертикальному центру, а не по строке заголовка.
+                if (chat.unread_count > 0) {
+                    // Больше 99 не показываем: бейдж не должен растягиваться
+                    // на всю строку. Точное число остаётся в подсказке.
+                    const label = chat.unread_count > 99
+                        ? "99+"
+                        : String(chat.unread_count);
+                    const badge = UI.el("span", "chat-item-unread", label);
+                    badge.title = `Непрочитанных сообщений: ${chat.unread_count}`;
+                    badge.setAttribute("aria-label", badge.title);
+                    item.appendChild(badge);
+                }
                 item.onclick = () => this.openChat(
                     chat.id,
                     chat.title,
@@ -105,6 +180,9 @@ export const Chat = {
 
         const box = document.getElementById("messages");
         await loadMessageHistory(box, chatId, this.messageOptions());
+        this.applyCachedStatuses(chatId);
+        // Открыли чат — всё входящее в ленте получено и (в видимой вкладке) прочитано
+        await Receipts.acknowledgeHistory(box, chatId);
         await this.loadChats();
     },
 
@@ -182,6 +260,7 @@ export const Chat = {
             const hint = box.querySelector(".empty-hint");
             if (hint) hint.remove();
             appendMessage(box, msg, this.messageOptions());
+            this.applyCachedStatuses(this.currentChatId);
             UI.scrollToBottom(box);
             await this.loadChats();
         } catch (err) {
@@ -212,6 +291,7 @@ export const Chat = {
             const hint = box.querySelector(".empty-hint");
             if (hint) hint.remove();
             appendMessage(box, msg, this.messageOptions());
+            this.applyCachedStatuses(this.currentChatId);
             UI.scrollToBottom(box);
             await this.loadChats();
         } catch (err) {

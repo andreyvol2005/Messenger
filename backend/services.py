@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 from typing import List
 
 from fastapi import HTTPException
-from sqlalchemy import func
+from sqlalchemy import and_, func
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, aliased
 
@@ -170,6 +170,34 @@ def add_contact(db: Session, user: models.User, username: str) -> models.User:
 # Чаты
 # ==========================================
 
+def _unread_counts(db: Session, user_id: int) -> dict[int, int]:
+    """Сколько входящих сообщений пользователь ещё не прочитал в каждом чате.
+
+    Считаем не по времени, а по id: last_read_message_id — максимальный id,
+    который клиент уже отметил прочитанным. Свои сообщения и удалённые не
+    учитываются.
+    """
+    rows = (
+        db.query(models.Message.chat_id, func.count(models.Message.id))
+        .join(
+            models.ChatMember,
+            and_(
+                models.ChatMember.chat_id == models.Message.chat_id,
+                models.ChatMember.user_id == user_id,
+            ),
+        )
+        .filter(
+            models.Message.sender_id != user_id,
+            models.Message.is_deleted.isnot(True),
+            models.Message.id
+            > func.coalesce(models.ChatMember.last_read_message_id, 0),
+        )
+        .group_by(models.Message.chat_id)
+        .all()
+    )
+    return {chat_id: count for chat_id, count in rows}
+
+
 def list_chats(db: Session, user: models.User) -> schemas.ChatListResponse:
     # «Избранное» всегда первым — это виртуальная папка, а не строка в chats
     last_favorite = (
@@ -198,6 +226,7 @@ def list_chats(db: Session, user: models.User) -> schemas.ChatListResponse:
         .filter(models.Contact.user_id == user.id)
         .all()
     }
+    unread_by_chat = _unread_counts(db, user.id)
 
     last_msg = aliased(models.Message)
     rows = (
@@ -231,6 +260,7 @@ def list_chats(db: Session, user: models.User) -> schemas.ChatListResponse:
                 last_message_at=last_at,
                 peer_username=peer_username,
                 is_contact=is_contact,
+                unread_count=unread_by_chat.get(chat.id, 0),
             )
         )
 
@@ -323,7 +353,47 @@ def _insert_private_chat(db: Session, pair_key: str, first_id: int, second_id: i
 # Сообщения
 # ==========================================
 
-def serialize_message(msg: models.Message, nickname: str | None) -> schemas.MessageResponse:
+def _receipt_bounds(db: Session, chat_id: int, user_id: int) -> tuple[int, int]:
+    """До какого сообщения дошли остальные участники чата.
+
+    Для личного чата это один собеседник, для группового — минимум по всем:
+    сообщение считается доставленным/прочитанным, когда его получили все.
+    """
+    rows = (
+        db.query(
+            models.ChatMember.last_delivered_message_id,
+            models.ChatMember.last_read_message_id,
+        )
+        .filter(
+            models.ChatMember.chat_id == chat_id,
+            models.ChatMember.user_id != user_id,
+        )
+        .all()
+    )
+    if not rows:
+        return 0, 0
+    delivered = min((row[0] or 0) for row in rows)
+    read = min((row[1] or 0) for row in rows)
+    return delivered, read
+
+
+def _message_status(
+    msg: models.Message, user_id: int, delivered_to: int, read_by: int
+) -> str:
+    # Галочки есть только у своих сообщений, но статус считаем для всех:
+    # так ответ API одинаково понятен и на случай будущих групповых чатов.
+    if msg.sender_id != user_id:
+        return "sent"
+    if msg.id <= read_by:
+        return "read"
+    if msg.id <= delivered_to:
+        return "delivered"
+    return "sent"
+
+
+def serialize_message(
+    msg: models.Message, nickname: str | None, status: str = "sent"
+) -> schemas.MessageResponse:
     return schemas.MessageResponse(
         id=msg.id,
         chat_id=msg.chat_id,
@@ -334,6 +404,7 @@ def serialize_message(msg: models.Message, nickname: str | None) -> schemas.Mess
         created_at=msg.created_at,
         reply_to_id=msg.reply_to_id,
         is_favorite=msg.is_favorite,
+        status=status,
     )
 
 
@@ -359,7 +430,19 @@ def list_messages(
         models.Message.created_at.desc(), models.Message.id.desc()
     ).limit(limit).all()
     rows.reverse()  # в чате сообщения идут снизу вверх
-    return [serialize_message(msg, nickname) for msg, nickname in rows]
+
+    delivered_to, read_by = (0, 0)
+    if not is_favorites(chat_id):
+        delivered_to, read_by = _receipt_bounds(db, chat_id, user.id)
+
+    return [
+        serialize_message(
+            msg,
+            nickname,
+            _message_status(msg, user.id, delivered_to, read_by),
+        )
+        for msg, nickname in rows
+    ]
 
 
 def _insert_message(
@@ -433,3 +516,65 @@ def toggle_favorite(
     db.commit()
     db.refresh(msg)
     return serialize_message(msg, user.nickname)
+
+
+def update_message_receipt(
+    db: Session,
+    user: models.User,
+    chat_id: int,
+    message_id: int,
+    mark_read: bool,
+) -> models.ChatMember:
+    """Продвигает отметку доставки/прочтения участника чата.
+
+    Отметки только растут: запоздавший запрос за старое сообщение не откатит
+    прогресс, достигнутый, например, при открытии чата.
+    """
+    member = (
+        db.query(models.ChatMember)
+        .filter(
+            models.ChatMember.chat_id == chat_id,
+            models.ChatMember.user_id == user.id,
+        )
+        .first()
+    )
+    if not member:
+        raise HTTPException(status_code=403, detail="No access to this chat")
+
+    message = (
+        db.query(models.Message.id)
+        .filter(
+            models.Message.id == message_id,
+            models.Message.chat_id == chat_id,
+            models.Message.is_deleted == False,
+        )
+        .first()
+    )
+    if not message:
+        raise HTTPException(status_code=404, detail="Message not found")
+
+    # GREATEST в самом UPDATE защищает от гонки двух вкладок: меньшая отметка
+    # никогда не перезапишет большую.
+    delivered = func.greatest(
+        func.coalesce(models.ChatMember.last_delivered_message_id, 0), message_id
+    )
+    values = {models.ChatMember.last_delivered_message_id: delivered}
+    if mark_read:
+        values[models.ChatMember.last_read_message_id] = func.greatest(
+            func.coalesce(models.ChatMember.last_read_message_id, 0), message_id
+        )
+
+    db.query(models.ChatMember).filter(
+        models.ChatMember.chat_id == chat_id,
+        models.ChatMember.user_id == user.id,
+    ).update(values, synchronize_session=False)
+    db.commit()
+
+    return (
+        db.query(models.ChatMember)
+        .filter(
+            models.ChatMember.chat_id == chat_id,
+            models.ChatMember.user_id == user.id,
+        )
+        .one()
+    )

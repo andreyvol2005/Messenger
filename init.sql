@@ -73,6 +73,10 @@ CREATE TABLE chats (
 CREATE TABLE chat_members (
     chat_id INTEGER NOT NULL REFERENCES chats(id) ON DELETE CASCADE,
     user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    -- Максимальные id сообщений, которые клиент уже получил и прочитал.
+    -- По ним отправитель понимает, какие галочки показывать.
+    last_delivered_message_id INTEGER DEFAULT NULL,
+    last_read_message_id INTEGER DEFAULT NULL,
     PRIMARY KEY (chat_id, user_id)
 );
 

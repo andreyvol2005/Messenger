@@ -64,6 +64,7 @@ def recipients_for(db: Session, msg, chat_id: int) -> List[int]:
 
 def build_event(msg, chat_id: int, sender_nickname: str | None) -> dict:
     return {
+        "type": "message",
         "id": msg.id,
         # chat_id для избранного приходит как -1: бэк хранит NULL,
         # а клиенту удобнее знать тот же id, по которому он писал
@@ -77,6 +78,24 @@ def build_event(msg, chat_id: int, sender_nickname: str | None) -> dict:
         "created_at": msg.created_at.isoformat(),
         "reply_to_id": msg.reply_to_id,
         "is_favorite": msg.is_favorite,
+    }
+
+
+def build_receipt_event(
+    chat_id: int, user_id: int, delivered_to: int, read_by: int
+) -> dict:
+    """Событие о том, что участник получил/прочитал сообщения в чате.
+
+    delivered_to и read_by — уже агрегированные отметки: для получателя это
+    минимум по остальным участникам. В группе одного события недостаточно
+    рассылать всем: у каждого свой набор собеседников.
+    """
+    return {
+        "type": "status",
+        "chat_id": chat_id,
+        "user_id": user_id,
+        "last_delivered_message_id": delivered_to,
+        "last_read_message_id": read_by,
     }
 
 

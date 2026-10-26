@@ -54,6 +54,10 @@ class ChatMember(Base):
     __tablename__ = "chat_members"
     chat_id = Column(Integer, ForeignKey("chats.id", ondelete="CASCADE"), primary_key=True)
     user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
+    # Максимальные id сообщений, которые клиент уже получил и прочитал.
+    # Статус своего сообщения отправитель считает по этим отметкам остальных.
+    last_delivered_message_id = Column(Integer, nullable=True)
+    last_read_message_id = Column(Integer, nullable=True)
 
 class Message(Base):
     __tablename__ = "messages"
