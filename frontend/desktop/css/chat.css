@@ -148,16 +148,27 @@
     background: #1f4d80;
 }
 
+/* Пузырь с картинкой не растягивается шире неё: 420px картинки + отступы */
+.message-bubble.has-image {
+    max-width: 444px;
+}
+
 .message-text {
     font-size: 14px;
     white-space: pre-wrap;
     word-break: break-word;
 }
 
-/* Картинка не выходит за пузырь, углы скруглены */
+/* Картинка не выходит за пузырь и не растягивается на пол-экрана.
+   Ширина и высота ограничены отдельно, пропорции сохраняются: изображение
+   уменьшается целиком и не обрезается. */
 .message-image {
     display: block;
-    max-width: 100%;
+    width: auto;
+    height: auto;
+    max-width: min(100%, 420px);
+    max-height: min(36vh, 360px);
+    object-fit: contain;
     margin-bottom: 4px;
     border-radius: 8px;
 }

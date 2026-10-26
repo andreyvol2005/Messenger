@@ -2,6 +2,7 @@
 
 import { API } from "./api.js";
 import { CONFIG } from "./config.js";
+import { openImageLightbox } from "./lightbox.js";
 import { Session } from "./session.js";
 import { UI } from "./ui.js";
 
@@ -147,7 +148,10 @@ export function renderMessage(msg, { classes, showStar, showStatus, onToggleFavo
     row.dataset.msgId = msg.id;
 
     // Пузырь по ширине подстраивается под текст, время — строкой ниже, справа
-    const bubble = UI.el("div", classes.bubble);
+    const bubble = UI.el(
+        "div",
+        classes.bubble + (msg.media_url ? " has-image" : "")
+    );
 
     // Картинка идёт первой, подпись (если есть) — под ней
     if (msg.media_url) {
@@ -155,6 +159,19 @@ export function renderMessage(msg, { classes, showStar, showStatus, onToggleFavo
         image.src = CONFIG.API_BASE + msg.media_url;
         image.alt = "Изображение";
         image.loading = "lazy";
+        // Картинку можно открыть на весь экран и рассмотреть в масштабе
+        image.tabIndex = 0;
+        image.title = "Открыть изображение";
+        image.setAttribute("role", "button");
+        image.setAttribute("aria-label", "Открыть изображение");
+        image.addEventListener("click", () => {
+            openImageLightbox(image.currentSrc || image.src, image.alt);
+        });
+        image.addEventListener("keydown", (event) => {
+            if (event.key !== "Enter" && event.key !== " ") return;
+            event.preventDefault();
+            openImageLightbox(image.currentSrc || image.src, image.alt);
+        });
         bubble.appendChild(image);
     }
 
