@@ -25,9 +25,19 @@
 }
 
 .chat-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
     flex-shrink: 0;
     padding: 16px;
     border-bottom: 1px solid #333;
+}
+
+.chat-header h3 {
+    min-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 /* Лента сообщений — колонка: пузырь по ширине подстраивается под текст,

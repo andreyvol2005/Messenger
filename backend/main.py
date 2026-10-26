@@ -11,8 +11,8 @@ import media
 
 # Схема создаётся через init.sql — он же единственный источник правды
 
-# Папка должна существовать до app.mount: StaticFiles не создаёт её сам
-media.ensure_images_dir()
+# Папки должны существовать до app.mount: StaticFiles не создаёт их сам
+media.ensure_upload_dirs()
 
 app = FastAPI(title="Messenger API")
 

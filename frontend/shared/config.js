@@ -11,7 +11,8 @@ export const CONFIG = {
         TOKEN: "messenger_token",
         USER_ID: "messenger_user_id",
         USERNAME: "messenger_username",
-        NICKNAME: "messenger_nickname"
+        NICKNAME: "messenger_nickname",
+        AVATAR: "messenger_avatar"
     }
 };
 

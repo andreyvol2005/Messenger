@@ -142,6 +142,16 @@ export const API = {
         });
     },
 
+    uploadAvatar(file) {
+        const form = new FormData();
+        form.append("file", file);
+
+        return this.request("/api/accounts/avatar", {
+            method: "POST",
+            body: form
+        });
+    },
+
     getMe() {
         return this.request("/api/me");
     },
