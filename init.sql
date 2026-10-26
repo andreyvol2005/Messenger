@@ -14,7 +14,8 @@ CREATE TABLE users (
     id SERIAL PRIMARY KEY,
     username VARCHAR(31) UNIQUE NOT NULL,
     nickname VARCHAR(30) NOT NULL,
-    password_hash TEXT NOT NULL,
+    -- NULL допустим: при удалении аккаунта хэш стирается, вход становится невозможен.
+    password_hash TEXT DEFAULT NULL,
     bio VARCHAR(150) DEFAULT NULL,
     birth_date DATE DEFAULT NULL,
     avatar_url TEXT DEFAULT NULL,

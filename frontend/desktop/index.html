@@ -149,6 +149,34 @@
                           placeholder="Пара слов о себе"></textarea>
             </label>
 
+            <details id="profile-danger" class="profile-danger">
+                <summary>Удаление аккаунта</summary>
+                <p class="profile-danger-text">
+                    Аккаунт и личные данные будут удалены безвозвратно, восстановить
+                    их после подтверждения нельзя. Сообщения в общих чатах останутся
+                    от «Удалённого пользователя».
+                </p>
+
+                <label class="field">
+                    <span class="field-label">Пароль</span>
+                    <input type="password" id="profile-delete-password"
+                           autocomplete="current-password" placeholder="Текущий пароль">
+                </label>
+
+                <label class="field">
+                    <span class="field-label">Контрольная фраза</span>
+                    <input type="text" id="profile-delete-phrase"
+                           autocomplete="off" spellcheck="false"
+                           placeholder="УДАЛИТЬ АККАУНТ">
+                </label>
+
+                <p id="profile-delete-error" class="error hidden"></p>
+
+                <button type="button" id="profile-delete-confirm" class="btn-danger">
+                    Удалить аккаунт навсегда
+                </button>
+            </details>
+
             <p id="profile-error" class="error hidden"></p>
 
             <div class="profile-actions">

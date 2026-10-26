@@ -6,12 +6,14 @@ import { Realtime } from "../shared/realtime.js";
 import { Session } from "../shared/session.js";
 import { UI } from "../shared/ui.js";
 import { UserSearch } from "../shared/user-search.js";
+import { Account } from "./account.js";
 
 export const MobileChats = {
     async init() {
         if (!Session.requireAuth()) return;
 
         document.getElementById("logout-btn").onclick = () => Session.logout();
+        Account.init();
         UserSearch.init((chat) => {
             window.location.href = Session.chatUrl(chat.id);
         });

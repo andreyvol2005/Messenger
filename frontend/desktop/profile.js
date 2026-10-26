@@ -1,6 +1,7 @@
 // Диалог профиля: данные тянем с сервера, правим username, nickname, bio и дату рождения.
 
 import { API } from "../shared/api.js";
+import { AccountDeletion } from "../shared/account-deletion.js";
 import { CONFIG } from "../shared/config.js";
 import { Session } from "../shared/session.js";
 import { UI } from "../shared/ui.js";
@@ -19,6 +20,13 @@ export const Profile = {
         this.avatarButton = document.getElementById("profile-avatar-btn");
         this.avatarButton.onclick = () => this.avatarInput.click();
         this.avatarInput.onchange = (e) => this.uploadAvatar(e.target);
+
+        AccountDeletion.init({
+            passwordId: "profile-delete-password",
+            phraseId: "profile-delete-phrase",
+            buttonId: "profile-delete-confirm",
+            errorId: "profile-delete-error"
+        });
 
         // Календарь не должен предлагать будущие даты
         document.getElementById("profile-birth").max = new Date().toISOString().slice(0, 10);
@@ -45,6 +53,8 @@ export const Profile = {
         this.modal.classList.add("open");
         this.modal.setAttribute("aria-hidden", "false");
         UI.hideError("profile-error");
+        document.getElementById("profile-danger").open = false;
+        AccountDeletion.reset();
 
         // Сразу показываем ник из сессии, остальное подгрузим
         this.dirty = false;

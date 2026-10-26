@@ -12,6 +12,13 @@
         <header class="m-header">
             <h1 class="m-title">Чаты</h1>
             <div class="m-header-actions">
+                <button id="account-btn" class="m-icon-btn" title="Аккаунт"
+                        aria-label="Аккаунт" aria-haspopup="dialog">
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <circle cx="12" cy="8" r="4"></circle>
+                        <path d="M4 21c0-4 3.6-6.2 8-6.2s8 2.2 8 6.2"></path>
+                    </svg>
+                </button>
                 <button id="logout-btn" class="m-icon-btn" title="Выйти">⎋</button>
             </div>
         </header>
@@ -30,6 +37,50 @@
         <p id="new-chat-error" class="error hidden m-new-chat-error"></p>
 
         <ul id="chat-list" class="m-chat-list"></ul>
+    </div>
+
+    <!-- Аккаунт: выход и безвозвратное удаление -->
+    <div id="account-modal" class="m-modal" aria-hidden="true">
+        <div class="m-modal-backdrop"></div>
+
+        <div class="m-modal-dialog" role="dialog" aria-modal="true"
+             aria-labelledby="account-title">
+            <h2 id="account-title" class="m-modal-title">Аккаунт</h2>
+            <p id="account-user" class="m-account-user"></p>
+
+            <details class="m-danger">
+                <summary>Удаление аккаунта</summary>
+                <p class="m-danger-text">
+                    Аккаунт и личные данные будут удалены безвозвратно, восстановить
+                    их после подтверждения нельзя. Сообщения в общих чатах останутся
+                    от «Удалённого пользователя».
+                </p>
+
+                <label>
+                    Пароль
+                    <input type="password" id="account-delete-password"
+                           autocomplete="current-password" placeholder="Текущий пароль">
+                </label>
+
+                <label>
+                    Контрольная фраза
+                    <input type="text" id="account-delete-phrase"
+                           autocomplete="off" spellcheck="false"
+                           placeholder="УДАЛИТЬ АККАУНТ">
+                </label>
+
+                <p id="account-delete-error" class="error hidden"></p>
+
+                <button type="button" id="account-delete-confirm" class="m-danger-btn">
+                    Удалить аккаунт навсегда
+                </button>
+            </details>
+
+            <div class="m-modal-actions">
+                <button type="button" id="account-logout" class="m-secondary-btn">Выйти</button>
+                <button type="button" id="account-close" class="m-secondary-btn">Закрыть</button>
+            </div>
+        </div>
     </div>
 
     <script type="module" src="/mobile/chats.js"></script>

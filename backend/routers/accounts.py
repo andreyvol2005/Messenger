@@ -122,6 +122,7 @@ async def upload_avatar(
 @router.post("/account/delete")
 def delete_account(
     payload: schemas.AccountDeleteRequest,
+    background_tasks: BackgroundTasks,
     current_user: models.User = Depends(auth.get_current_user),
     db: Session = Depends(get_db),
 ):
@@ -138,6 +139,11 @@ def delete_account(
         payload.confirmation_phrase,
         payload.two_fa_token,
     )
+
+    # Ответ отдаём сразу, а сокеты закрываем следом: клиент уже не должен
+    # получать новые события, даже если соединение успело установиться раньше.
+    background_tasks.add_task(events.manager.disconnect_all, user.id)
+
     return {
         "status": "deletion_scheduled",
         "user_id": user.id,

@@ -191,3 +191,63 @@
     opacity: 0.6;
     cursor: default;
 }
+
+/* ============================
+   Удаление аккаунта в профиле
+   ============================ */
+.profile-danger {
+    margin-top: 22px;
+    padding-top: 14px;
+    border-top: 1px solid #3a2a2c;
+    text-align: left;
+}
+
+.profile-danger summary {
+    color: #ff6b7a;
+    font-size: 13px;
+    cursor: pointer;
+    user-select: none;
+}
+
+.profile-danger summary:hover {
+    color: #ff8a99;
+}
+
+.profile-danger-text {
+    margin-top: 8px;
+    color: #999;
+    font-size: 12px;
+    line-height: 1.5;
+}
+
+.profile-danger .field {
+    margin-top: 12px;
+}
+
+.profile-danger .error {
+    margin-top: 10px;
+}
+
+.btn-danger {
+    width: 100%;
+    margin-top: 14px;
+    padding: 10px 16px;
+    background: #b32436;
+    color: #fff;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.btn-danger:hover {
+    background: #cf2b40;
+}
+
+.btn-danger:active {
+    background: #971d2d;
+}
+
+.btn-danger:disabled {
+    opacity: 0.6;
+    cursor: default;
+}

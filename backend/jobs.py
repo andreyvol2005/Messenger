@@ -13,9 +13,9 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from typing import Callable
+from typing import Awaitable, Callable
 
-from sqlalchemy import select
+from sqlalchemy import select, text
 from database import SessionLocal, engine
 import models
 
@@ -59,7 +59,7 @@ async def _revoke_sessions(user_id: int) -> None:
 
 
 # Реестр шагов очистки — порядок важен: сначала отзываем доступ, потом данные.
-_CLEANUP_STEPS: list[Callable[[int], asyncio.Future]] = [
+_CLEANUP_STEPS: list[Callable[[int], Awaitable[None]]] = [
     _revoke_sessions,
     _revoke_push_tokens,
     _delete_s3_media,
@@ -67,16 +67,31 @@ _CLEANUP_STEPS: list[Callable[[int], asyncio.Future]] = [
     _remove_from_search_index,
 ]
 
+# Экспоненциальный бэкофф между попытками: 0, 5, 15, 35 и 75 секунд.
+# Считаем от updated_at, чтобы не добавлять отдельную колонку в схему.
+_RETRY_READY = text(
+    "updated_at + make_interval("
+    "secs => LEAST(300, 5 * (power(2, attempts) - 1))"
+    ") <= now()"
+)
+
 
 # ---------------------------------------------------------------------------
 # Работа с джобами
 # ---------------------------------------------------------------------------
 
 async def claim_pending_job(db) -> models.AccountDeletionJob | None:
-    """Забрать одну необработанную джобу (FOR UPDATE SKIP LOCKED)."""
+    """Забрать одну готовую к обработке джобу (FOR UPDATE SKIP LOCKED).
+
+    Джоба с недавней неудачной попыткой ждёт экспоненциальный бэкофф,
+    поэтому воркер не долбит внешние сервисы каждые 5 секунд.
+    """
     result = db.execute(
         select(models.AccountDeletionJob)
-        .where(models.AccountDeletionJob.status == "pending")
+        .where(
+            models.AccountDeletionJob.status == "pending",
+            _RETRY_READY,
+        )
         .order_by(models.AccountDeletionJob.created_at)
         .with_for_update(skip_locked=True)
         .limit(1)
@@ -100,17 +115,18 @@ async def process_job_once(db) -> bool:
     except Exception as exc:  # noqa: BLE001
         job.attempts += 1
         job.last_error = str(exc)[:1000]
-        if job.attempts >= MAX_ATTEMPTS:
+        max_attempts = job.max_attempts or MAX_ATTEMPTS
+        if job.attempts >= max_attempts:
             job.status = "failed"  # dead-letter — требует ручного разбора
             logger.error(
                 "Джоба удаления пользователя %d перешла в failed после %d попыток: %s",
                 job.user_id, job.attempts, job.last_error,
             )
         else:
-            job.status = "pending"  # повторим при следующем проходе
+            job.status = "pending"  # повторим после бэкоффа
             logger.warning(
-                "Джоба удаления пользователя %d落ちла, попытка %d/%d: %s",
-                job.user_id, job.attempts, MAX_ATTEMPTS, job.last_error,
+                "Джоба удаления пользователя %d упала, попытка %d/%d: %s",
+                job.user_id, job.attempts, max_attempts, job.last_error,
             )
 
     db.add(job)

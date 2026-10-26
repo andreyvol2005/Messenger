@@ -31,12 +31,14 @@ class ConnectionManager:
         if not sockets:
             self.active.pop(user_id, None)
 
-    def disconnect_all(self, user_id: int):
+    async def disconnect_all(self, user_id: int):
         """Разрывает все WebSocket-соединения пользователя (например, при удалении аккаунта)."""
         sockets = self.active.pop(user_id, [])
         for ws in list(sockets):
             try:
-                ws.close()
+                # WebSocket.close в Starlette — корутина: без await сокет
+                # останется открытым, а клиент продолжит получать события.
+                await ws.close()
             except Exception:
                 pass
 

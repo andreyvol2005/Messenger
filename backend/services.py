@@ -60,7 +60,12 @@ def schedule_delete_account(
     # 4. Транзакция: мягкое удаление + outbox-джоба
     user.deleted_at = datetime.now(timezone.utc)
     user.deleted_reason = "user_requested"
-    user.password_hash = None  # стираем учётные данные сразу
+    # Учётные данные и персональные данные стираем сразу, не дожидаясь
+    # фоновой очистки: после ответа их уже нельзя вернуть.
+    user.password_hash = None
+    user.bio = None
+    user.birth_date = None
+    user.avatar_url = None
     user.nickname = DELETED_DISPLAY_NAME  # анти-impersonation + отображение в чатах
     db.add(user)
 

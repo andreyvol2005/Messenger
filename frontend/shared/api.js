@@ -161,5 +161,15 @@ export const API = {
             method: "PATCH",
             body: JSON.stringify(data)
         });
+    },
+
+    deleteAccount(password, confirmationPhrase) {
+        return this.request("/api/account/delete", {
+            method: "POST",
+            body: JSON.stringify({
+                password,
+                confirmation_phrase: confirmationPhrase
+            })
+        });
     }
 };
