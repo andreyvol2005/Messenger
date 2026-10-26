@@ -1,6 +1,7 @@
 // Диалог профиля: данные тянем с сервера, правим username, nickname, bio и дату рождения.
 
 import { API } from "../shared/api.js";
+import { CONFIG } from "../shared/config.js";
 import { Session } from "../shared/session.js";
 import { UI } from "../shared/ui.js";
 import { Validation } from "../shared/validation.js";
@@ -13,6 +14,11 @@ export const Profile = {
         document.getElementById("profile-close").onclick = () => this.close();
         document.getElementById("profile-save").onclick = () => this.save();
         document.getElementById("profile-logout").onclick = () => Session.logout();
+
+        this.avatarInput = document.getElementById("profile-avatar-input");
+        this.avatarButton = document.getElementById("profile-avatar-btn");
+        this.avatarButton.onclick = () => this.avatarInput.click();
+        this.avatarInput.onchange = (e) => this.uploadAvatar(e.target);
 
         // Календарь не должен предлагать будущие даты
         document.getElementById("profile-birth").max = new Date().toISOString().slice(0, 10);
@@ -49,6 +55,10 @@ export const Profile = {
 
         try {
             const me = await API.getMe();
+            Session.setAvatar(me.avatar_url);
+            // Аватарку обновляем всегда, даже если пользователь уже начал
+            // редактировать остальные поля.
+            this.renderAvatar(me.nickname, me.avatar_url);
             if (!this.dirty) this.fill(me);
         } catch (err) {
             UI.showError("profile-error", err.message);
@@ -57,16 +67,24 @@ export const Profile = {
         document.getElementById("profile-close").focus();
     },
 
+    renderAvatar(nickname, avatarUrl) {
+        UI.setAvatar(
+            document.getElementById("profile-avatar"),
+            nickname,
+            avatarUrl
+        );
+    },
+
     fillBasic() {
         const nickname = Session.nickname();
-        document.getElementById("profile-avatar").textContent = UI.initial(nickname);
+        this.renderAvatar(nickname, Session.avatar());
         document.getElementById("profile-name").textContent = nickname;
         document.getElementById("profile-username").value = Session.username().replace(/^@/, "");
         document.getElementById("profile-nickname").value = nickname;
     },
 
     fill(me) {
-        document.getElementById("profile-avatar").textContent = UI.initial(me.nickname);
+        this.renderAvatar(me.nickname, me.avatar_url);
         document.getElementById("profile-name").textContent = me.nickname;
         document.getElementById("profile-username").value = (me.username || "").replace(/^@/, "");
         document.getElementById("profile-nickname").value = me.nickname;
@@ -80,6 +98,40 @@ export const Profile = {
             })
             : "";
         this.dirty = false;
+    },
+
+    async uploadAvatar(input) {
+        const file = input.files && input.files[0];
+        // Сбрасываем значение, иначе повторный выбор того же файла не сработает
+        input.value = "";
+        if (!file) return;
+
+        if (!file.type.startsWith("image/")) {
+            UI.showError("profile-error", "Можно загружать только изображения");
+            return;
+        }
+        if (file.size > CONFIG.MAX_IMAGE_BYTES) {
+            UI.showError("profile-error", "Файл больше 5 МБ");
+            return;
+        }
+
+        const button = this.avatarButton;
+        button.disabled = true;
+        button.textContent = "Загрузка…";
+        UI.hideError("profile-error");
+
+        try {
+            const me = await API.uploadAvatar(file);
+            Session.setAvatar(me.avatar_url);
+            this.renderAvatar(me.nickname, me.avatar_url);
+            document.getElementById("profile-name").textContent = me.nickname;
+            UI.toast("Аватар обновлён");
+        } catch (err) {
+            UI.showError("profile-error", err.message);
+        } finally {
+            button.disabled = false;
+            button.textContent = "Сменить фото";
+        }
     },
 
     async save() {
@@ -108,6 +160,7 @@ export const Profile = {
 
             // JWT привязан к id пользователя, поэтому сессия остаётся живой
             Session.setIdentity(me.username, me.nickname);
+            Session.setAvatar(me.avatar_url);
             this.fill(me);
             UI.toast("Профиль сохранён");
             this.close();

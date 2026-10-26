@@ -69,8 +69,10 @@ class ChatResponse(BaseModel):
     is_favorites: bool = False
     last_message: Optional[str] = None
     last_message_at: Optional[datetime] = None
-    # Только для личных чатов: собеседник и признак того, что он уже в контактах
+    # Только для личных чатов: собеседник, его аватар и признак того,
+    # что он уже в контактах
     peer_username: Optional[str] = None
+    avatar_url: Optional[str] = None
     is_contact: bool = False
     # Входящие сообщения, которые пользователь ещё не прочитал (бейдж в списке)
     unread_count: int = 0

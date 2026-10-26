@@ -161,6 +161,7 @@
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
+    overflow: hidden;
     border-radius: 50%;
     background: linear-gradient(135deg, #3b82f6, #1e40af);
     color: #fff;

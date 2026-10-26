@@ -30,6 +30,19 @@ export const Contacts = {
             }
             this.close();
         });
+
+        // Аватарку контакта обновили через WebSocket — перерисовываем список
+        document.addEventListener("messenger:avatar-updated", (event) => {
+            const data = event.detail || {};
+            let changed = false;
+            for (const contact of this.contacts) {
+                if (contact.id === Number(data.user_id)) {
+                    contact.avatar_url = data.avatar_url;
+                    changed = true;
+                }
+            }
+            if (changed && this.isOpen()) this.render();
+        });
     },
 
     isOpen() {
@@ -84,7 +97,9 @@ export const Contacts = {
 
         for (const user of this.contacts) {
             const item = UI.el("li", "contact-item");
-            item.appendChild(UI.el("div", "avatar avatar-lg", UI.initial(user.nickname)));
+            item.appendChild(
+                UI.avatar(user.nickname, user.avatar_url, "avatar avatar-lg")
+            );
 
             const text = UI.el("div", "contact-text");
             text.appendChild(UI.el("div", "contact-name", user.nickname));
@@ -106,7 +121,8 @@ export const Contacts = {
                 chat.id,
                 chat.title,
                 chat.peer_username,
-                chat.is_contact
+                chat.is_contact,
+                chat.avatar_url
             );
         } catch (err) {
             UI.showError("contacts-error", err.message);
@@ -194,7 +210,7 @@ export const Contacts = {
                 for (const user of matches) {
                     const item = UI.el("li", "user-search-item");
                     item.appendChild(
-                        UI.el("div", "user-search-avatar", UI.initial(user.nickname))
+                        UI.avatar(user.nickname, user.avatar_url, "user-search-avatar")
                     );
 
                     const text = UI.el("div", "user-search-text");

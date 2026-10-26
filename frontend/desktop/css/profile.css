@@ -53,6 +53,28 @@
     margin: 0 auto;
 }
 
+.profile-avatar-btn {
+    display: block;
+    margin: 10px auto 0;
+    padding: 6px 12px;
+    background: transparent;
+    border: 1px solid #444;
+    border-radius: 999px;
+    color: #bbb;
+    font-size: 12px;
+}
+
+.profile-avatar-btn:hover {
+    background: #2f2f2f;
+    border-color: #555;
+    color: #fff;
+}
+
+.profile-avatar-btn:disabled {
+    opacity: 0.6;
+    cursor: default;
+}
+
 .profile-name {
     margin-top: 14px;
     font-size: 20px;

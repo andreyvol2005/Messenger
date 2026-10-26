@@ -61,6 +61,9 @@ export const MobileChat = {
             }
         });
 
+        // Аватарку собеседника обновили — перечитываем данные чата
+        document.addEventListener("messenger:avatar-updated", () => this.loadTitle());
+
         await this.loadTitle();
         await this.loadMessages();
         document.getElementById("message-input").focus();
@@ -128,10 +131,25 @@ export const MobileChat = {
             titleEl.textContent = found.title;
             this.peerUsername = found.peer_username || null;
             this.peerIsContact = Boolean(found.is_contact);
+            this.setChatAvatar(found.title, found.avatar_url);
             this.updateContactSuggestion();
         } catch (err) {
             titleEl.textContent = "Чат";
         }
+    },
+
+    setChatAvatar(title, avatarUrl) {
+        const avatar = document.getElementById("chat-avatar");
+        if (!avatar) return;
+
+        // У «Избранного» нет собеседника
+        if (this.chatId === CONFIG.FAVORITES_CHAT_ID) {
+            avatar.classList.add("hidden");
+            return;
+        }
+
+        avatar.classList.remove("hidden");
+        UI.setAvatar(avatar, title, avatarUrl);
     },
 
     updateContactSuggestion() {

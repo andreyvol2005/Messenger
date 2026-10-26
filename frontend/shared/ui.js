@@ -1,5 +1,7 @@
 // Общие мелочи для рендера: DOM-хелперы, время, уведомления, debounce.
 
+import { CONFIG } from "./config.js";
+
 export const UI = {
     // Только часы: в ленте дата под сообщением не нужна, время и так читается
     // по вертикали переписки. Дата остаётся в title, если понадобится.
@@ -21,10 +23,44 @@ export const UI = {
         node.scrollTop = node.scrollHeight;
     },
 
-    // Первая буква ника — пока аватарки без картинок
+    // Первая буква ника — заглушка, если картинки нет
     initial(name) {
         const text = (name || "").trim();
         return text ? text.charAt(0).toUpperCase() : "?";
+    },
+
+    // Круглый аватар: картинка, а при её отсутствии — первая буква ника
+    avatar(name, avatarUrl, className = "avatar") {
+        const node = this.el("div", className);
+        this.setAvatar(node, name, avatarUrl);
+        return node;
+    },
+
+    setAvatar(node, name, avatarUrl) {
+        if (!node) return;
+
+        node.textContent = "";
+        if (!avatarUrl) {
+            node.textContent = this.initial(name);
+            return;
+        }
+
+        const image = document.createElement("img");
+        image.className = "avatar-img";
+        // Относительный путь с бэкенда; API_BASE нужен, если API на другом хосте
+        image.src = avatarUrl.startsWith("/")
+            ? CONFIG.API_BASE + avatarUrl
+            : avatarUrl;
+        image.alt = name ? `Аватар ${name}` : "Аватар";
+        image.loading = "lazy";
+        image.decoding = "async";
+        // Битый файл или удалённая картинка — не оставляем пустой круг
+        image.onerror = () => {
+            if (!node.contains(image)) return;
+            image.remove();
+            node.textContent = this.initial(name);
+        };
+        node.appendChild(image);
     },
 
     // Короткое уведомление внизу экрана: заглушки и подтверждения

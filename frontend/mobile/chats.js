@@ -27,6 +27,9 @@ export const MobileChats = {
             this.refreshList();
         });
 
+        // Смена аватарки собеседника — тоже повод перерисовать список
+        document.addEventListener("messenger:avatar-updated", () => this.refreshList());
+
         await this.loadChats();
     },
 
@@ -45,8 +48,11 @@ export const MobileChats = {
             for (const chat of chats) {
                 const item = UI.el("li", "m-chat-item");
 
-                const avatar = UI.el("div", "m-avatar",
-                    chat.is_favorites ? "★" : UI.initial(chat.title));
+                const avatar = UI.avatar(
+                    chat.is_favorites ? "★" : chat.title,
+                    chat.is_favorites ? null : chat.avatar_url,
+                    "m-avatar"
+                );
                 if (chat.is_favorites) avatar.classList.add("m-avatar-fav");
 
                 const body = UI.el("div", "m-chat-body");

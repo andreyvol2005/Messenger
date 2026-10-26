@@ -99,7 +99,7 @@ export const UserSearch = {
                 for (const user of users) {
                     const item = UI.el("li", "user-search-item");
                     item.appendChild(
-                        UI.el("div", "user-search-avatar", UI.initial(user.nickname))
+                        UI.avatar(user.nickname, user.avatar_url, "user-search-avatar")
                     );
 
                     const text = UI.el("div", "user-search-text");

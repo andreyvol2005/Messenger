@@ -38,8 +38,14 @@ export const Chat = {
             chat.id,
             chat.title,
             chat.peer_username,
-            chat.is_contact
+            chat.is_contact,
+            chat.avatar_url
         ));
+
+        document.addEventListener("messenger:avatar-updated", () => {
+            // В списке чатов мог измениться собеседник, а в шапке — его аватар
+            this.refreshList();
+        });
 
         Realtime.connect(
             (msg) => this.onIncoming(msg),
@@ -133,12 +139,19 @@ export const Chat = {
                 const item = UI.el("li", "chat-item");
                 if (chat.id === this.currentChatId) item.classList.add("active");
 
+                const avatar = UI.avatar(
+                    chat.is_favorites ? "★" : chat.title,
+                    chat.is_favorites ? null : chat.avatar_url,
+                    "avatar avatar-lg chat-item-avatar"
+                );
+                if (chat.is_favorites) avatar.classList.add("avatar-fav");
+
                 const body = UI.el("div", "chat-item-body");
                 body.appendChild(UI.el("div", "chat-item-title",
                     chat.is_favorites ? "★ " + chat.title : chat.title));
                 body.appendChild(UI.el("div", "chat-item-preview",
                     chat.last_message || "Нет сообщений"));
-                item.appendChild(body);
+                item.append(avatar, body);
 
                 // Бейдж — отдельный элемент строки, поэтому выравнивается
                 // по её вертикальному центру, а не по строке заголовка.
@@ -157,9 +170,16 @@ export const Chat = {
                     chat.id,
                     chat.title,
                     chat.peer_username,
-                    chat.is_contact
+                    chat.is_contact,
+                    chat.avatar_url
                 );
                 list.appendChild(item);
+            }
+
+            // Если открыт чат, шапка тоже должна подхватить свежий аватар
+            const current = chats.find((chat) => chat.id === this.currentChatId);
+            if (current) {
+                this.setChatAvatar(current.title, current.avatar_url);
             }
         } catch (err) {
             list.appendChild(UI.el("li", "chat-item loading-item", err.message));
@@ -168,7 +188,13 @@ export const Chat = {
 
     // ---------- Окно переписки ----------
 
-    async openChat(chatId, title, peerUsername = null, isContact = false) {
+    async openChat(
+        chatId,
+        title,
+        peerUsername = null,
+        isContact = false,
+        avatarUrl = null
+    ) {
         this.currentChatId = chatId;
         this.peerUsername = peerUsername || null;
         this.peerIsContact = Boolean(isContact);
@@ -177,6 +203,7 @@ export const Chat = {
         document.getElementById("chat-placeholder").classList.add("hidden");
         document.getElementById("chat-window").classList.remove("hidden");
         document.getElementById("chat-title").textContent = title;
+        this.setChatAvatar(title, avatarUrl);
 
         const box = document.getElementById("messages");
         await loadMessageHistory(box, chatId, this.messageOptions());
@@ -184,6 +211,20 @@ export const Chat = {
         // Открыли чат — всё входящее в ленте получено и (в видимой вкладке) прочитано
         await Receipts.acknowledgeHistory(box, chatId);
         await this.loadChats();
+    },
+
+    setChatAvatar(title, avatarUrl) {
+        const avatar = document.getElementById("chat-avatar");
+        if (!avatar) return;
+
+        // У «Избранного» нет собеседника
+        if (this.currentChatId === CONFIG.FAVORITES_CHAT_ID) {
+            avatar.classList.add("hidden");
+            return;
+        }
+
+        avatar.classList.remove("hidden");
+        UI.setAvatar(avatar, title, avatarUrl);
     },
 
     updateContactSuggestion() {
