@@ -11,13 +11,19 @@ import {
     appendIncoming,
     appendMessage,
     loadMessageHistory,
-    MESSAGE_CLASSES
+    MESSAGE_CLASSES,
+    Receipts,
+    updateMessageStatuses
 } from "../shared/messages.js";
 
 export const MobileChat = {
     chatId: null,
     peerUsername: null,
     peerIsContact: false,
+    // Событие о прочтении может прийти раньше ответа на отправку — применим
+    // отметки после того, как сообщение появится в DOM.
+    statusDelivered: 0,
+    statusRead: 0,
 
     async init() {
         if (!Session.requireAuth()) return;
@@ -43,18 +49,30 @@ export const MobileChat = {
             () => this.dismissContactSuggestion();
 
         // Собеседник пишет — сообщение появляется здесь без перезагрузки
-        Realtime.connect((msg) => this.onIncoming(msg));
+        Realtime.connect(
+            (msg) => this.onIncoming(msg),
+            (status) => this.onStatus(status)
+        );
+
+        // Вернулись на вкладку — всё, что пришло в открытый чат, стало прочитано
+        document.addEventListener("visibilitychange", () => {
+            if (document.visibilityState === "visible") {
+                this.markCurrentChatRead();
+            }
+        });
 
         await this.loadTitle();
         await this.loadMessages();
         document.getElementById("message-input").focus();
     },
 
-    // Параметры общего рендера: мобильные классы, звезда только вне избранного
+    // Параметры общего рендера: мобильные классы, звезда только вне избранного.
+    // В «Избранном» галочки не нужны: там нет собеседника.
     messageOptions() {
         return {
             classes: MESSAGE_CLASSES.mobile,
             showStar: this.chatId !== CONFIG.FAVORITES_CHAT_ID,
+            showStatus: this.chatId !== CONFIG.FAVORITES_CHAT_ID,
             onToggleFavorite: (star, msg) => this.onToggleFavorite(star, msg)
         };
     },
@@ -62,7 +80,37 @@ export const MobileChat = {
     onIncoming(msg) {
         // В избранное сервер шлёт отправителю, у него chat_id = -1
         if (msg.chat_id !== this.chatId) return;
+
+        const mine = msg.sender_id === Session.userId();
         appendIncoming(document.getElementById("messages"), msg, this.messageOptions());
+        if (mine) this.applyCachedStatuses();
+        if (!mine) {
+            // Чат открыт: если вкладка видима — сообщение сразу прочитано
+            Receipts.acknowledgeMessage(msg.chat_id, msg.id, true);
+        }
+    },
+
+    // Собеседник получил или прочитал наши сообщения — обновляем галочки
+    onStatus(status) {
+        if (status.chat_id !== this.chatId) return;
+        this.statusDelivered = status.last_delivered_message_id || 0;
+        this.statusRead = status.last_read_message_id || 0;
+        this.applyCachedStatuses();
+    },
+
+    applyCachedStatuses() {
+        updateMessageStatuses(
+            document.getElementById("messages"),
+            this.statusDelivered,
+            this.statusRead
+        );
+    },
+
+    async markCurrentChatRead() {
+        await Receipts.acknowledgeHistory(
+            document.getElementById("messages"),
+            this.chatId
+        );
     },
 
     // Заголовок берём из списка чатов — так он всегда совпадает с тем, что видит собеседник
@@ -125,11 +173,11 @@ export const MobileChat = {
     },
 
     async loadMessages() {
-        await loadMessageHistory(
-            document.getElementById("messages"),
-            this.chatId,
-            this.messageOptions()
-        );
+        const box = document.getElementById("messages");
+        await loadMessageHistory(box, this.chatId, this.messageOptions());
+        this.applyCachedStatuses();
+        // Открыли чат — всё входящее в ленте получено и (в видимой вкладке) прочитано
+        await Receipts.acknowledgeHistory(box, this.chatId);
     },
 
     async onToggleFavorite(star, msg) {
@@ -156,6 +204,7 @@ export const MobileChat = {
             const hint = box.querySelector(".empty-hint");
             if (hint) hint.remove();
             appendMessage(box, msg, this.messageOptions());
+            this.applyCachedStatuses();
             UI.scrollToBottom(box);
         } catch (err) {
             input.value = text;
@@ -185,6 +234,7 @@ export const MobileChat = {
             const hint = box.querySelector(".empty-hint");
             if (hint) hint.remove();
             appendMessage(box, msg, this.messageOptions());
+            this.applyCachedStatuses();
             UI.scrollToBottom(box);
         } catch (err) {
             alert(err.message);

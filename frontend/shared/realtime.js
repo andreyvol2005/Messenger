@@ -9,11 +9,13 @@ export const Realtime = {
     socket: null,
     backoff: 1000,
     handler: null,
+    statusHandler: null,
     seen: new Set(),      // id уже показанных сообщений
     MAX_SEEN: 500,
 
-    connect(handler) {
+    connect(handler, statusHandler = null) {
         this.handler = handler;
+        this.statusHandler = statusHandler;
         this.open();
     },
 
@@ -49,6 +51,14 @@ export const Realtime = {
         }
         // Сервер присылает error в ответ на ввод с сокета, мы по сокету не шлём
         if (data.error) return;
+
+        // Отметки «доставлено/прочитано» — не сообщения, их обрабатывает
+        // отдельный колбэк и они не попадают в список увиденных id.
+        if (data.type === "status") {
+            if (this.statusHandler) this.statusHandler(data);
+            return;
+        }
+        if (data.type && data.type !== "message") return;
 
         if (typeof data.id === "number") {
             if (this.seen.has(data.id)) return;   // это своё сообщение, уже показано

@@ -32,6 +32,10 @@ export const API = {
         if (token) headers["Authorization"] = `Bearer ${token}`;
 
         const response = await fetch(CONFIG.API_BASE + url, {
+            // Данные чатов меняются постоянно. Без этого браузер может отдать
+            // список из HTTP-кэша при возврате назад — например, со старым
+            // числом непрочитанных.
+            cache: "no-store",
             headers,
             ...options,
         });
@@ -90,6 +94,20 @@ export const API = {
 
     getMessages(chatId, limit = 50) {
         return this.request(`/api/messages/${chatId}?limit=${limit}`);
+    },
+
+    markDelivered(chatId, messageId) {
+        return this.request(`/api/chats/${chatId}/delivered`, {
+            method: "POST",
+            body: JSON.stringify({ message_id: messageId })
+        });
+    },
+
+    markRead(chatId, messageId) {
+        return this.request(`/api/chats/${chatId}/read`, {
+            method: "POST",
+            body: JSON.stringify({ message_id: messageId })
+        });
     },
 
     sendMessage(chatId, text) {

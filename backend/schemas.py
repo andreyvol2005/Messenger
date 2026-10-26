@@ -72,6 +72,8 @@ class ChatResponse(BaseModel):
     # Только для личных чатов: собеседник и признак того, что он уже в контактах
     peer_username: Optional[str] = None
     is_contact: bool = False
+    # Входящие сообщения, которые пользователь ещё не прочитал (бейдж в списке)
+    unread_count: int = 0
 
 
 class ChatListResponse(BaseModel):
@@ -95,3 +97,19 @@ class MessageResponse(BaseModel):
     created_at: datetime
     reply_to_id: Optional[int] = None
     is_favorite: bool = False
+    # sent | delivered | read. Показывается только у своих сообщений
+    status: str = "sent"
+
+
+class ReceiptUpdate(BaseModel):
+    message_id: int
+
+
+class ReceiptResponse(BaseModel):
+    chat_id: int
+    user_id: int
+    last_delivered_message_id: Optional[int] = None
+    last_read_message_id: Optional[int] = None
+
+    class Config:
+        from_attributes = True

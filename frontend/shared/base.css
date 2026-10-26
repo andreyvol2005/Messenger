@@ -267,6 +267,32 @@ textarea:-webkit-autofill:active {
     color: #fff;
 }
 
+/* ============================
+   Статусы сообщений
+   ============================ */
+/* Одна галочка — отправлено, две — доставлено, две синие — прочитано. */
+.message-status {
+    display: inline-flex;
+    align-items: center;
+    margin-left: 4px;
+    vertical-align: middle;
+    line-height: 1;
+}
+
+.message-status svg {
+    width: 15px;
+    height: 11px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.7;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+.message-status.sent { color: #8d8d8d; }
+.message-status.delivered { color: #c2c2c2; }
+.message-status.read { color: #5cb8ff; }
+
 @media (max-width: 768px) {
     .auth-container {
         margin: 0;

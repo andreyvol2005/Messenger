@@ -132,8 +132,30 @@
 .m-avatar-fav { background: #4a3a10; color: #ffcc4d; }
 
 .m-chat-body { flex: 1; min-width: 0; }
-.m-chat-top { display: flex; justify-content: space-between; align-items: baseline; }
-.m-chat-title { font-size: 15px; font-weight: 600; }
+.m-chat-title {
+    font-size: 15px;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Кружок с числом новых непрочитанных сообщений */
+.m-chat-unread {
+    flex-shrink: 0;
+    min-width: 20px;
+    height: 20px;
+    padding: 0 6px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: #007bff;
+    color: #fff;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1;
+}
 .m-chat-preview {
     font-size: 13px;
     color: #888;
