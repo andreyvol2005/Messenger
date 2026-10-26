@@ -10,17 +10,11 @@
 <body>
     <div class="m-page">
         <header class="m-header">
+            <button type="button" id="menu-btn" class="m-hamburger-btn" title="Меню"
+                    aria-label="Открыть меню" aria-expanded="false" aria-controls="side-menu">
+                <span></span><span></span><span></span>
+            </button>
             <h1 class="m-title">Чаты</h1>
-            <div class="m-header-actions">
-                <button id="account-btn" class="m-icon-btn" title="Аккаунт"
-                        aria-label="Аккаунт" aria-haspopup="dialog">
-                    <svg viewBox="0 0 24 24" aria-hidden="true">
-                        <circle cx="12" cy="8" r="4"></circle>
-                        <path d="M4 21c0-4 3.6-6.2 8-6.2s8 2.2 8 6.2"></path>
-                    </svg>
-                </button>
-                <button id="logout-btn" class="m-icon-btn" title="Выйти">⎋</button>
-            </div>
         </header>
 
         <form id="new-chat-form" class="m-search-form" role="search">
@@ -39,16 +33,80 @@
         <ul id="chat-list" class="m-chat-list"></ul>
     </div>
 
-    <!-- Аккаунт: выход и безвозвратное удаление -->
-    <div id="account-modal" class="m-modal" aria-hidden="true">
+    <!-- Затемнение основного экрана, пока открыто меню -->
+    <div id="menu-backdrop" class="m-drawer-backdrop" aria-hidden="true"></div>
+
+    <!-- Боковое меню: те же разделы, что в десктопной версии -->
+    <aside id="side-menu" class="m-drawer" aria-hidden="true" aria-label="Главное меню">
+        <div class="m-drawer-user">
+            <div id="menu-avatar" class="avatar avatar-lg">?</div>
+            <div class="m-drawer-user-text">
+                <div id="menu-nickname" class="m-drawer-name"></div>
+                <div id="menu-username" class="m-drawer-sub"></div>
+            </div>
+        </div>
+
+        <nav class="m-drawer-nav">
+            <button type="button" id="menu-profile" class="m-menu-item">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <circle cx="12" cy="8" r="4"></circle>
+                    <path d="M4 21c0-4 3.6-6.2 8-6.2s8 2.2 8 6.2"></path>
+                </svg>
+                <span>Профиль</span>
+            </button>
+            <button type="button" id="menu-contacts" class="m-menu-item">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <circle cx="9" cy="8" r="3.4"></circle>
+                    <path d="M2.6 20c0-3.4 2.9-5.3 6.4-5.3s6.4 1.9 6.4 5.3"></path>
+                    <path d="M15.9 5.2a3.4 3.4 0 0 1 0 6.5"></path>
+                    <path d="M17.9 14.9c2.2.6 3.5 2.2 3.5 4.5"></path>
+                </svg>
+                <span>Контакты</span>
+            </button>
+        </nav>
+    </aside>
+
+    <!-- Профиль: редактирование данных, смена фото, выход и удаление аккаунта -->
+    <div id="profile-modal" class="m-modal" aria-hidden="true">
         <div class="m-modal-backdrop"></div>
 
-        <div class="m-modal-dialog" role="dialog" aria-modal="true"
-             aria-labelledby="account-title">
-            <h2 id="account-title" class="m-modal-title">Аккаунт</h2>
-            <p id="account-user" class="m-account-user"></p>
+        <div class="m-modal-dialog m-profile-dialog" role="dialog" aria-modal="true"
+             aria-labelledby="profile-name">
+            <div id="profile-avatar" class="avatar avatar-xl">?</div>
+            <button type="button" id="profile-avatar-btn" class="m-profile-avatar-btn">
+                Сменить фото
+            </button>
+            <input type="file" id="profile-avatar-input" accept="image/*" hidden>
+            <h2 id="profile-name" class="m-profile-name"></h2>
+            <p id="profile-since" class="m-profile-since"></p>
 
-            <details class="m-danger">
+            <label class="m-field">
+                <span class="m-field-label">Имя пользователя</span>
+                <div class="input-with-prefix">
+                    <span class="input-prefix">@</span>
+                    <input type="text" id="profile-username" maxlength="30"
+                           autocomplete="username" placeholder="Имя пользователя">
+                </div>
+            </label>
+
+            <label class="m-field">
+                <span class="m-field-label">Имя</span>
+                <input type="text" id="profile-nickname" maxlength="30"
+                       autocomplete="nickname" placeholder="Имя">
+            </label>
+
+            <label class="m-field">
+                <span class="m-field-label">Дата рождения</span>
+                <input type="date" id="profile-birth">
+            </label>
+
+            <label class="m-field">
+                <span class="m-field-label">О себе</span>
+                <textarea id="profile-bio" rows="3" maxlength="150"
+                          placeholder="Пара слов о себе"></textarea>
+            </label>
+
+            <details id="profile-danger" class="m-danger">
                 <summary>Удаление аккаунта</summary>
                 <p class="m-danger-text">
                     Аккаунт и личные данные будут удалены безвозвратно, восстановить
@@ -58,28 +116,65 @@
 
                 <label>
                     Пароль
-                    <input type="password" id="account-delete-password"
+                    <input type="password" id="profile-delete-password"
                            autocomplete="current-password" placeholder="Текущий пароль">
                 </label>
 
                 <label>
                     Контрольная фраза
-                    <input type="text" id="account-delete-phrase"
+                    <input type="text" id="profile-delete-phrase"
                            autocomplete="off" spellcheck="false"
                            placeholder="УДАЛИТЬ АККАУНТ">
                 </label>
 
-                <p id="account-delete-error" class="error hidden"></p>
+                <p id="profile-delete-error" class="error hidden"></p>
 
-                <button type="button" id="account-delete-confirm" class="m-danger-btn">
+                <button type="button" id="profile-delete-confirm" class="m-danger-btn">
                     Удалить аккаунт навсегда
                 </button>
             </details>
 
+            <p id="profile-error" class="error hidden m-profile-error"></p>
+
             <div class="m-modal-actions">
-                <button type="button" id="account-logout" class="m-secondary-btn">Выйти</button>
-                <button type="button" id="account-close" class="m-secondary-btn">Закрыть</button>
+                <button type="button" id="profile-logout" class="m-logout-btn">Выйти</button>
+                <button type="button" id="profile-close" class="m-secondary-btn">Закрыть</button>
+                <button type="button" id="profile-save">Сохранить</button>
             </div>
+        </div>
+    </div>
+
+    <!-- Контакты: список сохранённых контактов и добавление новых -->
+    <div id="contacts-modal" class="m-modal" aria-hidden="true">
+        <div class="m-modal-backdrop"></div>
+
+        <div class="m-modal-dialog m-contacts-dialog" role="dialog" aria-modal="true"
+             aria-labelledby="contacts-title">
+            <div class="m-contacts-header">
+                <h2 id="contacts-title" class="m-modal-title">Контакты</h2>
+                <button type="button" id="contacts-close" class="m-contacts-close"
+                        aria-label="Закрыть контакты" title="Закрыть">×</button>
+            </div>
+
+            <button type="button" id="contacts-add-toggle" class="m-contacts-add-toggle">
+                <span class="m-contacts-add-plus">＋</span>
+                <span>Добавить контакт</span>
+            </button>
+
+            <form id="contact-add-form" class="m-contact-add-form hidden">
+                <div class="m-contact-add-row">
+                    <input type="text" id="contact-search" maxlength="30"
+                           placeholder="Имя пользователя (без @)"
+                           aria-label="Имя пользователя для добавления в контакты"
+                           autocomplete="off">
+                    <button type="submit">Добавить</button>
+                </div>
+                <ul id="contact-search-results"
+                    class="user-search-results m-contact-search-results hidden"></ul>
+            </form>
+
+            <p id="contacts-error" class="error hidden m-contacts-error"></p>
+            <ul id="contacts-list" class="m-contacts-list"></ul>
         </div>
     </div>
 

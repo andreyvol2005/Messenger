@@ -332,7 +332,7 @@
 }
 
 /* ============================
-   Аккаунт: выход и удаление
+   Модальные окна (нижние панели)
    ============================ */
 .m-modal {
     position: fixed;
@@ -382,13 +382,6 @@
 .m-modal-title {
     font-size: 18px;
     font-weight: 600;
-}
-
-.m-account-user {
-    margin-top: 4px;
-    color: #888;
-    font-size: 13px;
-    word-break: break-word;
 }
 
 .m-modal-actions {
@@ -465,4 +458,453 @@
 .m-danger-btn:disabled {
     opacity: 0.6;
     cursor: default;
+}
+
+/* ============================
+   Боковое меню: гамбургер и выдвижная панель
+   ============================ */
+.m-hamburger-btn {
+    flex-shrink: 0;
+    width: 38px;
+    height: 38px;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    background: transparent;
+    border-radius: 8px;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.m-hamburger-btn span {
+    display: block;
+    width: 18px;
+    height: 2px;
+    background: #aaa;
+    border-radius: 2px;
+    transition: background 0.15s ease;
+}
+
+.m-hamburger-btn:active {
+    background: #2a2a2a;
+}
+
+.m-hamburger-btn:active span {
+    background: #fff;
+}
+
+.m-drawer-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 40;
+    background: rgba(0, 0, 0, 0.55);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s ease;
+}
+
+.m-drawer-backdrop.open {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.m-drawer {
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 50;
+    width: 300px;
+    max-width: 84vw;
+    height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    padding: calc(18px + env(safe-area-inset-top)) 14px 18px;
+    background: #232323;
+    border-right: 1px solid #333;
+    box-shadow: 8px 0 30px rgba(0, 0, 0, 0.35);
+    transform: translateX(-100%);
+    transition: transform 0.25s ease;
+}
+
+.m-drawer.open {
+    transform: translateX(0);
+}
+
+.m-drawer-user {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 6px 4px 18px;
+    border-bottom: 1px solid #333;
+}
+
+.m-drawer-user-text {
+    min-width: 0;
+}
+
+.m-drawer-name {
+    font-size: 15px;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.m-drawer-sub {
+    margin-top: 2px;
+    font-size: 12px;
+    color: #888;
+}
+
+.m-drawer-nav {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-top: 12px;
+}
+
+.m-menu-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    padding: 12px;
+    background: transparent;
+    color: #ddd;
+    font-size: 15px;
+    text-align: left;
+    border-radius: 8px;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.m-menu-item:active {
+    background: #2f2f2f;
+    color: #fff;
+}
+
+.m-menu-item svg {
+    width: 19px;
+    height: 19px;
+    flex-shrink: 0;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.7;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    opacity: 0.9;
+}
+
+/* Аватарки-кружки: буква-заглушка или картинка. Классы общие с десктопом,
+   поэтому стили приходится продублировать в мобильной таблице. */
+.avatar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    overflow: hidden;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #3b82f6, #1e40af);
+    color: #fff;
+    font-weight: 600;
+    line-height: 1;
+    user-select: none;
+}
+
+.avatar-lg {
+    width: 44px;
+    height: 44px;
+    font-size: 18px;
+}
+
+.avatar-xl {
+    width: 88px;
+    height: 88px;
+    font-size: 36px;
+    margin: 0 auto;
+}
+
+/* ============================
+   Профиль (нижняя панель)
+   ============================ */
+.m-profile-dialog {
+    text-align: center;
+}
+
+.m-profile-avatar-btn {
+    display: block;
+    margin: 10px auto 0;
+    padding: 6px 12px;
+    background: transparent;
+    border: 1px solid #444;
+    border-radius: 999px;
+    color: #bbb;
+    font-size: 12px;
+}
+
+.m-profile-avatar-btn:hover {
+    background: #2f2f2f;
+    border-color: #555;
+    color: #fff;
+}
+
+.m-profile-avatar-btn:disabled {
+    opacity: 0.6;
+    cursor: default;
+}
+
+.m-profile-name {
+    margin-top: 14px;
+    font-size: 20px;
+    font-weight: 600;
+    word-break: break-word;
+}
+
+.m-profile-since {
+    margin-top: 4px;
+    font-size: 12px;
+    color: #888;
+    min-height: 15px;
+}
+
+.m-field {
+    display: block;
+    margin-top: 16px;
+    text-align: left;
+}
+
+.m-field-label {
+    display: block;
+    margin-bottom: 6px;
+    font-size: 12px;
+    color: #999;
+}
+
+.m-profile-dialog input,
+.m-profile-dialog textarea {
+    width: 100%;
+    padding: 9px 10px;
+    background: #2a2a2a;
+    border: 1px solid #444;
+    border-radius: 6px;
+    color: #eee;
+    font-size: 15px;
+    font-family: inherit;
+}
+
+.m-profile-dialog textarea {
+    resize: vertical;
+    min-height: 74px;
+}
+
+.m-profile-dialog input:focus,
+.m-profile-dialog textarea:focus {
+    outline: none;
+    border-color: #007bff;
+}
+
+/* «@» перед username — статичный префикс, вводится только handle */
+.input-with-prefix {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    padding-left: 10px;
+    background: #2a2a2a;
+    border: 1px solid #444;
+    border-radius: 6px;
+}
+
+.input-with-prefix:focus-within {
+    border-color: #007bff;
+}
+
+.input-prefix {
+    flex-shrink: 0;
+    color: #888;
+    font-size: 14px;
+}
+
+.input-with-prefix input {
+    padding-left: 3px;
+    background: transparent;
+    border: 0;
+}
+
+.input-with-prefix input:focus {
+    border-color: transparent;
+}
+
+.m-profile-error {
+    margin-top: 10px;
+}
+
+.m-logout-btn {
+    background: transparent;
+    color: #ff6b7a;
+}
+
+.m-logout-btn:hover {
+    background: rgba(255, 85, 102, 0.12);
+    color: #ff8a99;
+}
+
+.m-profile-dialog .m-danger {
+    text-align: left;
+}
+
+.m-profile-dialog .m-danger summary:hover {
+    color: #ff8a99;
+}
+
+/* ============================
+   Контакты (нижняя панель)
+   ============================ */
+.m-contacts-dialog {
+    display: flex;
+    flex-direction: column;
+    padding-bottom: calc(20px + env(safe-area-inset-bottom));
+}
+
+.m-contacts-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 14px;
+}
+
+.m-contacts-close {
+    flex-shrink: 0;
+    width: 34px;
+    height: 34px;
+    padding: 0;
+    border-radius: 50%;
+    background: transparent;
+    color: #999;
+    font-size: 24px;
+    line-height: 1;
+}
+
+.m-contacts-close:active {
+    background: #2f2f2f;
+    color: #fff;
+}
+
+.m-contacts-add-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+    margin-bottom: 12px;
+    padding: 11px 12px;
+    background: transparent;
+    border: 1px dashed #444;
+    border-radius: 8px;
+    color: #bbb;
+    font-size: 13px;
+}
+
+.m-contacts-add-toggle:active {
+    background: #2f2f2f;
+    border-color: #555;
+    color: #fff;
+}
+
+.m-contacts-add-plus {
+    color: #4da3ff;
+    font-size: 16px;
+    line-height: 1;
+}
+
+.m-contact-add-form {
+    margin-bottom: 12px;
+}
+
+.m-contact-add-row {
+    display: flex;
+    gap: 8px;
+}
+
+.m-contact-add-row input {
+    flex: 1;
+    min-width: 0;
+    padding: 9px 10px;
+    font-size: 15px;
+}
+
+.m-contact-add-row button {
+    flex-shrink: 0;
+    padding: 9px 14px;
+    font-size: 13px;
+}
+
+.m-contact-search-results {
+    margin-top: 8px;
+    max-height: 200px;
+    overflow-y: auto;
+    list-style: none;
+    background: #2a2a2a;
+    border: 1px solid #333;
+    border-radius: 8px;
+}
+
+.m-contacts-error {
+    margin: 0 0 10px;
+}
+
+.m-contacts-list {
+    list-style: none;
+    min-height: 0;
+    overflow-y: auto;
+}
+
+.m-contact-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 11px 4px;
+    border-bottom: 1px solid #2a2a2a;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.m-contact-item:active {
+    background: #2f2f2f;
+}
+
+.m-contact-avatar {
+    width: 40px;
+    height: 40px;
+    font-size: 16px;
+}
+
+.m-contact-text {
+    flex: 1;
+    min-width: 0;
+}
+
+.m-contact-name {
+    font-size: 15px;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.m-contact-username {
+    margin-top: 2px;
+    color: #888;
+    font-size: 12px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.m-contacts-empty {
+    padding: 28px 8px;
+    color: #888;
+    font-size: 13px;
+    text-align: center;
 }
