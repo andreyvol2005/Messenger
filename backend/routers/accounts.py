@@ -1,10 +1,12 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, UploadFile
 from sqlalchemy import or_
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 from datetime import date
 
 import auth
+import events
+import media
 import models
 import schemas
 import services
@@ -64,7 +66,57 @@ def login(credentials: schemas.UserLogin, db: Session = Depends(get_db)):
         "user_id": user.id,
         "username": user.username,
         "nickname": user.nickname,
+        "avatar_url": user.avatar_url,
     }
+
+
+@router.post("/accounts/avatar", response_model=schemas.ProfileResponse)
+async def upload_avatar(
+    background_tasks: BackgroundTasks,
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth.get_current_user),
+):
+    """Загрузка аватарки: файл на диск, в users.avatar_url — относительный путь."""
+    if file.content_type and not file.content_type.startswith("image/"):
+        raise HTTPException(status_code=400, detail="Можно загружать только изображения")
+
+    # Читаем на байт больше лимита: превышение замечаем, не вычитывая файл целиком.
+    data = await file.read(media.MAX_AVATAR_SIZE + 1)
+    if len(data) > media.MAX_AVATAR_SIZE:
+        raise HTTPException(status_code=413, detail="Файл больше 5 МБ")
+    if not data:
+        raise HTTPException(status_code=400, detail="Пустой файл")
+
+    extension = media.detect_image_extension(data[:16])
+    if extension is None:
+        raise HTTPException(status_code=400, detail="Файл не является изображением")
+
+    avatar_url = media.save_avatar(data, extension)
+    old_avatar_url = current_user.avatar_url
+    current_user.avatar_url = avatar_url
+    try:
+        db.commit()
+    except Exception:
+        # Запись в БД не удалась — только что сохранённый файл не нужен
+        db.rollback()
+        media.delete_avatar(avatar_url)
+        raise
+
+    db.refresh(current_user)
+    # Старую картинку удаляем только после успешного коммита: если что-то
+    # пойдёт не так, у пользователя останется прежний аватар.
+    media.delete_avatar(old_avatar_url)
+
+    # Открытые клиенты обновят картинку без перезагрузки страницы
+    recipients = events.avatar_recipients(db, current_user.id)
+    background_tasks.add_task(
+        events.publish,
+        recipients,
+        events.build_avatar_event(current_user),
+    )
+
+    return current_user
 
 
 @router.post("/account/delete")

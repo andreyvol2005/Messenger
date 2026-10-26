@@ -44,6 +44,7 @@
             </div>
             <div id="chat-window" class="chat-window hidden">
                 <div class="chat-header">
+                    <div id="chat-avatar" class="avatar avatar-lg hidden">?</div>
                     <h3 id="chat-title"></h3>
                 </div>
                 <div id="chat-contact-banner" class="contact-suggestion hidden">
@@ -115,6 +116,10 @@
 
         <div class="profile-dialog" role="dialog" aria-modal="true" aria-labelledby="profile-name">
             <div id="profile-avatar" class="avatar avatar-xl">?</div>
+            <button type="button" id="profile-avatar-btn" class="profile-avatar-btn">
+                Сменить фото
+            </button>
+            <input type="file" id="profile-avatar-input" accept="image/*" hidden>
             <h2 id="profile-name" class="profile-name"></h2>
             <p id="profile-since" class="profile-since"></p>
 

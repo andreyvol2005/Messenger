@@ -10,6 +10,7 @@ from typing import Dict, List
 from fastapi import WebSocket
 from sqlalchemy.orm import Session
 
+import models
 import services
 
 
@@ -96,6 +97,44 @@ def build_receipt_event(
         "user_id": user_id,
         "last_delivered_message_id": delivered_to,
         "last_read_message_id": read_by,
+    }
+
+
+def avatar_recipients(db: Session, user_id: int) -> List[int]:
+    """Кому показать смену аватарки: сам пользователь, его контакты и собеседники."""
+    recipients = {user_id}
+
+    for row in (
+        db.query(models.Contact.user_id)
+        .filter(models.Contact.contact_user_id == user_id)
+        .all()
+    ):
+        recipients.add(row.user_id)
+
+    chat_ids = db.query(models.ChatMember.chat_id).filter(
+        models.ChatMember.user_id == user_id
+    )
+    for row in (
+        db.query(models.ChatMember.user_id)
+        .filter(
+            models.ChatMember.chat_id.in_(chat_ids),
+            models.ChatMember.user_id != user_id,
+        )
+        .all()
+    ):
+        recipients.add(row.user_id)
+
+    return list(recipients)
+
+
+def build_avatar_event(user: models.User) -> dict:
+    """Событие для уже открытых клиентов: обновить аватар без перезагрузки."""
+    return {
+        "type": "avatar_updated",
+        "user_id": user.id,
+        "username": user.username,
+        "nickname": user.nickname,
+        "avatar_url": user.avatar_url,
     }
 
 

@@ -58,6 +58,17 @@ export const Realtime = {
             if (this.statusHandler) this.statusHandler(data);
             return;
         }
+
+        // Смена аватарки: списки чатов/контактов обновят картинку без F5
+        if (data.type === "avatar_updated") {
+            if (Number(data.user_id) === Session.userId()) {
+                Session.setAvatar(data.avatar_url);
+            }
+            document.dispatchEvent(new CustomEvent("messenger:avatar-updated", {
+                detail: data
+            }));
+            return;
+        }
         if (data.type && data.type !== "message") return;
 
         if (typeof data.id === "number") {
