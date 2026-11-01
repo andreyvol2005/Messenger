@@ -7,6 +7,18 @@ html {
     color-scheme: dark;
 }
 
+html[data-theme="light"] {
+    color-scheme: light;
+    filter: invert(1) hue-rotate(180deg);
+}
+
+/* Картинки и иконки возвращаем к исходному виду */
+html[data-theme="light"] img,
+html[data-theme="light"] video,
+html[data-theme="light"] svg {
+    filter: invert(1) hue-rotate(180deg);
+}
+
 body {
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     background: #1e1e1e;

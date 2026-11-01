@@ -6,6 +6,7 @@ import { CONFIG, PATHS } from "../shared/config.js";
 import { ContactSuggestion } from "../shared/contact-suggestion.js";
 import { Realtime } from "../shared/realtime.js";
 import { Session } from "../shared/session.js";
+import { Theme } from "../shared/theme.js";
 import { UI } from "../shared/ui.js";
 import {
     appendIncoming,
@@ -29,6 +30,8 @@ export const MobileChat = {
     async init() {
         if (!Session.requireAuth()) return;
 
+        Theme.apply(Session.theme());
+
         // Без id (например, заход вручную) — возвращаем к списку
         const raw = new URLSearchParams(window.location.search).get("id");
         const parsed = Number(raw);
@@ -40,6 +43,19 @@ export const MobileChat = {
 
         document.getElementById("back-btn").onclick = () => window.location.href = PATHS.MOBILE_CHATS;
         document.getElementById("message-form").onsubmit = (e) => this.sendMessage(e);
+        const messageInput = document.getElementById("message-input");
+        if (messageInput) {
+            messageInput.addEventListener("input", () => {
+                this.saveDraft(this.chatId, messageInput.value);
+                this.resizeInput(messageInput);
+            });
+            messageInput.addEventListener("keydown", (e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                    e.preventDefault();
+                    document.getElementById("message-form").requestSubmit();
+                }
+            });
+        }
         document.getElementById("attach-btn").onclick = () =>
             document.getElementById("image-input").click();
         document.getElementById("image-input").onchange = (e) =>
@@ -78,7 +94,12 @@ export const MobileChat = {
 
         await this.loadTitle();
         await this.loadMessages();
-        document.getElementById("message-input").focus();
+        const initialInput = document.getElementById("message-input");
+        if (initialInput) {
+            initialInput.value = this.getDraft(this.chatId);
+            this.resizeInput(initialInput);
+            initialInput.focus();
+        }
     },
 
     // Параметры общего рендера: мобильные классы, звезда только вне избранного.
@@ -302,6 +323,40 @@ export const MobileChat = {
         }
     },
 
+    draftKey(chatId) {
+        return `messenger_draft_${Session.userId()}_${chatId}`;
+    },
+
+    saveDraft(chatId, text) {
+        if (chatId === null || chatId === undefined) return;
+        try {
+            localStorage.setItem(this.draftKey(chatId), text || "");
+        } catch (e) {}
+    },
+
+    getDraft(chatId) {
+        if (chatId === null || chatId === undefined) return "";
+        try {
+            return localStorage.getItem(this.draftKey(chatId)) || "";
+        } catch (e) {
+            return "";
+        }
+    },
+
+    clearDraft(chatId) {
+        if (chatId === null || chatId === undefined) return;
+        try {
+            localStorage.removeItem(this.draftKey(chatId));
+        } catch (e) {}
+    },
+
+    resizeInput(input) {
+        if (!input) return;
+        input.style.height = "auto";
+        const next = Math.min(input.scrollHeight, 240);
+        input.style.height = next + "px";
+    },
+
     async sendMessage(e) {
         e.preventDefault();
         const input = document.getElementById("message-input");
@@ -309,6 +364,8 @@ export const MobileChat = {
         if (!text) return;
 
         input.value = "";
+        this.clearDraft(this.chatId);
+        this.resizeInput(input);
         try {
             const msg = await API.sendMessage(this.chatId, text);
             const box = document.getElementById("messages");
@@ -319,6 +376,7 @@ export const MobileChat = {
             UI.scrollToBottom(box);
         } catch (err) {
             input.value = text;
+            this.resizeInput(input);
             alert(err.message);
         }
     },

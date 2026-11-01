@@ -27,6 +27,20 @@ export const Chat = {
 
     async init() {
         document.getElementById("message-form").onsubmit = (e) => this.sendMessage(e);
+        const messageInput = document.getElementById("message-input");
+        if (messageInput) {
+            messageInput.addEventListener("input", () => {
+                this.saveDraft(this.currentChatId, messageInput.value);
+                this.resizeInput(messageInput);
+            });
+            messageInput.addEventListener("keydown", (e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                    e.preventDefault();
+                    document.getElementById("message-form").requestSubmit();
+                }
+            });
+            this.resizeInput(messageInput);
+        }
         document.getElementById("attach-btn").onclick = () =>
             document.getElementById("image-input").click();
         document.getElementById("image-input").onchange = (e) =>
@@ -196,6 +210,12 @@ export const Chat = {
         isContact = false,
         avatarUrl = null
     ) {
+        // Сохраняем черновик текущего чата перед переключением
+        if (this.currentChatId !== null) {
+            const currentInput = document.getElementById("message-input");
+            if (currentInput) this.saveDraft(this.currentChatId, currentInput.value);
+        }
+
         this.currentChatId = chatId;
         this.peerUsername = peerUsername || null;
         this.peerIsContact = Boolean(isContact);
@@ -225,6 +245,12 @@ export const Chat = {
         document.getElementById("chat-window").classList.remove("hidden");
         document.getElementById("chat-title").textContent = title;
         this.setChatAvatar(title, avatarUrl);
+
+        const input = document.getElementById("message-input");
+        if (input) {
+            input.value = this.getDraft(chatId);
+            this.resizeInput(input);
+        }
 
         const box = document.getElementById("messages");
         await loadMessageHistory(box, chatId, this.messageOptions());
@@ -316,6 +342,8 @@ export const Chat = {
         if (!text || this.currentChatId === null) return;
 
         input.value = "";
+        this.clearDraft(this.currentChatId);
+        this.resizeInput(input);
         try {
             const msg = await API.sendMessage(this.currentChatId, text);
             const box = document.getElementById("messages");
@@ -327,8 +355,44 @@ export const Chat = {
             await this.loadChats();
         } catch (err) {
             input.value = text;
+            this.resizeInput(input);
             alert(err.message);
         }
+    },
+
+    // Черновики и размер поля ввода
+    draftKey(chatId) {
+        return `messenger_draft_${Session.userId()}_${chatId}`;
+    },
+
+    saveDraft(chatId, text) {
+        if (chatId === null || chatId === undefined) return;
+        try {
+            localStorage.setItem(this.draftKey(chatId), text || "");
+        } catch (e) {}
+    },
+
+    getDraft(chatId) {
+        if (chatId === null || chatId === undefined) return "";
+        try {
+            return localStorage.getItem(this.draftKey(chatId)) || "";
+        } catch (e) {
+            return "";
+        }
+    },
+
+    clearDraft(chatId) {
+        if (chatId === null || chatId === undefined) return;
+        try {
+            localStorage.removeItem(this.draftKey(chatId));
+        } catch (e) {}
+    },
+
+    resizeInput(input) {
+        if (!input) return;
+        input.style.height = "auto";
+        const next = Math.min(input.scrollHeight, 240);
+        input.style.height = next + "px";
     },
 
     // Скрепка: файл выбран — сразу отправляем, без промежуточной формы

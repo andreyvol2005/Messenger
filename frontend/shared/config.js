@@ -12,7 +12,8 @@ export const CONFIG = {
         USER_ID: "messenger_user_id",
         USERNAME: "messenger_username",
         NICKNAME: "messenger_nickname",
-        AVATAR: "messenger_avatar"
+        AVATAR: "messenger_avatar",
+        THEME: "messenger_theme"
     }
 };
 

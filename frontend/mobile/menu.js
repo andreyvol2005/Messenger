@@ -3,6 +3,7 @@
 
 import { API } from "../shared/api.js";
 import { Session } from "../shared/session.js";
+import { Theme } from "../shared/theme.js";
 import { UI } from "../shared/ui.js";
 import { Contacts } from "./contacts.js";
 import { Profile } from "./profile.js";
@@ -24,6 +25,14 @@ export const Menu = {
             this.close();
             Contacts.open();
         };
+
+        const themeBtn = document.getElementById("menu-theme");
+        if (themeBtn) {
+            themeBtn.onclick = () => {
+                this.close();
+                this.toggleTheme();
+            };
+        }
 
         document.addEventListener("keydown", (e) => {
             if (e.key === "Escape" && this.isOpen()) this.close();
@@ -58,9 +67,20 @@ export const Menu = {
             const me = await API.getMe();
             Session.setIdentity(me.username, me.nickname);
             Session.setAvatar(me.avatar_url);
+            if (me.theme) Theme.apply(me.theme);
             if (this.isOpen()) this.renderUser();
         } catch (err) {
             // Меню уже показано из сессии — сетевую ошибку здесь не показываем
+        }
+    },
+
+    async toggleTheme() {
+        const next = Theme.toggle();
+        Theme.apply(next);
+        try {
+            await API.updateMe({ theme: next });
+        } catch (err) {
+            // Локально тема уже применена
         }
     },
 

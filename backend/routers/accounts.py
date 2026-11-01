@@ -67,6 +67,7 @@ def login(credentials: schemas.UserLogin, db: Session = Depends(get_db)):
         "username": user.username,
         "nickname": user.nickname,
         "avatar_url": user.avatar_url,
+        "theme": user.theme or "dark",
     }
 
 
@@ -236,6 +237,12 @@ def update_me(
         if birth_date and birth_date > date.today():
             raise HTTPException(status_code=400, detail="Дата рождения не может быть в будущем")
         current_user.birth_date = birth_date
+
+    if "theme" in data:
+        theme = (data["theme"] or "").strip().lower()
+        if theme not in ("dark", "light"):
+            raise HTTPException(status_code=400, detail="Недопустимая тема")
+        current_user.theme = theme
 
     try:
         db.commit()

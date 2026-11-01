@@ -15,6 +15,9 @@ class User(Base):
     bio = Column(String(150), nullable=True)
     birth_date = Column(Date, nullable=True)
     avatar_url = Column(Text, nullable=True)
+    # Предпочтительная тема интерфейса: "dark" или "light". Хранится в аккаунте,
+    # чтобы не настраивать её заново при каждом входе.
+    theme = Column(String(10), nullable=False, default="dark")
     created_at = Column(DateTime, default=datetime.utcnow)
     # Мягкое удаление: deleted_at != NULL означает аккаунт безвозвратно удалён.
     # Мы не удаляем строку физически, чтобы не ломать FK messages.sender_id -> users(id)

@@ -4,6 +4,7 @@ import { API } from "../shared/api.js";
 import { Receipts } from "../shared/messages.js";
 import { Realtime } from "../shared/realtime.js";
 import { Session } from "../shared/session.js";
+import { Theme } from "../shared/theme.js";
 import { UI } from "../shared/ui.js";
 import { UserSearch } from "../shared/user-search.js";
 import { Contacts } from "./contacts.js";
@@ -13,6 +14,8 @@ import { Profile } from "./profile.js";
 export const MobileChats = {
     async init() {
         if (!Session.requireAuth()) return;
+
+        Theme.apply(Session.theme());
 
         Menu.init();
         Profile.init();

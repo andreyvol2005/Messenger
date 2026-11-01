@@ -32,6 +32,10 @@ export const Session = {
         return localStorage.getItem(CONFIG.STORAGE.AVATAR) || "";
     },
 
+    theme() {
+        return localStorage.getItem(CONFIG.STORAGE.THEME) || "dark";
+    },
+
     userId() {
         return Number(localStorage.getItem(CONFIG.STORAGE.USER_ID));
     },
@@ -42,6 +46,7 @@ export const Session = {
         localStorage.setItem(CONFIG.STORAGE.USERNAME, data.username || "");
         localStorage.setItem(CONFIG.STORAGE.NICKNAME, data.nickname || "");
         localStorage.setItem(CONFIG.STORAGE.AVATAR, data.avatar_url || "");
+        if (data.theme) localStorage.setItem(CONFIG.STORAGE.THEME, data.theme);
     },
 
     // После смены username/nickname сессия не сбрасывается: JWT привязан к id
@@ -52,6 +57,10 @@ export const Session = {
 
     setAvatar(avatarUrl) {
         localStorage.setItem(CONFIG.STORAGE.AVATAR, avatarUrl || "");
+    },
+
+    setTheme(theme) {
+        localStorage.setItem(CONFIG.STORAGE.THEME, theme === "light" ? "light" : "dark");
     },
 
     logout() {

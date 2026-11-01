@@ -19,6 +19,7 @@ class UserResponse(BaseModel):
     nickname: str
     bio: Optional[str] = None
     avatar_url: Optional[str] = None
+    theme: str = "dark"
     created_at: datetime
 
     class Config:
@@ -33,6 +34,7 @@ class ProfileResponse(BaseModel):
     bio: Optional[str] = None
     birth_date: Optional[date] = None
     avatar_url: Optional[str] = None
+    theme: str = "dark"
     created_at: datetime
 
     class Config:
@@ -45,6 +47,7 @@ class ProfileUpdate(BaseModel):
     nickname: Optional[str] = None
     bio: Optional[str] = None
     birth_date: Optional[date] = None
+    theme: Optional[str] = None
 
 
 class AccountDeleteRequest(BaseModel):

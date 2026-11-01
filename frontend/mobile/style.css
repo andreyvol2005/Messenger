@@ -275,10 +275,16 @@
     padding: 10px 12px;
     padding-bottom: calc(10px + env(safe-area-inset-bottom));
 }
-.m-composer input { 
+.m-composer input,
+.m-composer textarea { 
     flex: 1;
-    border-radius: 999px;
+    border-radius: 20px;
     padding: 10px 16px;
+    resize: none;
+    max-height: 240px;
+    overflow-y: auto;
+    line-height: 1.4;
+    font-family: inherit;
 }
 
 /* Скрепка: нейтральная кнопка слева от поля ввода */

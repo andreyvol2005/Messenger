@@ -67,10 +67,16 @@
     padding: 12px;
 }
 
-.message-form input {
+.message-form input,
+.message-form textarea {
     flex: 1;
-    border-radius: 999px;
+    border-radius: 20px;
     padding: 10px 16px;
+    resize: none;
+    max-height: 240px; /* ~10 строк */
+    overflow-y: auto;
+    line-height: 1.4;
+    font-family: inherit;
 }
 
 .message-form button {

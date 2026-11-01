@@ -19,6 +19,7 @@ CREATE TABLE users (
     bio VARCHAR(150) DEFAULT NULL,
     birth_date DATE DEFAULT NULL,
     avatar_url TEXT DEFAULT NULL,
+    theme VARCHAR(10) NOT NULL DEFAULT 'dark',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     deleted_at TIMESTAMP WITH TIME ZONE DEFAULT NULL,
     deleted_reason TEXT DEFAULT NULL,
