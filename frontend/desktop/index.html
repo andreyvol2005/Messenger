@@ -46,6 +46,8 @@
                 <div class="chat-header">
                     <div id="chat-avatar" class="avatar avatar-lg hidden">?</div>
                     <h3 id="chat-title"></h3>
+                    <button type="button" id="chat-info-btn" class="chat-header-info hidden"
+                            title="Профиль собеседника" aria-label="Информация о собеседнике">i</button>
                 </div>
                 <div id="chat-contact-banner" class="contact-suggestion hidden">
                     <div class="contact-suggestion-text">
@@ -76,6 +78,21 @@
             </div>
         </main>
     </div>
+
+    <!-- Затемнение основного экрана, пока открыта панель информации о собеседнике -->
+    <div id="peer-info-backdrop" class="overlay" aria-hidden="true"></div>
+
+    <!-- Панель профиля собеседника: выезжает справа -->
+    <aside id="peer-info" class="peer-info" role="dialog" aria-modal="true"
+           aria-labelledby="peer-info-name" aria-hidden="true">
+        <button type="button" id="peer-info-close" class="peer-info-close"
+                aria-label="Закрыть" title="Закрыть">×</button>
+        <div id="peer-info-avatar" class="avatar avatar-xl">?</div>
+        <h2 id="peer-info-name" class="peer-info-name"></h2>
+        <p id="peer-info-username" class="peer-info-username"></p>
+        <p id="peer-info-bio" class="peer-info-bio"></p>
+        <p id="peer-info-birth" class="peer-info-birth"></p>
+    </aside>
 
     <!-- Затемнение основного экрана, пока открыто меню -->
     <div id="menu-backdrop" class="overlay" aria-hidden="true"></div>

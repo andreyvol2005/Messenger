@@ -15,6 +15,7 @@ import {
     updateMessageStatuses
 } from "../shared/messages.js";
 import { UserSearch } from "../shared/user-search.js";
+import { PeerInfo } from "./peer-info.js";
 
 export const Chat = {
     currentChatId: null,
@@ -199,6 +200,15 @@ export const Chat = {
         this.peerUsername = peerUsername || null;
         this.peerIsContact = Boolean(isContact);
         this.updateContactSuggestion();
+
+        // Кнопка профиля собеседника есть только в личном чате
+        const infoBtn = document.getElementById("chat-info-btn");
+        infoBtn.classList.toggle("hidden", !this.peerUsername);
+        infoBtn.onclick = () => {
+            if (this.peerUsername) {
+                PeerInfo.open(this.peerUsername, { nickname: title, avatarUrl });
+            }
+        };
 
         document.getElementById("chat-placeholder").classList.add("hidden");
         document.getElementById("chat-window").classList.remove("hidden");

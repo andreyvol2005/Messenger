@@ -6,6 +6,7 @@ import { Contacts } from "./contacts.js";
 import { Menu } from "./menu.js";
 import { Profile } from "./profile.js";
 import { Sidebar } from "./sidebar.js";
+import { PeerInfo } from "./peer-info.js";
 
 document.addEventListener("DOMContentLoaded", () => {
     if (!Session.requireAuth()) return;
@@ -14,5 +15,6 @@ document.addEventListener("DOMContentLoaded", () => {
     Profile.init();
     Contacts.init();
     Sidebar.init();
+    PeerInfo.init();
     Chat.init();
 });

@@ -19,6 +19,7 @@ import {
 export const MobileChat = {
     chatId: null,
     peerUsername: null,
+    peerAvatarUrl: null,
     peerIsContact: false,
     // Событие о прочтении может прийти раньше ответа на отправку — применим
     // отметки после того, как сообщение появится в DOM.
@@ -47,6 +48,17 @@ export const MobileChat = {
             () => this.addPeerToContacts();
         document.getElementById("chat-contact-banner-close").onclick =
             () => this.dismissContactSuggestion();
+        document.getElementById("chat-info-btn").onclick = () =>
+            this.peerUsername && this.openPeerInfo();
+
+        document.getElementById("peer-info-close").onclick = () =>
+            this.closePeerInfo();
+        document.querySelector(".m-peer-info-backdrop").onclick = () =>
+            this.closePeerInfo();
+
+        document.addEventListener("keydown", (e) => {
+            if (e.key === "Escape" && this.isPeerInfoOpen()) this.closePeerInfo();
+        });
 
         // Собеседник пишет — сообщение появляется здесь без перезагрузки
         Realtime.connect(
@@ -130,9 +142,11 @@ export const MobileChat = {
             }
             titleEl.textContent = found.title;
             this.peerUsername = found.peer_username || null;
+            this.peerAvatarUrl = found.avatar_url || null;
             this.peerIsContact = Boolean(found.is_contact);
             this.setChatAvatar(found.title, found.avatar_url);
             this.updateContactSuggestion();
+            this.updateInfoButton();
         } catch (err) {
             titleEl.textContent = "Чат";
         }
@@ -162,6 +176,85 @@ export const MobileChat = {
         banner.classList.toggle("hidden", !show);
         button.disabled = false;
         UI.hideError("chat-contact-banner-error");
+    },
+
+    // Кнопка профиля есть только в личном чате (у «Избранного» нет собеседника)
+    updateInfoButton() {
+        const btn = document.getElementById("chat-info-btn");
+        btn.classList.toggle(
+            "hidden",
+            this.chatId === CONFIG.FAVORITES_CHAT_ID || !this.peerUsername
+        );
+    },
+
+    isPeerInfoOpen() {
+        return document.getElementById("peer-info-modal").classList.contains("open");
+    },
+
+    // Профиль собеседника на весь экран: не уходим со страницы чата,
+    // поэтому WebSocket и отправка сообщений продолжают работать.
+    async openPeerInfo() {
+        let user = null;
+        try {
+            const users = await API.searchUsers(this.peerUsername);
+            const match = users.find(
+                (u) => u.username.replace(/^@/, "").toLowerCase()
+                    === this.peerUsername.replace(/^@/, "").toLowerCase()
+            ) || users[0];
+            if (match) user = await API.getUser(match.id);
+        } catch (err) {
+            // Собеседник мог удалить аккаунт — покажем то, что есть из чата.
+            user = null;
+        }
+        this.renderPeerInfo(user);
+
+        const modal = document.getElementById("peer-info-modal");
+        modal.classList.add("open");
+        modal.setAttribute("aria-hidden", "false");
+        document.getElementById("peer-info-close").focus();
+    },
+
+    renderPeerInfo(user) {
+        const titleEl = document.getElementById("chat-title");
+        const nickname = (user && user.nickname) || titleEl.textContent || "Собеседник";
+        document.getElementById("peer-info-name").textContent = nickname;
+        UI.setAvatar(
+            document.getElementById("peer-info-avatar"),
+            nickname,
+            (user && user.avatar_url) || this.peerAvatarUrl || null
+        );
+
+        const usernameEl = document.getElementById("peer-info-username");
+        usernameEl.textContent = user ? user.username : "—";
+
+        const bioEl = document.getElementById("peer-info-bio");
+        if (user && user.bio) {
+            bioEl.textContent = user.bio;
+            bioEl.hidden = false;
+        } else {
+            bioEl.textContent = "";
+            bioEl.hidden = true;
+        }
+
+        const birthEl = document.getElementById("peer-info-birth");
+        if (user && user.birth_date) {
+            birthEl.textContent = new Date(user.birth_date).toLocaleDateString("ru-RU", {
+                day: "numeric",
+                month: "long",
+                year: "numeric"
+            });
+            birthEl.hidden = false;
+        } else {
+            birthEl.textContent = "";
+            birthEl.hidden = true;
+        }
+    },
+
+    closePeerInfo() {
+        const modal = document.getElementById("peer-info-modal");
+        if (!modal.classList.contains("open")) return;
+        modal.classList.remove("open");
+        modal.setAttribute("aria-hidden", "true");
     },
 
     dismissContactSuggestion() {

@@ -13,6 +13,8 @@
             <button id="back-btn" class="m-back-btn" title="Назад">‹</button>
             <div id="chat-avatar" class="m-header-avatar hidden">?</div>
             <h1 id="chat-title" class="m-title m-title-chat">Чат</h1>
+            <button type="button" id="chat-info-btn" class="m-icon-btn hidden"
+                    title="Профиль собеседника" aria-label="Информация о собеседнике">i</button>
         </header>
 
         <div id="chat-contact-banner" class="contact-suggestion hidden">
@@ -43,6 +45,20 @@
                 </svg>
             </button>
         </form>
+    </div>
+
+    <!-- Полноэкранный профиль собеседника: поверх переписки, закрывается крестиком или кликом мимо -->
+    <div id="peer-info-modal" class="m-peer-info" aria-hidden="true" role="dialog" aria-modal="true">
+        <div class="m-peer-info-backdrop"></div>
+        <div class="m-peer-info-content">
+            <button type="button" id="peer-info-close" class="m-peer-info-close"
+                    aria-label="Закрыть" title="Закрыть">×</button>
+            <div id="peer-info-avatar" class="avatar avatar-xl">?</div>
+            <h1 id="peer-info-name" class="m-peer-info-name"></h1>
+            <p id="peer-info-username" class="m-peer-info-username"></p>
+            <p id="peer-info-bio" class="m-peer-info-field"></p>
+            <p id="peer-info-birth" class="m-peer-info-field"></p>
+        </div>
     </div>
 
     <script type="module" src="/mobile/chat.js"></script>

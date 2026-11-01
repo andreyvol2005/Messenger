@@ -70,6 +70,10 @@ export const API = {
         return this.request(`/api/users?q=${encodeURIComponent(query)}`);
     },
 
+    getUser(userId) {
+        return this.request(`/api/users/${userId}`);
+    },
+
     getContacts() {
         return this.request("/api/contacts");
     },

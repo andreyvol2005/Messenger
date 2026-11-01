@@ -174,6 +174,24 @@ def get_users(
     return query.order_by(models.User.nickname).limit(20).all()
 
 
+@router.get("/users/{user_id}", response_model=schemas.ProfileResponse)
+def get_user(
+    user_id: int,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth.get_current_user),
+):
+    # Информация о любом активном пользователе по id — для панели профиля собеседника.
+    # Дата рождения, био и аватарка доступны любому собеседнику в чате.
+    user = (
+        db.query(models.User)
+        .filter(models.User.id == user_id, models.User.deleted_at.is_(None))
+        .first()
+    )
+    if not user:
+        raise HTTPException(status_code=404, detail="Пользователь с таким id не найден")
+    return user
+
+
 @router.get("/me", response_model=schemas.ProfileResponse)
 def get_me(current_user: models.User = Depends(auth.get_current_user)):
     # current_user уже загружен из базы зависимостью get_current_user
