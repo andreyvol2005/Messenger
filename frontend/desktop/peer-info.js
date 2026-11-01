@@ -1,19 +1,18 @@
-// Панель информации о собеседнике (десктоп): выезжает справа поверх шапки и ленты.
-// Данные — через GET /api/users/{id}; WebSocket и отправка сообщений не затрагиваются.
+// Панель информации о собеседнике (десктоп): часть раскладки чата.
+// При открытии сужает окно переписки влево, пользователь может
+// продолжать общаться. Данные — через GET /api/users/{id}.
+// WebSocket и отправка сообщений не затрагиваются.
 
 import { API } from "../shared/api.js";
 import { UI } from "../shared/ui.js";
 
 export const PeerInfo = {
     panel: null,
-    backdrop: null,
 
     init() {
         this.panel = document.getElementById("peer-info");
-        this.backdrop = document.getElementById("peer-info-backdrop");
 
         document.getElementById("peer-info-close").onclick = () => this.close();
-        this.backdrop.onclick = () => this.close();
 
         document.addEventListener("keydown", (e) => {
             if (e.key === "Escape" && this.isOpen()) this.close();
@@ -41,10 +40,9 @@ export const PeerInfo = {
         }
         this.render(user, { nickname, avatarUrl });
 
-        this.backdrop.classList.add("open");
-        this.backdrop.setAttribute("aria-hidden", "false");
         this.panel.classList.add("open");
         this.panel.setAttribute("aria-hidden", "false");
+        document.getElementById("chat-main").classList.add("with-panel");
         document.getElementById("peer-info-close").focus();
     },
 
@@ -88,7 +86,6 @@ export const PeerInfo = {
         if (!this.isOpen()) return;
         this.panel.classList.remove("open");
         this.panel.setAttribute("aria-hidden", "true");
-        this.backdrop.classList.remove("open");
-        this.backdrop.setAttribute("aria-hidden", "true");
+        document.getElementById("chat-main").classList.remove("with-panel");
     }
 };

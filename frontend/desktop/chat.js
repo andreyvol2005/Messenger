@@ -205,10 +205,13 @@ export const Chat = {
         const infoBtn = document.getElementById("chat-info-btn");
         infoBtn.classList.toggle("hidden", !this.peerUsername);
         infoBtn.onclick = () => {
-            if (this.peerUsername) {
-                PeerInfo.open(this.peerUsername, { nickname: title, avatarUrl });
-            }
+            if (!this.peerUsername) return;
+            if (PeerInfo.isOpen()) PeerInfo.close();
+            else PeerInfo.open(this.peerUsername, { nickname: title, avatarUrl });
         };
+
+        // Новый чат — панель профиля предыдущего собеседника больше не актуальна
+        if (PeerInfo.isOpen()) PeerInfo.close();
 
         document.getElementById("chat-placeholder").classList.add("hidden");
         document.getElementById("chat-window").classList.remove("hidden");

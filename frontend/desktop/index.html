@@ -38,7 +38,7 @@
         </aside>
         <div id="sidebar-resizer" class="resizer" role="separator"
             aria-orientation="vertical" title="Потяните, чтобы изменить ширину"></div>
-        <main class="chat-main">
+        <main class="chat-main" id="chat-main">
             <div id="chat-placeholder" class="chat-placeholder">
                 Выберите чат, чтобы начать общение
             </div>
@@ -76,23 +76,17 @@
                 </button>
                 </form>
             </div>
+            <aside id="peer-info" class="peer-info" aria-label="Информация о собеседнике">
+                <button type="button" id="peer-info-close" class="peer-info-close"
+                        aria-label="Закрыть" title="Закрыть">×</button>
+                <div id="peer-info-avatar" class="avatar avatar-xl">?</div>
+                <h2 id="peer-info-name" class="peer-info-name"></h2>
+                <p id="peer-info-username" class="peer-info-username"></p>
+                <p id="peer-info-bio" class="peer-info-bio"></p>
+                <p id="peer-info-birth" class="peer-info-birth"></p>
+            </aside>
         </main>
     </div>
-
-    <!-- Затемнение основного экрана, пока открыта панель информации о собеседнике -->
-    <div id="peer-info-backdrop" class="overlay" aria-hidden="true"></div>
-
-    <!-- Панель профиля собеседника: выезжает справа -->
-    <aside id="peer-info" class="peer-info" role="dialog" aria-modal="true"
-           aria-labelledby="peer-info-name" aria-hidden="true">
-        <button type="button" id="peer-info-close" class="peer-info-close"
-                aria-label="Закрыть" title="Закрыть">×</button>
-        <div id="peer-info-avatar" class="avatar avatar-xl">?</div>
-        <h2 id="peer-info-name" class="peer-info-name"></h2>
-        <p id="peer-info-username" class="peer-info-username"></p>
-        <p id="peer-info-bio" class="peer-info-bio"></p>
-        <p id="peer-info-birth" class="peer-info-birth"></p>
-    </aside>
 
     <!-- Затемнение основного экрана, пока открыто меню -->
     <div id="menu-backdrop" class="overlay" aria-hidden="true"></div>

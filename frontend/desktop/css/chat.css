@@ -224,36 +224,32 @@
     background: #3d3d3d;
 }
 
-/* Панель профиля собеседника: выезжает справа поверх переписки */
-#peer-info-backdrop.overlay {
-    z-index: 50;
+/* Когда панель профиля открыта, основная колонка становится строкой:
+   чат сужается влево, а панель занимает свою ширину справа.
+   Пользователь может продолжать общаться, пока панель открыта. */
+.chat-main.with-panel {
+    flex-direction: row;
 }
-.peer-info {
-    position: fixed;
-    top: 0;
-    right: 0;
-    bottom: 0;
-    width: min(420px, 92vw);
+
+#peer-info {
+    width: 0;
+    flex-shrink: 0;
+    overflow: hidden;
     padding: 24px 20px;
-    overflow-y: auto;
     background: #252525;
     border-left: 1px solid #333;
-    z-index: 55;
     color: #eee;
-    transform: translateX(100%);
-    transition: transform 0.22s ease;
     display: flex;
     flex-direction: column;
     gap: 14px;
+    transition: width 0.22s ease;
 }
-.peer-info.open {
-    transform: translateX(0);
+#peer-info.open {
+    width: min(420px, 92vw);
+    border-left: 1px solid #333;
 }
 .peer-info-close {
-    position: absolute;
-    top: 16px;
-    right: 16px;
-    padding: 0;
+    position: static;
     width: 32px;
     height: 32px;
     border-radius: 50%;
@@ -266,6 +262,8 @@
     display: flex;
     align-items: center;
     justify-content: center;
+    align-self: flex-start;
+    margin-bottom: 10px;
 }
 .peer-info-close:hover {
     background: #333;
