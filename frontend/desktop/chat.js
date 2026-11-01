@@ -210,8 +210,16 @@ export const Chat = {
             else PeerInfo.open(this.peerUsername, { nickname: title, avatarUrl });
         };
 
-        // Новый чат — панель профиля предыдущего собеседника больше не актуальна
-        if (PeerInfo.isOpen()) PeerInfo.close();
+        // Переключаемся между чатами: панель профиля остаётся открытой,
+        // просто перерисовываем её под нового собеседника.
+        // У «Избранного» нет собеседника — панель закрываем.
+        if (PeerInfo.isOpen()) {
+            if (this.peerUsername) {
+                PeerInfo.open(this.peerUsername, { nickname: title, avatarUrl });
+            } else {
+                PeerInfo.close();
+            }
+        }
 
         document.getElementById("chat-placeholder").classList.add("hidden");
         document.getElementById("chat-window").classList.remove("hidden");
