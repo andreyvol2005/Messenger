@@ -1,4 +1,12 @@
-# Messenger
+<h1 align="center">Messenger</h1>
+
+<div align="center">
+
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-blue.svg)](https://python.org)
+[![FastAPI](https://img.shields.io/badge/FastAPI-latest-green.svg)](https://fastapi.tiangolo.com)
+
+</div>
 
 Мессенджер в браузере: личные чаты в реальном времени, контакты, «Избранное», картинки
 в сообщениях и аватарки. Бэкенд — FastAPI и PostgreSQL, фронтенд — обычные ES-модули
@@ -33,6 +41,12 @@
   — отдельные страницы, поэтому кнопка «назад» в браузере работает как надо.
 - **Удаление аккаунта.** Пароль плюс контрольная фраза, мягкое удаление (tombstone)
   с мгновенной инвалидацией токенов и фоновой очисткой связанных данных.
+
+<div align="center">
+
+![Workflow приложения Messenger](docs/workflow.svg)
+
+</div>
 
 ## Стек
 
