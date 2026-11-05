@@ -33,11 +33,35 @@
     border-bottom: 1px solid #333;
 }
 
+.chat-header-text {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
 .chat-header h3 {
     min-width: 0;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+}
+
+/* Строка статуса под именем: «в сети», «был в …», «печатает...» */
+.chat-status {
+    min-width: 0;
+    font-size: 12px;
+    line-height: 1.3;
+    color: #8a8a8a;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.chat-status.is-online,
+.chat-status.is-typing {
+    color: #4caf50;
 }
 
 /* Лента сообщений — колонка: пузырь по ширине подстраивается под текст,

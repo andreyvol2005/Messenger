@@ -5,6 +5,7 @@
 рассылка живёт здесь, а не внутри ws-обработчика.
 """
 import json
+from datetime import datetime
 from typing import Dict, List
 
 from fastapi import WebSocket
@@ -187,20 +188,74 @@ def online_related_ids(db: Session, user_id: int) -> List[int]:
     return [uid for uid in visible_user_ids(db, user_id) if manager.is_online(uid)]
 
 
-def build_presence_event(user_id: int, online: bool) -> dict:
+def visible_last_seen(db: Session, user_id: int) -> Dict[int, datetime]:
+    """Когда в последний раз были в сети видимые пользователи.
+
+    Нужно для начального снимка: WebSocket сообщает только об изменениях,
+    а «был в …» для тех, кто уже офлайн, клиент узнаёт здесь.
+    """
+    visible = visible_user_ids(db, user_id)
+    rows = (
+        db.query(models.User.id, models.User.last_seen_at)
+        .filter(
+            models.User.id.in_(visible),
+            models.User.last_seen_at.is_not(None),
+        )
+        .all()
+    )
+    return {row.id: row.last_seen_at for row in rows}
+
+
+def build_presence_event(
+    user_id: int, online: bool, last_seen_at: datetime | None = None
+) -> dict:
     return {
         "type": "presence",
         "user_id": user_id,
         "online": online,
+        # Для офлайна это и есть время последней активности; для онлайна —
+        # момент подключения. None бывает только при удалении аккаунта.
+        "last_seen_at": last_seen_at.isoformat() if last_seen_at else None,
     }
 
 
-async def publish_presence(db: Session, user_id: int, online: bool):
+async def publish_presence(
+    db: Session,
+    user_id: int,
+    online: bool,
+    last_seen_at: datetime | None = None,
+):
     """Сообщает контактам и собеседникам о входе или выходе пользователя."""
     await publish(
         related_user_ids(db, user_id),
-        build_presence_event(user_id, online),
+        build_presence_event(user_id, online, last_seen_at),
     )
+
+
+def build_typing_event(chat_id: int, user_id: int) -> dict:
+    return {
+        "type": "typing",
+        "chat_id": chat_id,
+        "user_id": user_id,
+    }
+
+
+async def publish_typing(db: Session, user_id: int, chat_id: int):
+    """Эфемерное «печатает…» — только остальным участникам чата.
+
+    Состояние не хранится ни в базе, ни в памяти сервера: клиент присылает
+    событие, пока набирает текст, а получатель гасит индикатор по таймауту.
+    """
+    if services.is_favorites(chat_id):
+        return
+
+    recipients = [
+        member_id
+        for member_id in services.chat_member_ids(db, chat_id)
+        if member_id != user_id
+    ]
+    if recipients:
+        await publish(recipients, build_typing_event(chat_id, user_id))
 
 
 async def disconnect_user_everywhere(user_id: int):

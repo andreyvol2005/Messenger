@@ -11,6 +11,7 @@ from __future__ import annotations
 import asyncio
 import sys
 import uuid
+from datetime import datetime
 from pathlib import Path
 
 import pytest
@@ -106,6 +107,15 @@ def auth(token: str) -> dict:
     return {"Authorization": f"Bearer {token}"}
 
 
+def assert_presence(event: dict, user_id: int, online: bool):
+    assert event["type"] == "presence"
+    assert event["user_id"] == user_id
+    assert event["online"] is online
+    # Время последней активности должно быть ISO-строкой, которую понимает
+    # и Python, и браузер.
+    assert datetime.fromisoformat(event["last_seen_at"]) is not None
+
+
 def test_presence_event_and_snapshot(client):
     alice = register_and_login(client, "alice")
     bob = register_and_login(client, "bob")
@@ -127,39 +137,79 @@ def test_presence_event_and_snapshot(client):
         f"/ws/{bob['user_id']}?token={bob['access_token']}"
     ) as bob_socket:
         # Своё подключение тоже приходит событием
-        own = bob_socket.receive_json()
-        assert own == {
-            "type": "presence",
-            "user_id": bob["user_id"],
-            "online": True,
-        }
+        assert_presence(bob_socket.receive_json(), bob["user_id"], True)
 
         with client.websocket_connect(
             f"/ws/{alice['user_id']}?token={alice['access_token']}"
         ):
-            online = bob_socket.receive_json()
-            assert online == {
-                "type": "presence",
-                "user_id": alice["user_id"],
-                "online": True,
-            }
+            assert_presence(bob_socket.receive_json(), alice["user_id"], True)
 
             snapshot = client.get(
                 "/api/presence", headers=auth(bob["access_token"])
             )
             assert snapshot.status_code == 200
-            assert set(snapshot.json()["online"]) == {
-                alice["user_id"],
-                bob["user_id"],
+            data = snapshot.json()
+            assert set(data["online"]) == {alice["user_id"], bob["user_id"]}
+            # Оба уже подключались, поэтому время последней активности известно
+            assert set(data["last_seen"]) == {
+                str(alice["user_id"]),
+                str(bob["user_id"]),
             }
 
-        # Сокет Алисы закрылся — Боб получает офлайн
-        offline = bob_socket.receive_json()
-        assert offline == {
-            "type": "presence",
-            "user_id": alice["user_id"],
-            "online": False,
-        }
+        # Сокет Алисы закрылся — Боб получает офлайн и время последней активности
+        assert_presence(bob_socket.receive_json(), alice["user_id"], False)
+
+        snapshot = client.get(
+            "/api/presence", headers=auth(bob["access_token"])
+        ).json()
+        assert alice["user_id"] not in snapshot["online"]
+        assert str(alice["user_id"]) in snapshot["last_seen"]
+
+
+def test_typing_only_for_chat_members(client):
+    alice = register_and_login(client, "type_a")
+    bob = register_and_login(client, "type_b")
+    stranger = register_and_login(client, "type_c")
+
+    chat = client.post(
+        "/api/chats",
+        json={"username": bob["username"].lstrip("@")},
+        headers=auth(alice["access_token"]),
+    ).json()
+    # Чат, в котором Алисы нет: её typing туда попасть не должен
+    foreign_chat = client.post(
+        "/api/chats",
+        json={"username": stranger["username"].lstrip("@")},
+        headers=auth(bob["access_token"]),
+    ).json()
+
+    with client.websocket_connect(
+        f"/ws/{bob['user_id']}?token={bob['access_token']}"
+    ) as bob_socket:
+        bob_socket.receive_json()  # собственное online-событие
+
+        with client.websocket_connect(
+            f"/ws/{alice['user_id']}?token={alice['access_token']}"
+        ) as alice_socket:
+            assert bob_socket.receive_json()["user_id"] == alice["user_id"]
+
+            # Сначала чужой чат — событие должно быть проигнорировано,
+            # иначе следующим Боб получил бы typing с чужим chat_id.
+            alice_socket.send_json({
+                "type": "typing",
+                "chat_id": foreign_chat["id"],
+            })
+            alice_socket.send_json({"type": "typing", "chat_id": chat["id"]})
+            # Обычное сообщение заставляет TestClient отдать Бобу уже
+            # поставленные в очередь события; порядок при этом сохраняется.
+            alice_socket.send_json({"chat_id": chat["id"], "text": "привет"})
+
+            event = bob_socket.receive_json()
+            assert event == {
+                "type": "typing",
+                "chat_id": chat["id"],
+                "user_id": alice["user_id"],
+            }
 
 
 def test_presence_snapshot_uses_own_contacts(client):
