@@ -31,7 +31,10 @@ async def websocket_endpoint(websocket: WebSocket, user_id: int, token: str = ""
             await websocket.close(code=1008)
             return
 
-        await events.manager.connect(websocket, user_id)
+        became_online = await events.manager.connect(websocket, user_id)
+        if became_online:
+            # Первая вкладка пользователя: контакты и собеседники видят зелёную точку
+            await events.publish_presence(db, user_id, True)
         try:
             while True:
                 raw = await websocket.receive_text()
@@ -69,6 +72,8 @@ async def websocket_endpoint(websocket: WebSocket, user_id: int, token: str = ""
         except WebSocketDisconnect:
             pass
         finally:
-            events.manager.disconnect(user_id, websocket)
+            # Последняя закрытая вкладка — пользователь ушёл в офлайн
+            if events.manager.disconnect(user_id, websocket):
+                await events.publish_presence(db, user_id, False)
     finally:
         db.close()

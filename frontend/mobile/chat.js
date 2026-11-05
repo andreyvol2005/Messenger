@@ -4,6 +4,7 @@
 import { API } from "../shared/api.js";
 import { CONFIG, PATHS } from "../shared/config.js";
 import { ContactSuggestion } from "../shared/contact-suggestion.js";
+import { Presence } from "../shared/presence.js";
 import { Realtime } from "../shared/realtime.js";
 import { Session } from "../shared/session.js";
 import { Theme } from "../shared/theme.js";
@@ -81,6 +82,7 @@ export const MobileChat = {
             (msg) => this.onIncoming(msg),
             (status) => this.onStatus(status)
         );
+        Presence.init();
 
         // Вернулись на вкладку — всё, что пришло в открытый чат, стало прочитано
         document.addEventListener("visibilitychange", () => {
@@ -165,7 +167,7 @@ export const MobileChat = {
             this.peerUsername = found.peer_username || null;
             this.peerAvatarUrl = found.avatar_url || null;
             this.peerIsContact = Boolean(found.is_contact);
-            this.setChatAvatar(found.title, found.avatar_url);
+            this.setChatAvatar(found.title, found.avatar_url, found.peer_id);
             this.updateContactSuggestion();
             this.updateInfoButton();
         } catch (err) {
@@ -173,7 +175,7 @@ export const MobileChat = {
         }
     },
 
-    setChatAvatar(title, avatarUrl) {
+    setChatAvatar(title, avatarUrl, peerId = null) {
         const avatar = document.getElementById("chat-avatar");
         if (!avatar) return;
 
@@ -185,6 +187,7 @@ export const MobileChat = {
 
         avatar.classList.remove("hidden");
         UI.setAvatar(avatar, title, avatarUrl);
+        Presence.attach(avatar, peerId);
     },
 
     updateContactSuggestion() {

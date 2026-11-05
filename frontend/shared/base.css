@@ -196,6 +196,41 @@ textarea:-webkit-autofill:active {
     object-fit: cover;
 }
 
+/* ============================
+   Индикатор «в сети»
+   ============================ */
+/* Точка лежит поверх аватара, поэтому его содержимое не должно обрезаться.
+   Класс presence-host вешается из shared/presence.js. */
+.avatar.presence-host,
+.m-avatar.presence-host,
+.m-header-avatar.presence-host,
+.user-search-avatar.presence-host {
+    position: relative;
+    overflow: visible;
+}
+
+.presence-dot {
+    position: absolute;
+    right: -1px;
+    bottom: -1px;
+    width: 13px;
+    height: 13px;
+    display: block;
+    border: 2px solid #252525;
+    border-radius: 50%;
+    background: #22c55e;
+    box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.25);
+    opacity: 0;
+    transform: scale(0.6);
+    transition: opacity 0.15s ease, transform 0.15s ease;
+    pointer-events: none;
+}
+
+.presence-host.is-online > .presence-dot {
+    opacity: 1;
+    transform: scale(1);
+}
+
 .user-search-text {
     min-width: 0;
 }

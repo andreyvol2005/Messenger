@@ -2,6 +2,7 @@
 // и добавлением по username. Тап по контакту открывает с ним чат.
 
 import { API } from "../shared/api.js";
+import { Presence } from "../shared/presence.js";
 import { Session } from "../shared/session.js";
 import { UI } from "../shared/ui.js";
 import { Validation } from "../shared/validation.js";
@@ -77,6 +78,8 @@ export const Contacts = {
                 a.nickname.localeCompare(b.nickname, "ru", { sensitivity: "base" })
             );
             this.render();
+            // Контакт мог быть добавлен уже после входа в сеть — обновляем статусы
+            Presence.refresh();
         } catch (err) {
             this.list.innerHTML = "";
             this.list.appendChild(UI.el("li", "m-contacts-empty", "Не удалось загрузить контакты"));
@@ -98,9 +101,13 @@ export const Contacts = {
 
         for (const user of this.contacts) {
             const item = UI.el("li", "m-contact-item");
-            item.appendChild(
-                UI.avatar(user.nickname, user.avatar_url, "avatar m-contact-avatar")
+            const avatar = UI.avatar(
+                user.nickname,
+                user.avatar_url,
+                "avatar m-contact-avatar"
             );
+            Presence.attach(avatar, user.id);
+            item.appendChild(avatar);
 
             const text = UI.el("div", "m-contact-text");
             text.appendChild(UI.el("div", "m-contact-name", user.nickname));

@@ -18,21 +18,38 @@ class ConnectionManager:
     def __init__(self):
         self.active: Dict[int, List[WebSocket]] = {}  # user_id -> список сокетов
 
-    async def connect(self, ws: WebSocket, user_id: int):
-        await ws.accept()
-        self.active.setdefault(user_id, []).append(ws)
+    async def connect(self, ws: WebSocket, user_id: int) -> bool:
+        """Подключает сокет и сообщает, был ли пользователь до этого офлайн.
 
-    def disconnect(self, user_id: int, ws: WebSocket):
+        Несколько вкладок одного пользователя не должны давать повторный
+        «вошёл в сеть»: событие шлём только на переходе 0 → 1 сокет.
+        """
+        await ws.accept()
+        was_online = bool(self.active.get(user_id))
+        self.active.setdefault(user_id, []).append(ws)
+        return not was_online
+
+    def is_online(self, user_id: int) -> bool:
+        return bool(self.active.get(user_id))
+
+    def disconnect(self, user_id: int, ws: WebSocket) -> bool:
+        """Убирает сокет и сообщает, ушёл ли пользователь в офлайн.
+
+        Последняя закрытая вкладка — переход 1 → 0; тогда собеседникам нужно
+        отправить событие. Пока остаётся хотя бы один сокет, пользователь онлайн.
+        """
         sockets = self.active.get(user_id)
         if not sockets:
-            return
+            return False
         if ws in sockets:
             sockets.remove(ws)
-        if not sockets:
-            self.active.pop(user_id, None)
+        if sockets:
+            return False
+        self.active.pop(user_id, None)
+        return True
 
-    async def disconnect_all(self, user_id: int):
-        """Разрывает все WebSocket-соединения пользователя (например, при удалении аккаунта)."""
+    async def disconnect_all(self, user_id: int) -> bool:
+        """Разрывает все сокеты пользователя. True — если он был в сети."""
         sockets = self.active.pop(user_id, [])
         for ws in list(sockets):
             try:
@@ -41,6 +58,7 @@ class ConnectionManager:
                 await ws.close()
             except Exception:
                 pass
+        return bool(sockets)
 
     async def send_to_users(self, user_ids: List[int], message: dict):
         payload = json.dumps(message, default=str)
@@ -102,8 +120,31 @@ def build_receipt_event(
     }
 
 
-def avatar_recipients(db: Session, user_id: int) -> List[int]:
-    """Кому показать смену аватарки: сам пользователь, его контакты и собеседники."""
+def chat_peer_ids(db: Session, user_id: int) -> set[int]:
+    """Пользователи, с которыми у данного есть общий чат."""
+    chat_ids = db.query(models.ChatMember.chat_id).filter(
+        models.ChatMember.user_id == user_id
+    )
+    return {
+        row.user_id
+        for row in (
+            db.query(models.ChatMember.user_id)
+            .filter(
+                models.ChatMember.chat_id.in_(chat_ids),
+                models.ChatMember.user_id != user_id,
+            )
+            .all()
+        )
+    }
+
+
+def related_user_ids(db: Session, user_id: int) -> List[int]:
+    """Кому показать изменения профиля и присутствия этого пользователя.
+
+    Это люди, у которых он есть в контактах (они сохранили его), и собеседники
+    по общим чатам. Обратное направление здесь не нужно: если пользователь сам
+    сохранил кого-то, тот ещё не видит его у себя.
+    """
     recipients = {user_id}
 
     for row in (
@@ -113,20 +154,75 @@ def avatar_recipients(db: Session, user_id: int) -> List[int]:
     ):
         recipients.add(row.user_id)
 
-    chat_ids = db.query(models.ChatMember.chat_id).filter(
-        models.ChatMember.user_id == user_id
-    )
+    recipients.update(chat_peer_ids(db, user_id))
+    return list(recipients)
+
+
+def visible_user_ids(db: Session, user_id: int) -> List[int]:
+    """Кого видит сам пользователь: свои контакты и собеседники по чатам.
+
+    Для начального снимка присутствия направление контактов обратное
+    related_user_ids: пользователю нужны статусы тех, кого он сохранил.
+    """
+    recipients = {user_id}
+
     for row in (
-        db.query(models.ChatMember.user_id)
-        .filter(
-            models.ChatMember.chat_id.in_(chat_ids),
-            models.ChatMember.user_id != user_id,
-        )
+        db.query(models.Contact.contact_user_id)
+        .filter(models.Contact.user_id == user_id)
         .all()
     ):
-        recipients.add(row.user_id)
+        recipients.add(row.contact_user_id)
 
+    recipients.update(chat_peer_ids(db, user_id))
     return list(recipients)
+
+
+def avatar_recipients(db: Session, user_id: int) -> List[int]:
+    """Кому показать смену аватарки: сам пользователь, его контакты и собеседники."""
+    return related_user_ids(db, user_id)
+
+
+def online_related_ids(db: Session, user_id: int) -> List[int]:
+    """Кто из видимых пользователей сейчас на связи."""
+    return [uid for uid in visible_user_ids(db, user_id) if manager.is_online(uid)]
+
+
+def build_presence_event(user_id: int, online: bool) -> dict:
+    return {
+        "type": "presence",
+        "user_id": user_id,
+        "online": online,
+    }
+
+
+async def publish_presence(db: Session, user_id: int, online: bool):
+    """Сообщает контактам и собеседникам о входе или выходе пользователя."""
+    await publish(
+        related_user_ids(db, user_id),
+        build_presence_event(user_id, online),
+    )
+
+
+async def disconnect_user_everywhere(user_id: int):
+    """Закрывает все сокеты пользователя и сообщает, что он вышел.
+
+    Нужно при удалении аккаунта: обработчик сокета не увидит перехода 1 → 0,
+    потому что соединения уже убраны из active.
+    """
+    if not await manager.disconnect_all(user_id):
+        return
+
+    # Сессия запроса к этому моменту уже закрыта, поэтому открываем свою.
+    from database import SessionLocal
+
+    db = SessionLocal()
+    try:
+        await publish_presence(db, user_id, False)
+    except Exception:
+        # Пользователя уже удаляют; сбой рассылки не должен ломать очистку.
+        pass
+    finally:
+        db.close()
 
 
 def build_avatar_event(user: models.User) -> dict:

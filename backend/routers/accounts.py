@@ -143,7 +143,7 @@ def delete_account(
 
     # Ответ отдаём сразу, а сокеты закрываем следом: клиент уже не должен
     # получать новые события, даже если соединение успело установиться раньше.
-    background_tasks.add_task(events.manager.disconnect_all, user.id)
+    background_tasks.add_task(events.disconnect_user_everywhere, user.id)
 
     return {
         "status": "deletion_scheduled",

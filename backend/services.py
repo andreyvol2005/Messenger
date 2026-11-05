@@ -245,6 +245,7 @@ def list_chats(db: Session, user: models.User) -> schemas.ChatListResponse:
 
     for chat, last_text, last_media, last_at in rows:
         title = chat.name
+        peer_id = None
         peer_username = None
         avatar_url = None
         is_contact = False
@@ -253,6 +254,7 @@ def list_chats(db: Session, user: models.User) -> schemas.ChatListResponse:
             if peer:
                 # Удалённый собеседник отображается как «Удалённый пользователь»
                 title = peer.nickname
+                peer_id = peer.id
                 peer_username = peer.username
                 avatar_url = peer.avatar_url
                 is_contact = peer.id in contact_ids
@@ -265,6 +267,7 @@ def list_chats(db: Session, user: models.User) -> schemas.ChatListResponse:
                 is_favorites=False,
                 last_message=_message_preview(last_text, last_media),
                 last_message_at=last_at,
+                peer_id=peer_id,
                 peer_username=peer_username,
                 avatar_url=avatar_url,
                 is_contact=is_contact,
@@ -331,6 +334,7 @@ def create_or_get_chat(db: Session, user: models.User, username: str) -> schemas
         is_favorites=False,
         last_message=None,
         last_message_at=None,
+        peer_id=other.id,
         peer_username=other.username,
         avatar_url=other.avatar_url,
         is_contact=is_contact,

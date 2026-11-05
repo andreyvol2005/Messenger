@@ -3,6 +3,7 @@
 import { API } from "../shared/api.js";
 import { CONFIG } from "../shared/config.js";
 import { ContactSuggestion } from "../shared/contact-suggestion.js";
+import { Presence } from "../shared/presence.js";
 import { Realtime } from "../shared/realtime.js";
 import { Session } from "../shared/session.js";
 import { UI } from "../shared/ui.js";
@@ -54,7 +55,8 @@ export const Chat = {
             chat.title,
             chat.peer_username,
             chat.is_contact,
-            chat.avatar_url
+            chat.avatar_url,
+            chat.peer_id
         ));
 
         document.addEventListener("messenger:avatar-updated", () => {
@@ -66,6 +68,7 @@ export const Chat = {
             (msg) => this.onIncoming(msg),
             (status) => this.onStatus(status)
         );
+        Presence.init();
 
         // Вернулись на вкладку — всё, что пришло в открытый чат, стало прочитано
         document.addEventListener("visibilitychange", () => {
@@ -160,6 +163,7 @@ export const Chat = {
                     "avatar avatar-lg chat-item-avatar"
                 );
                 if (chat.is_favorites) avatar.classList.add("avatar-fav");
+                Presence.attach(avatar, chat.peer_id);
 
                 const body = UI.el("div", "chat-item-body");
                 body.appendChild(UI.el("div", "chat-item-title",
@@ -186,7 +190,8 @@ export const Chat = {
                     chat.title,
                     chat.peer_username,
                     chat.is_contact,
-                    chat.avatar_url
+                    chat.avatar_url,
+                    chat.peer_id
                 );
                 list.appendChild(item);
             }
@@ -194,7 +199,11 @@ export const Chat = {
             // Если открыт чат, шапка тоже должна подхватить свежий аватар
             const current = chats.find((chat) => chat.id === this.currentChatId);
             if (current) {
-                this.setChatAvatar(current.title, current.avatar_url);
+                this.setChatAvatar(
+                    current.title,
+                    current.avatar_url,
+                    current.peer_id
+                );
             }
         } catch (err) {
             list.appendChild(UI.el("li", "chat-item loading-item", err.message));
@@ -208,7 +217,8 @@ export const Chat = {
         title,
         peerUsername = null,
         isContact = false,
-        avatarUrl = null
+        avatarUrl = null,
+        peerId = null
     ) {
         // Сохраняем черновик текущего чата перед переключением
         if (this.currentChatId !== null) {
@@ -244,7 +254,10 @@ export const Chat = {
         document.getElementById("chat-placeholder").classList.add("hidden");
         document.getElementById("chat-window").classList.remove("hidden");
         document.getElementById("chat-title").textContent = title;
-        this.setChatAvatar(title, avatarUrl);
+        this.setChatAvatar(title, avatarUrl, peerId);
+        // Чат могли создать только что: собеседник уже был онлайн, поэтому
+        // события о его входе не приходило — уточняем состояние.
+        Presence.refresh();
 
         const input = document.getElementById("message-input");
         if (input) {
@@ -260,7 +273,7 @@ export const Chat = {
         await this.loadChats();
     },
 
-    setChatAvatar(title, avatarUrl) {
+    setChatAvatar(title, avatarUrl, peerId = null) {
         const avatar = document.getElementById("chat-avatar");
         if (!avatar) return;
 
@@ -272,6 +285,7 @@ export const Chat = {
 
         avatar.classList.remove("hidden");
         UI.setAvatar(avatar, title, avatarUrl);
+        Presence.attach(avatar, peerId);
     },
 
     updateContactSuggestion() {

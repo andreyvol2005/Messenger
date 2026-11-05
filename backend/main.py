@@ -5,7 +5,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
-from routers import accounts, chats, contacts, messages, ws
+from routers import accounts, chats, contacts, messages, presence, ws
 from jobs import worker_loop
 import media
 
@@ -28,6 +28,7 @@ app.include_router(accounts.router)
 app.include_router(chats.router)
 app.include_router(contacts.router)
 app.include_router(messages.router)
+app.include_router(presence.router)
 app.include_router(ws.router)
 
 # Фоновый воркер очистки данных удалённых аккаунтов (S3, Redis, индекс, push).

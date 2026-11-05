@@ -28,7 +28,12 @@ export const Realtime = {
         this.socket = new WebSocket(
             `${proto}//${window.location.host}/ws/${userId}?token=${encodeURIComponent(token)}`
         );
-        this.socket.onopen = () => { this.backoff = 1000; };
+        this.socket.onopen = () => {
+            this.backoff = 1000;
+            // После переподключения события за время обрыва потеряны — модуль
+            // присутствия сверит состояние с сервером.
+            document.dispatchEvent(new CustomEvent("messenger:realtime-open"));
+        };
         this.socket.onmessage = (event) => this.handle(event);
         this.socket.onclose = () => this.retry();
         // Ошибку не логируем: после неё всё равно придёт onclose с переподключением
@@ -56,6 +61,14 @@ export const Realtime = {
         // отдельный колбэк и они не попадают в список увиденных id.
         if (data.type === "status") {
             if (this.statusHandler) this.statusHandler(data);
+            return;
+        }
+
+        // Пользователь вошёл в сеть или вышел — обновляем зелёные точки
+        if (data.type === "presence") {
+            document.dispatchEvent(new CustomEvent("messenger:presence", {
+                detail: data
+            }));
             return;
         }
 

@@ -73,7 +73,8 @@ class ChatResponse(BaseModel):
     last_message: Optional[str] = None
     last_message_at: Optional[datetime] = None
     # Только для личных чатов: собеседник, его аватар и признак того,
-    # что он уже в контактах
+    # что он уже в контактах. peer_id нужен для индикатора «в сети».
+    peer_id: Optional[int] = None
     peer_username: Optional[str] = None
     avatar_url: Optional[str] = None
     is_contact: bool = False
@@ -108,6 +109,11 @@ class MessageResponse(BaseModel):
 
 class ReceiptUpdate(BaseModel):
     message_id: int
+
+
+class PresenceResponse(BaseModel):
+    # id связанных пользователей, у которых сейчас есть открытый WebSocket
+    online: List[int]
 
 
 class ReceiptResponse(BaseModel):

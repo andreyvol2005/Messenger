@@ -1,6 +1,7 @@
 // Контакты: только явно сохранённые записи из таблицы contacts.
 
 import { API } from "../shared/api.js";
+import { Presence } from "../shared/presence.js";
 import { UI } from "../shared/ui.js";
 import { Validation } from "../shared/validation.js";
 import { Chat } from "./chat.js";
@@ -76,6 +77,8 @@ export const Contacts = {
                 a.nickname.localeCompare(b.nickname, "ru", { sensitivity: "base" })
             );
             this.render();
+            // Контакт мог быть добавлен уже после входа в сеть — обновляем статусы
+            Presence.refresh();
         } catch (err) {
             this.list.innerHTML = "";
             this.list.appendChild(UI.el("li", "contacts-empty", "Не удалось загрузить контакты"));
@@ -97,9 +100,13 @@ export const Contacts = {
 
         for (const user of this.contacts) {
             const item = UI.el("li", "contact-item");
-            item.appendChild(
-                UI.avatar(user.nickname, user.avatar_url, "avatar avatar-lg")
+            const avatar = UI.avatar(
+                user.nickname,
+                user.avatar_url,
+                "avatar avatar-lg"
             );
+            Presence.attach(avatar, user.id);
+            item.appendChild(avatar);
 
             const text = UI.el("div", "contact-text");
             text.appendChild(UI.el("div", "contact-name", user.nickname));
@@ -122,7 +129,8 @@ export const Contacts = {
                 chat.title,
                 chat.peer_username,
                 chat.is_contact,
-                chat.avatar_url
+                chat.avatar_url,
+                chat.peer_id
             );
         } catch (err) {
             UI.showError("contacts-error", err.message);

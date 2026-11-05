@@ -89,6 +89,10 @@ export const API = {
         return this.request("/api/chats");
     },
 
+    getPresence() {
+        return this.request("/api/presence");
+    },
+
     createChat(username) {
         return this.request("/api/chats", {
             method: "POST",

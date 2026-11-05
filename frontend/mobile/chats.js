@@ -2,6 +2,7 @@
 
 import { API } from "../shared/api.js";
 import { Receipts } from "../shared/messages.js";
+import { Presence } from "../shared/presence.js";
 import { Realtime } from "../shared/realtime.js";
 import { Session } from "../shared/session.js";
 import { Theme } from "../shared/theme.js";
@@ -34,6 +35,7 @@ export const MobileChats = {
             }
             this.refreshList();
         });
+        Presence.init();
 
         // Смена аватарки собеседника — тоже повод перерисовать список
         document.addEventListener("messenger:avatar-updated", () => this.refreshList());
@@ -62,6 +64,7 @@ export const MobileChats = {
                     "m-avatar"
                 );
                 if (chat.is_favorites) avatar.classList.add("m-avatar-fav");
+                Presence.attach(avatar, chat.peer_id);
 
                 const body = UI.el("div", "m-chat-body");
                 body.appendChild(UI.el("div", "m-chat-title", chat.title));
