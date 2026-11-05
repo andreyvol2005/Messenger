@@ -12,9 +12,6 @@ export const Realtime = {
     statusHandler: null,
     seen: new Set(),      // id уже показанных сообщений
     MAX_SEEN: 500,
-    // «Печатает…» шлём не на каждую клавишу, а раз в две секунды на чат
-    typingSentAt: new Map(),
-    TYPING_INTERVAL: 2000,
 
     connect(handler, statusHandler = null) {
         this.handler = handler;
@@ -33,7 +30,6 @@ export const Realtime = {
         );
         this.socket.onopen = () => {
             this.backoff = 1000;
-            this.typingSentAt.clear();
             // После переподключения события за время обрыва потеряны — модуль
             // присутствия сверит состояние с сервером.
             document.dispatchEvent(new CustomEvent("messenger:realtime-open"));
@@ -58,21 +54,13 @@ export const Realtime = {
         } catch (err) {
             return;
         }
-        // Сервер присылает error в ответ на некорректный ввод по сокету
+        // Сервер присылает error в ответ на ввод с сокета, мы по сокету не шлём
         if (data.error) return;
 
         // Отметки «доставлено/прочитано» — не сообщения, их обрабатывает
         // отдельный колбэк и они не попадают в список увиденных id.
         if (data.type === "status") {
             if (this.statusHandler) this.statusHandler(data);
-            return;
-        }
-
-        // Собеседник набирает текст — показываем «печатает...» в шапке чата
-        if (data.type === "typing") {
-            document.dispatchEvent(new CustomEvent("messenger:typing", {
-                detail: data
-            }));
             return;
         }
 
@@ -107,33 +95,6 @@ export const Realtime = {
         this.seen.add(id);
         if (this.seen.size > this.MAX_SEEN) {
             this.seen = new Set([...this.seen].slice(-(this.MAX_SEEN / 2)));
-        }
-    },
-
-    // Отправка служебного сообщения по сокету. Если сокет ещё не открыт,
-    // молча возвращаем false: сообщения всё равно уходят обычным POST.
-    send(data) {
-        if (!this.socket || this.socket.readyState !== WebSocket.OPEN) return false;
-        try {
-            this.socket.send(JSON.stringify(data));
-            return true;
-        } catch (err) {
-            return false;
-        }
-    },
-
-    // Не чаще раза в две секунды на чат: сервер не хранит состояние,
-    // а получатель сам гасит индикатор по таймауту.
-    sendTyping(chatId) {
-        const id = Number(chatId);
-        if (!Number.isInteger(id) || id <= 0) return;
-
-        const now = Date.now();
-        const last = this.typingSentAt.get(id) || 0;
-        if (now - last < this.TYPING_INTERVAL) return;
-
-        if (this.send({ type: "typing", chat_id: id })) {
-            this.typingSentAt.set(id, now);
         }
     }
 };

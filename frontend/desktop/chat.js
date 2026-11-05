@@ -33,9 +33,6 @@ export const Chat = {
             messageInput.addEventListener("input", () => {
                 this.saveDraft(this.currentChatId, messageInput.value);
                 this.resizeInput(messageInput);
-                if (messageInput.value.trim()) {
-                    Realtime.sendTyping(this.currentChatId);
-                }
             });
             messageInput.addEventListener("keydown", (e) => {
                 if (e.key === "Enter" && !e.shiftKey) {
@@ -97,8 +94,6 @@ export const Chat = {
     // Сообщение от другого человека пришло по сокету
     async onIncoming(msg) {
         const mine = msg.sender_id === Session.userId();
-        // Сообщение пришло — «печатает...» уже неактуально
-        if (!mine) Presence.clearTyping(msg.chat_id);
         if (msg.chat_id === this.currentChatId) {
             appendIncoming(document.getElementById("messages"), msg, this.messageOptions());
             if (mine) this.applyCachedStatuses(msg.chat_id);
@@ -209,7 +204,6 @@ export const Chat = {
                     current.avatar_url,
                     current.peer_id
                 );
-                this.setChatStatus(current.peer_id, current.id);
             }
         } catch (err) {
             list.appendChild(UI.el("li", "chat-item loading-item", err.message));
@@ -261,7 +255,6 @@ export const Chat = {
         document.getElementById("chat-window").classList.remove("hidden");
         document.getElementById("chat-title").textContent = title;
         this.setChatAvatar(title, avatarUrl, peerId);
-        this.setChatStatus(peerId, chatId);
         // Чат могли создать только что: собеседник уже был онлайн, поэтому
         // события о его входе не приходило — уточняем состояние.
         Presence.refresh();
@@ -293,14 +286,6 @@ export const Chat = {
         avatar.classList.remove("hidden");
         UI.setAvatar(avatar, title, avatarUrl);
         Presence.attach(avatar, peerId);
-    },
-
-    setChatStatus(peerId, chatId) {
-        Presence.bindStatus(
-            document.getElementById("chat-status"),
-            peerId,
-            chatId
-        );
     },
 
     updateContactSuggestion() {

@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from typing import Dict, Optional, List
+from typing import Optional, List
 from datetime import date, datetime
 
 
@@ -114,9 +114,6 @@ class ReceiptUpdate(BaseModel):
 class PresenceResponse(BaseModel):
     # id связанных пользователей, у которых сейчас есть открытый WebSocket
     online: List[int]
-    # Время последней активности связанных пользователей. Ключи — id,
-    # значения — ISO-время; для тех, кто ещё ни разу не подключался, пары нет.
-    last_seen: Dict[int, datetime] = {}
 
 
 class ReceiptResponse(BaseModel):

@@ -49,9 +49,6 @@ export const MobileChat = {
             messageInput.addEventListener("input", () => {
                 this.saveDraft(this.chatId, messageInput.value);
                 this.resizeInput(messageInput);
-                if (messageInput.value.trim()) {
-                    Realtime.sendTyping(this.chatId);
-                }
             });
             messageInput.addEventListener("keydown", (e) => {
                 if (e.key === "Enter" && !e.shiftKey) {
@@ -123,8 +120,6 @@ export const MobileChat = {
         if (msg.chat_id !== this.chatId) return;
 
         const mine = msg.sender_id === Session.userId();
-        // Сообщение пришло — «печатает...» уже неактуально
-        if (!mine) Presence.clearTyping(msg.chat_id);
         appendIncoming(document.getElementById("messages"), msg, this.messageOptions());
         if (mine) this.applyCachedStatuses();
         if (!mine) {
@@ -173,7 +168,6 @@ export const MobileChat = {
             this.peerAvatarUrl = found.avatar_url || null;
             this.peerIsContact = Boolean(found.is_contact);
             this.setChatAvatar(found.title, found.avatar_url, found.peer_id);
-            this.setChatStatus(found.peer_id, found.id);
             this.updateContactSuggestion();
             this.updateInfoButton();
         } catch (err) {
@@ -194,14 +188,6 @@ export const MobileChat = {
         avatar.classList.remove("hidden");
         UI.setAvatar(avatar, title, avatarUrl);
         Presence.attach(avatar, peerId);
-    },
-
-    setChatStatus(peerId, chatId) {
-        Presence.bindStatus(
-            document.getElementById("chat-status"),
-            peerId,
-            chatId
-        );
     },
 
     updateContactSuggestion() {

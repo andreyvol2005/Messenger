@@ -22,6 +22,5 @@ def get_presence(
     current_user: models.User = Depends(get_current_user),
 ):
     return schemas.PresenceResponse(
-        online=events.online_related_ids(db, current_user.id),
-        last_seen=events.visible_last_seen(db, current_user.id),
+        online=events.online_related_ids(db, current_user.id)
     )

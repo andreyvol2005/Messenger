@@ -27,36 +27,6 @@
 .m-title-chat { text-align: center; }
 .m-header-actions { display: flex; gap: 6px; }
 
-/* Имя и статус в шапке чата: статус меньше и ниже имени */
-.m-title-wrap {
-    flex: 1;
-    min-width: 0;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 1px;
-}
-.m-title-wrap .m-title {
-    flex: none;
-    max-width: 100%;
-    overflow: hidden;
-    white-space: nowrap;
-    text-overflow: ellipsis;
-}
-.m-chat-status {
-    max-width: 100%;
-    font-size: 11px;
-    line-height: 1.25;
-    color: #8a8a8a;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-.m-chat-status.is-online,
-.m-chat-status.is-typing {
-    color: #4caf50;
-}
-
 /* Аватарка собеседника в шапке чата */
 .m-header-avatar {
     flex-shrink: 0;
