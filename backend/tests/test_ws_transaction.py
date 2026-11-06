@@ -7,6 +7,7 @@
 from __future__ import annotations
 
 import sys
+import time
 import uuid
 from pathlib import Path
 
@@ -92,6 +93,41 @@ def test_open_socket_leaves_no_active_transaction(client):
         # Сессия сокета живёт, пока открыто соединение. Транзакций в ней быть
         # не должно: запросы к БД сделаны и отпустили блокировки.
         assert not [session for session in sessions if session.in_transaction()]
+
+
+def wait_for_no_transactions(sessions, timeout: float = 2.0) -> None:
+    """Даёт обработчику сокета время закрыть транзакцию после события."""
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        if not any(session.in_transaction() for session in sessions):
+            return
+        time.sleep(0.05)
+    assert not [session for session in sessions if session.in_transaction()]
+
+
+def test_typing_leaves_no_active_transaction(client):
+    http, sessions = client
+    alice = register_and_login(http, "alice")
+    bob = register_and_login(http, "bob")
+
+    chat_response = http.post(
+        "/api/chats",
+        headers=auth(alice["access_token"]),
+        json={"username": bob["username"].lstrip("@")},
+    )
+    assert chat_response.status_code == 200, chat_response.text
+    chat = chat_response.json()
+
+    with http.websocket_connect(
+        f"/ws/{alice['user_id']}?token={alice['access_token']}"
+    ) as socket:
+        assert socket.receive_json()["type"] == "presence"
+        wait_for_no_transactions(sessions)
+
+        # Событие уходит только Бобу, ответа Алисе нет — проверяем состояние
+        # сессии после того, как обработчик его обработал.
+        socket.send_json({"type": "typing", "chat_id": chat["id"]})
+        wait_for_no_transactions(sessions)
 
 
 def test_messages_still_work_after_transaction_release(client):

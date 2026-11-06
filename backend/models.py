@@ -18,6 +18,9 @@ class User(Base):
     # Предпочтительная тема интерфейса: "dark" или "light". Хранится в аккаунте,
     # чтобы не настраивать её заново при каждом входе.
     theme = Column(String(10), nullable=False, default="dark")
+    # Последняя активность: обновляется при подключении и отключении WebSocket.
+    # Нужна для статуса «был в …», когда пользователь не в сети.
+    last_seen_at = Column(DateTime(timezone=True), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     # Мягкое удаление: deleted_at != NULL означает аккаунт безвозвратно удалён.
     # Мы не удаляем строку физически, чтобы не ломать FK messages.sender_id -> users(id)
