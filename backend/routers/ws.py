@@ -11,6 +11,19 @@ from database import SessionLocal
 router = APIRouter(tags=["websocket"])
 
 
+def release_read_transaction(db):
+    """Закрывает транзакцию после чтения.
+
+    Сокет живёт часами, и если оставить транзакцию открытой, её блокировки
+    держат таблицы и не дают применить миграции. Пишущие операции коммитят
+    сами, поэтому здесь достаточно отката.
+    """
+    try:
+        db.rollback()
+    except Exception:
+        pass
+
+
 @router.websocket("/ws/{user_id}")
 async def websocket_endpoint(websocket: WebSocket, user_id: int, token: str = ""):
     # Без проверки токена можно было бы подключиться за чужого пользователя
@@ -31,10 +44,15 @@ async def websocket_endpoint(websocket: WebSocket, user_id: int, token: str = ""
             await websocket.close(code=1008)
             return
 
+        # Проверка пользователя — только чтение; не держим её транзакцию,
+        # пока сокет ждёт следующего сообщения.
+        release_read_transaction(db)
+
         became_online = await events.manager.connect(websocket, user_id)
         if became_online:
             # Первая вкладка пользователя: контакты и собеседники видят зелёную точку
             await events.publish_presence(db, user_id, True)
+            release_read_transaction(db)
         try:
             while True:
                 raw = await websocket.receive_text()
@@ -65,15 +83,29 @@ async def websocket_endpoint(websocket: WebSocket, user_id: int, token: str = ""
                         db, user, chat_id, text, data.get("reply_to_id")
                     )
                 except HTTPException as exc:
+                    # Чтение доступа к чату могло открыть транзакцию
+                    release_read_transaction(db)
                     await events.manager.send_error(websocket, exc.detail)
                     continue
 
                 await events.publish_message(db, result, chat_id, user.nickname)
+                # Рассылка могла снова открыть транзакцию — закрываем её,
+                # чтобы сокет не блокировал таблицы между сообщениями.
+                release_read_transaction(db)
         except WebSocketDisconnect:
             pass
         finally:
+            # Сессия могла остаться в прерванной транзакции после ошибки —
+            # перед рассылкой её нужно вернуть в рабочее состояние.
+            release_read_transaction(db)
             # Последняя закрытая вкладка — пользователь ушёл в офлайн
             if events.manager.disconnect(user_id, websocket):
-                await events.publish_presence(db, user_id, False)
+                try:
+                    await events.publish_presence(db, user_id, False)
+                except Exception:
+                    # Сокет уже закрыт, сбой рассылки не должен всплывать наружу.
+                    pass
+                finally:
+                    release_read_transaction(db)
     finally:
         db.close()

@@ -217,6 +217,15 @@ def test_avatar_update_is_published_over_websocket(client):
 
     url = f"/ws/{alice['user_id']}?token={alice['access_token']}"
     with client.websocket_connect(url) as socket:
+        # При подключении приходит собственное событие присутствия — его
+        # поведение проверяют тесты presence, здесь оно только мешает.
+        own_presence = socket.receive_json()
+        assert own_presence == {
+            "type": "presence",
+            "user_id": alice["user_id"],
+            "online": True,
+        }
+
         uploaded = upload(client, bob["access_token"])
         assert uploaded.status_code == 200, uploaded.text
 

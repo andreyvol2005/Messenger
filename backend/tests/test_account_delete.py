@@ -1,4 +1,4 @@
-"""Тесты удаления аккаунта.
+r"""Тесты удаления аккаунта.
 
 Запуск:  .\.venv\Scripts\python.exe backend/tests/test_account_delete.py -v
 Требуется запущенный сервер на http://localhost:8000 и PostgreSQL в контейнере messenger-pg.
@@ -16,6 +16,7 @@ import urllib.error
 import urllib.request
 import uuid
 
+import pytest
 import websockets
 from websockets.exceptions import ConnectionClosed
 
@@ -23,6 +24,14 @@ BASE = (os.getenv("MESSENGER_TEST_BASE") or "http://localhost:8000").rstrip("/")
 WS = BASE.replace("https://", "wss://").replace("http://", "ws://")
 
 CONFIRM = "УДАЛИТЬ АККАУНТ"
+
+# Это интеграционные тесты: им нужен живой сервер и PostgreSQL. Под pytest
+# они пропускаются, чтобы обычный прогон не зависел от окружения. Прямой
+# запуск файла (python backend/tests/test_account_delete.py) работает как раньше.
+pytestmark = pytest.mark.skipif(
+    os.getenv("MESSENGER_TEST_RUN_INTEGRATION") != "1",
+    reason="нужен запущенный сервер; задайте MESSENGER_TEST_RUN_INTEGRATION=1",
+)
 
 
 def api(method: str, path: str, body: dict | None = None, token: str | None = None):
