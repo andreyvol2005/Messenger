@@ -1,0 +1,42 @@
+name: Remote check
+
+# Временный workflow для диагностики сервера. Запускается только вручную.
+on:
+  workflow_dispatch:
+    inputs:
+      command_b64:
+        description: "Команда для выполнения на сервере (base64)"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: Run remote command
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Run over SSH
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          REMOTE_SCRIPT_B64: ${{ inputs.command_b64 }}
+        run: |
+          set -euo pipefail
+
+          install -m 700 -d "$HOME/.ssh"
+          printf '%s\n' "$SSH_PRIVATE_KEY" > "$HOME/.ssh/deploy_key"
+          chmod 600 "$HOME/.ssh/deploy_key"
+
+          printf '%s' "$REMOTE_SCRIPT_B64" | base64 -d \
+            | ssh -i "$HOME/.ssh/deploy_key" \
+                -o IdentitiesOnly=yes \
+                -o StrictHostKeyChecking=accept-new \
+                -o ConnectTimeout=20 \
+                -o ServerAliveInterval=30 \
+                -o ServerAliveCountMax=10 \
+                "$SSH_USER@$SSH_HOST" 'bash -s'
