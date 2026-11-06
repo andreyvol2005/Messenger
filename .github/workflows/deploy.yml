@@ -34,9 +34,15 @@ jobs:
           printf '%s\n' "$SSH_PRIVATE_KEY" > "$HOME/.ssh/deploy_key"
           chmod 600 "$HOME/.ssh/deploy_key"
 
+          # ServerAliveInterval не даёт промежуточному NAT закрыть соединение,
+          # пока на сервере молча выполняется долгая операция (например, миграция).
           ssh -i "$HOME/.ssh/deploy_key" \
               -o IdentitiesOnly=yes \
               -o StrictHostKeyChecking=accept-new \
+              -o ConnectTimeout=20 \
+              -o ServerAliveInterval=30 \
+              -o ServerAliveCountMax=10 \
+              -o TCPKeepAlive=yes \
               "$SSH_USER@$SSH_HOST" 'bash -s' <<'REMOTE'
           set -euo pipefail
 
@@ -74,6 +80,9 @@ jobs:
           trap 'rm -rf "$MIGRATE_DIR"' EXIT
           git archive "$NEW_COMMIT" backend/migrate.py migrations \
             | tar -x -C "$MIGRATE_DIR"
+          # Если таблицу держит чужая транзакция, лучше упасть за 30 секунд,
+          # чем висеть до таймаута job и оставлять деплой в неопределённом виде.
+          export PGOPTIONS='-c lock_timeout=30s'
           ./backend/venv/bin/python "$MIGRATE_DIR/backend/migrate.py"
 
           git reset --hard "$NEW_COMMIT"
