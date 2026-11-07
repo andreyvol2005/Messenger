@@ -94,6 +94,14 @@ export const Realtime = {
             }));
             return;
         }
+
+        // Группа изменилась: название, аватар или состав участников
+        if (data.type === "chat_updated") {
+            document.dispatchEvent(new CustomEvent("messenger:chat-updated", {
+                detail: data
+            }));
+            return;
+        }
         if (data.type && data.type !== "message") return;
 
         if (typeof data.id === "number") {

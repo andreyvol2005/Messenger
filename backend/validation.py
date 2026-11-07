@@ -8,6 +8,7 @@ from fastapi import HTTPException
 
 USERNAME_MAX = 30
 NICKNAME_MAX = 30
+CHAT_NAME_MAX = 50
 
 
 def _has_only_allowed_chars(value: str) -> bool:
@@ -63,5 +64,18 @@ def validate_nickname(raw: str | None) -> str:
         raise HTTPException(
             status_code=400,
             detail="Nickname: только латиница, кириллица, цифры и _",
+        )
+    return value
+
+
+def validate_chat_name(raw: str | None) -> str:
+    """Проверяет название группы. Пробелы и эмодзи здесь допустимы."""
+    value = (raw or "").strip()
+    if not value:
+        raise HTTPException(status_code=400, detail="Введите название группы")
+    if len(value) > CHAT_NAME_MAX:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Название группы не может быть длиннее {CHAT_NAME_MAX} символов",
         )
     return value

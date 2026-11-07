@@ -5,6 +5,7 @@ import { API } from "../shared/api.js";
 import { Session } from "../shared/session.js";
 import { Theme } from "../shared/theme.js";
 import { UI } from "../shared/ui.js";
+import { GroupCreate } from "../shared/group-create.js";
 import { Contacts } from "./contacts.js";
 import { Profile } from "./profile.js";
 
@@ -24,6 +25,10 @@ export const Menu = {
         document.getElementById("menu-contacts").onclick = () => {
             this.close();
             Contacts.open();
+        };
+        document.getElementById("menu-create-group").onclick = () => {
+            this.close();
+            GroupCreate.open();
         };
 
         const themeBtn = document.getElementById("menu-theme");

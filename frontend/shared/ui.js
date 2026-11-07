@@ -29,6 +29,21 @@ export const UI = {
         return text ? text.charAt(0).toUpperCase() : "?";
     },
 
+    // Русское склонение по числу: 1 участник, 2 участника, 5 участников
+    plural(count, one, few, many) {
+        const value = Math.abs(Number(count)) || 0;
+        const mod10 = value % 10;
+        const mod100 = value % 100;
+        if (mod10 === 1 && mod100 !== 11) return one;
+        if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return few;
+        return many;
+    },
+
+    membersLabel(count) {
+        const value = Number(count) || 0;
+        return `${value} ${this.plural(value, "участник", "участника", "участников")}`;
+    },
+
     // Круглый аватар: картинка, а при её отсутствии — первая буква ника
     avatar(name, avatarUrl, className = "avatar") {
         const node = this.el("div", className);

@@ -65,6 +65,23 @@ class ChatCreate(BaseModel):
     username: str
 
 
+class GroupChatCreate(BaseModel):
+    name: str
+    user_ids: List[int] = []
+
+
+class ChatMemberAdd(BaseModel):
+    user_id: int
+
+
+class ChatMemberResponse(BaseModel):
+    id: int
+    nickname: str
+    avatar_url: Optional[str] = None
+    # Не обязателен по контракту, но удобен интерфейсу для подписи @username
+    username: Optional[str] = None
+
+
 class ChatResponse(BaseModel):
     # -1 у виртуального чата «Избранное», настоящей строки в chats у него нет
     id: int
@@ -80,6 +97,11 @@ class ChatResponse(BaseModel):
     is_contact: bool = False
     # Входящие сообщения, которые пользователь ещё не прочитал (бейдж в списке)
     unread_count: int = 0
+    # "private" | "group": интерфейсу нужно отличать группу от личного чата,
+    # даже если у группы ещё нет ни одного сообщения.
+    chat_type: str = "private"
+    # Число участников — только у группового чата
+    members_count: Optional[int] = None
 
 
 class ChatListResponse(BaseModel):

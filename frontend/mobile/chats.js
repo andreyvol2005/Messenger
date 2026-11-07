@@ -8,6 +8,7 @@ import { Session } from "../shared/session.js";
 import { Theme } from "../shared/theme.js";
 import { UI } from "../shared/ui.js";
 import { UserSearch } from "../shared/user-search.js";
+import { GroupCreate } from "../shared/group-create.js";
 import { Contacts } from "./contacts.js";
 import { Menu } from "./menu.js";
 import { Profile } from "./profile.js";
@@ -17,6 +18,12 @@ export const MobileChats = {
         if (!Session.requireAuth()) return;
 
         Theme.apply(Session.theme());
+
+        GroupCreate.init({
+            onCreated: (chat) => {
+                window.location.href = Session.chatUrl(chat.id);
+            }
+        });
 
         Menu.init();
         Profile.init();
@@ -39,17 +46,24 @@ export const MobileChats = {
 
         // Смена аватарки собеседника — тоже повод перерисовать список
         document.addEventListener("messenger:avatar-updated", () => this.refreshList());
+        // Группу переименовали или изменили состав
+        document.addEventListener("messenger:chat-updated", () => this.refreshList());
 
         await this.loadChats();
     },
 
     async loadChats() {
         const list = document.getElementById("chat-list");
-        list.innerHTML = "";
+        // Несколько событий могут обновлять список одновременно: применяем
+        // только ответ последнего запроса, чтобы строки не задвоились.
+        const generation = (this.chatsLoadGeneration || 0) + 1;
+        this.chatsLoadGeneration = generation;
 
         try {
             const { chats } = await API.getChats();
+            if (generation !== this.chatsLoadGeneration) return;
 
+            list.innerHTML = "";
             if (!chats.length) {
                 list.appendChild(UI.el("li", "m-loading", "Пока нет чатов"));
                 return;
@@ -88,6 +102,8 @@ export const MobileChats = {
                 list.appendChild(item);
             }
         } catch (err) {
+            if (generation !== this.chatsLoadGeneration) return;
+            list.innerHTML = "";
             list.appendChild(UI.el("li", "m-loading", err.message));
         }
     }

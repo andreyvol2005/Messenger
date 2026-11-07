@@ -291,6 +291,18 @@ def build_avatar_event(user: models.User) -> dict:
     }
 
 
+def build_chat_event(chat_id: int) -> dict:
+    """Группа изменилась: название, аватар или состав участников.
+
+    Клиент по этому событию перечитывает список чатов и панель участников.
+    Для личных чатов событие не отправляется.
+    """
+    return {
+        "type": "chat_updated",
+        "chat_id": chat_id,
+    }
+
+
 async def publish(recipients: List[int], event: dict):
     await manager.send_to_users(recipients, event)
 

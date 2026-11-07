@@ -65,6 +65,44 @@
         </div>
     </div>
 
+    <!-- Информация о группе: участники, название и аватар -->
+    <div id="group-info" class="m-peer-info m-group-info" aria-hidden="true"
+         role="dialog" aria-modal="true">
+        <div id="group-info-backdrop" class="m-peer-info-backdrop"></div>
+        <div class="m-peer-info-content">
+            <button type="button" id="group-info-close" class="m-peer-info-close"
+                    aria-label="Закрыть" title="Закрыть">×</button>
+            <div id="group-info-avatar" class="avatar avatar-xl">?</div>
+            <button type="button" id="group-avatar-btn" class="m-group-avatar-btn">
+                Сменить фото
+            </button>
+            <input type="file" id="group-avatar-input" accept="image/*" hidden>
+            <h1 id="group-info-name" class="m-peer-info-name"></h1>
+            <p id="group-info-count" class="m-peer-info-username"></p>
+
+            <label class="m-field">
+                <span class="m-field-label">Название группы</span>
+                <div class="m-group-name-row">
+                    <input type="text" id="group-name-input" maxlength="50"
+                           placeholder="Название группы">
+                    <button type="button" id="group-name-save">Сохранить</button>
+                </div>
+            </label>
+
+            <p id="group-info-error" class="error hidden"></p>
+
+            <h2 class="m-group-section-title">Участники</h2>
+            <ul id="group-members-list" class="m-group-members-list"></ul>
+
+            <h2 class="m-group-section-title">Добавить участника</h2>
+            <input type="text" id="group-add-search" class="m-group-add-search"
+                   placeholder="Имя или @username" autocomplete="off"
+                   aria-label="Поиск пользователя для добавления в группу">
+            <ul id="group-add-results"
+                class="user-search-results m-group-add-results hidden"></ul>
+        </div>
+    </div>
+
     <script type="module" src="/mobile/chat.js"></script>
 </body>
 </html>

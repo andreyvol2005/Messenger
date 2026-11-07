@@ -100,6 +100,45 @@ export const API = {
         });
     },
 
+    createGroup(name, userIds) {
+        return this.request("/api/chats/group", {
+            method: "POST",
+            body: JSON.stringify({ name, user_ids: userIds })
+        });
+    },
+
+    getChatMembers(chatId) {
+        return this.request(`/api/chats/${chatId}/members`);
+    },
+
+    addChatMember(chatId, userId) {
+        return this.request(`/api/chats/${chatId}/members`, {
+            method: "POST",
+            body: JSON.stringify({ user_id: userId })
+        });
+    },
+
+    removeChatMember(chatId, userId) {
+        return this.request(`/api/chats/${chatId}/members/${userId}`, {
+            method: "DELETE"
+        });
+    },
+
+    updateChat(chatId, data = {}) {
+        // PATCH принимает multipart: так одним запросом можно передать
+        // и новое название, и файл аватара.
+        const form = new FormData();
+        if (data.name !== undefined && data.name !== null) {
+            form.append("name", data.name);
+        }
+        if (data.file) form.append("file", data.file);
+
+        return this.request(`/api/chats/${chatId}`, {
+            method: "PATCH",
+            body: form
+        });
+    },
+
     getMessages(chatId, limit = 50) {
         return this.request(`/api/messages/${chatId}?limit=${limit}`);
     },

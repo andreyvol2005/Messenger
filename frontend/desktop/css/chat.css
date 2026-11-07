@@ -261,7 +261,8 @@
     flex-direction: row;
 }
 
-#peer-info {
+#peer-info,
+#group-info {
     width: 0;
     flex-shrink: 0;
     overflow: hidden;
@@ -276,13 +277,15 @@
 }
 /* Когда панель закрыта, она не должна занимать места в раскладке ни по ширине, ни по высоте —
    иначе в обычной колонной раскладке она выглядит как лишняя полоса внизу чата. */
-#peer-info:not(.open) {
+#peer-info:not(.open),
+#group-info:not(.open) {
     min-height: 0;
     height: 0;
     padding: 0;
     border: none;
 }
-#peer-info.open {
+#peer-info.open,
+#group-info.open {
     width: min(420px, 92vw);
     border-left: 1px solid #333;
 }

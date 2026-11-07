@@ -51,6 +51,9 @@ class Chat(Base):
     id = Column(Integer, primary_key=True, index=True)
     type = Column(String(10), nullable=False)
     name = Column(String(50), nullable=True)
+    # Аватар группы: относительный путь /uploads/group_avatars/<uuid>.<ext>.
+    # У личных чатов всегда NULL — там показывается аватар собеседника.
+    avatar_url = Column(Text, nullable=True)
     # Личный чат: "min_id:max_id" участников, защищает от дублей. NULL у групповых
     pair_key = Column(String(32), unique=True, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)

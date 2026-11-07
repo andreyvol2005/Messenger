@@ -9,6 +9,7 @@ import { Realtime } from "../shared/realtime.js";
 import { Session } from "../shared/session.js";
 import { Theme } from "../shared/theme.js";
 import { UI } from "../shared/ui.js";
+import { GroupInfo } from "../shared/group-info.js";
 import {
     appendIncoming,
     appendMessage,
@@ -23,6 +24,9 @@ export const MobileChat = {
     peerUsername: null,
     peerAvatarUrl: null,
     peerIsContact: false,
+    chatType: "private",
+    chatMembersCount: null,
+    chatAvatarUrl: null,
     // Событие о прочтении может прийти раньше ответа на отправку — применим
     // отметки после того, как сообщение появится в DOM.
     statusDelivered: 0,
@@ -69,7 +73,14 @@ export const MobileChat = {
         document.getElementById("chat-contact-banner-close").onclick =
             () => this.dismissContactSuggestion();
         document.getElementById("chat-info-btn").onclick = () =>
-            this.peerUsername && this.openPeerInfo();
+            this.openInfo();
+
+        GroupInfo.init({
+            onChanged: () => this.loadTitle(),
+            onRemovedSelf: () => {
+                window.location.href = PATHS.MOBILE_CHATS;
+            }
+        });
 
         document.getElementById("peer-info-close").onclick = () =>
             this.closePeerInfo();
@@ -96,6 +107,8 @@ export const MobileChat = {
 
         // Аватарку собеседника обновили — перечитываем данные чата
         document.addEventListener("messenger:avatar-updated", () => this.loadTitle());
+        // Группу переименовали, сменили аватар или состав участников
+        document.addEventListener("messenger:chat-updated", () => this.loadTitle());
 
         await this.loadTitle();
         await this.loadMessages();
@@ -169,8 +182,15 @@ export const MobileChat = {
                 return;
             }
             titleEl.textContent = found.title;
-            this.peerUsername = found.peer_username || null;
-            this.peerAvatarUrl = found.avatar_url || null;
+            this.chatType = found.chat_type || "private";
+            this.chatMembersCount = found.members_count ?? null;
+            this.peerUsername = this.chatType === "group"
+                ? null
+                : (found.peer_username || null);
+            this.chatAvatarUrl = found.avatar_url || null;
+            this.peerAvatarUrl = this.chatType === "group"
+                ? null
+                : (found.avatar_url || null);
             this.peerIsContact = Boolean(found.is_contact);
             this.setChatAvatar(found.title, found.avatar_url, found.peer_id);
             this.setChatStatus(found.peer_id, found.id);
@@ -191,17 +211,27 @@ export const MobileChat = {
             return;
         }
 
+        this.chatAvatarUrl = avatarUrl || null;
         avatar.classList.remove("hidden");
         UI.setAvatar(avatar, title, avatarUrl);
         Presence.attach(avatar, peerId);
     },
 
     setChatStatus(peerId, chatId) {
-        Presence.bindStatus(
-            document.getElementById("chat-status"),
-            peerId,
-            chatId
-        );
+        const element = document.getElementById("chat-status");
+        if (!element) return;
+
+        if (this.chatType === "group") {
+            // Вместо статуса собеседника — число участников группы
+            Presence.bindStatus(element, null, chatId);
+            element.textContent = this.chatMembersCount !== null
+                ? UI.membersLabel(this.chatMembersCount)
+                : "Группа";
+            element.classList.remove("hidden", "is-online", "is-typing");
+            return;
+        }
+
+        Presence.bindStatus(element, peerId, chatId);
     },
 
     updateContactSuggestion() {
@@ -216,13 +246,32 @@ export const MobileChat = {
         UI.hideError("chat-contact-banner-error");
     },
 
-    // Кнопка профиля есть только в личном чате (у «Избранного» нет собеседника)
+    // Кнопка информации: профиль собеседника в личном чате, панель группы
+    // в групповом. У «Избранного» собеседника нет.
     updateInfoButton() {
         const btn = document.getElementById("chat-info-btn");
+        const isGroup = this.chatType === "group";
         btn.classList.toggle(
             "hidden",
-            this.chatId === CONFIG.FAVORITES_CHAT_ID || !this.peerUsername
+            this.chatId === CONFIG.FAVORITES_CHAT_ID || (!isGroup && !this.peerUsername)
         );
+        btn.title = isGroup ? "Информация о группе" : "Профиль собеседника";
+        btn.setAttribute(
+            "aria-label",
+            isGroup ? "Информация о группе" : "Информация о собеседнике"
+        );
+    },
+
+    openInfo() {
+        if (this.chatType === "group") {
+            GroupInfo.open(this.chatId, {
+                title: document.getElementById("chat-title").textContent,
+                avatar_url: this.chatAvatarUrl,
+                members_count: this.chatMembersCount
+            });
+            return;
+        }
+        if (this.peerUsername) this.openPeerInfo();
     },
 
     isPeerInfoOpen() {

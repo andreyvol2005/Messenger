@@ -67,6 +67,9 @@ CREATE TABLE chats (
     id SERIAL PRIMARY KEY,
     type VARCHAR(10) NOT NULL CHECK (type IN ('private', 'group')),
     name VARCHAR(50) DEFAULT NULL,
+    -- Аватар группы: относительный путь /uploads/group_avatars/<uuid>.<ext>.
+    -- У личных чатов NULL — показывается аватар собеседника.
+    avatar_url TEXT DEFAULT NULL,
     pair_key VARCHAR(32) UNIQUE DEFAULT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );

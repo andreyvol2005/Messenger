@@ -8,6 +8,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, aliased
 
 import auth
+import media
 import models
 import schemas
 import validation
@@ -242,6 +243,8 @@ def list_chats(db: Session, user: models.User) -> schemas.ChatListResponse:
         .order_by(func.coalesce(last_msg.created_at, models.Chat.created_at).desc())
         .all()
     )
+    group_ids = [chat.id for chat, *_ in rows if chat.type == "group"]
+    group_counts = _group_member_counts(db, group_ids)
 
     for chat, last_text, last_media, last_at in rows:
         title = chat.name
@@ -260,6 +263,10 @@ def list_chats(db: Session, user: models.User) -> schemas.ChatListResponse:
                 is_contact = peer.id in contact_ids
             else:
                 title = chat.name or "Личный чат"
+        else:
+            # У группы нет собеседника: название и аватар хранятся в chats
+            title = chat.name or "Группа"
+            avatar_url = chat.avatar_url
         chats.append(
             schemas.ChatResponse(
                 id=chat.id,
@@ -272,10 +279,29 @@ def list_chats(db: Session, user: models.User) -> schemas.ChatListResponse:
                 avatar_url=avatar_url,
                 is_contact=is_contact,
                 unread_count=unread_by_chat.get(chat.id, 0),
+                chat_type=chat.type,
+                members_count=(
+                    group_counts.get(chat.id)
+                    if chat.type == "group"
+                    else None
+                ),
             )
         )
 
     return schemas.ChatListResponse(chats=chats)
+
+
+def _group_member_counts(db: Session, chat_ids: List[int]) -> dict[int, int]:
+    """Число участников для каждого группового чата одним запросом."""
+    if not chat_ids:
+        return {}
+    rows = (
+        db.query(models.ChatMember.chat_id, func.count(models.ChatMember.user_id))
+        .filter(models.ChatMember.chat_id.in_(chat_ids))
+        .group_by(models.ChatMember.chat_id)
+        .all()
+    )
+    return {chat_id: count for chat_id, count in rows}
 
 
 def _message_preview(text: str | None, media_url: str | None) -> str | None:
@@ -338,6 +364,7 @@ def create_or_get_chat(db: Session, user: models.User, username: str) -> schemas
         peer_username=other.username,
         avatar_url=other.avatar_url,
         is_contact=is_contact,
+        chat_type="private",
     )
 
 
@@ -360,6 +387,221 @@ def _insert_private_chat(db: Session, pair_key: str, first_id: int, second_id: i
         return existing
     db.refresh(chat)
     return chat
+
+
+# ==========================================
+# Групповые чаты
+# ==========================================
+
+def _get_chat(db: Session, chat_id: int) -> models.Chat:
+    chat = db.query(models.Chat).filter(models.Chat.id == chat_id).first()
+    if not chat:
+        raise HTTPException(status_code=404, detail="Чат не найден")
+    return chat
+
+
+def _require_group_member(
+    db: Session, user: models.User, chat_id: int
+) -> models.Chat:
+    """Групповой чат, в котором текущий пользователь состоит участником.
+
+    Ролей нет: любого участника достаточно и для смены названия/аватара,
+    и для добавления или удаления других участников.
+    """
+    chat = _get_chat(db, chat_id)
+    if chat.type != "group":
+        raise HTTPException(status_code=400, detail="Это не групповой чат")
+    if not can_access_chat(db, user, chat_id):
+        raise HTTPException(status_code=403, detail="Нет доступа к этому чату")
+    return chat
+
+
+def _group_chat_response(db: Session, chat: models.Chat) -> schemas.ChatResponse:
+    count = (
+        db.query(func.count(models.ChatMember.user_id))
+        .filter(models.ChatMember.chat_id == chat.id)
+        .scalar()
+    ) or 0
+    return schemas.ChatResponse(
+        id=chat.id,
+        title=chat.name or "Группа",
+        avatar_url=chat.avatar_url,
+        chat_type="group",
+        members_count=count,
+    )
+
+
+def _serialize_member(user: models.User) -> schemas.ChatMemberResponse:
+    return schemas.ChatMemberResponse(
+        id=user.id,
+        nickname=user.nickname,
+        avatar_url=user.avatar_url,
+        username=user.username,
+    )
+
+
+def create_group_chat(
+    db: Session, user: models.User, name: str, user_ids: List[int]
+) -> schemas.ChatResponse:
+    """Создаёт группу, добавляя в неё автора и выбранных пользователей."""
+    title = validation.validate_chat_name(name)
+
+    # Себя добавляем сами; дубликаты в запросе не создают лишних строк.
+    member_ids = {int(member_id) for member_id in user_ids if int(member_id) != user.id}
+    if not member_ids:
+        raise HTTPException(
+            status_code=400,
+            detail="Выберите хотя бы одного участника",
+        )
+
+    users = (
+        db.query(models.User)
+        .filter(
+            models.User.id.in_(member_ids),
+            models.User.deleted_at.is_(None),
+        )
+        .all()
+    )
+    found_ids = {member.id for member in users}
+    if found_ids != member_ids:
+        raise HTTPException(
+            status_code=404,
+            detail="Один из выбранных пользователей не найден",
+        )
+
+    chat = models.Chat(type="group", name=title)
+    db.add(chat)
+    try:
+        db.flush()
+        db.add_all([
+            models.ChatMember(chat_id=chat.id, user_id=member_id)
+            for member_id in sorted(member_ids | {user.id})
+        ])
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise
+
+    db.refresh(chat)
+    return _group_chat_response(db, chat)
+
+
+def list_group_members(
+    db: Session, user: models.User, chat_id: int
+) -> List[schemas.ChatMemberResponse]:
+    _require_group_member(db, user, chat_id)
+    members = (
+        db.query(models.User)
+        .join(models.ChatMember, models.ChatMember.user_id == models.User.id)
+        .filter(models.ChatMember.chat_id == chat_id)
+        .order_by(models.User.nickname)
+        .all()
+    )
+    return [_serialize_member(member) for member in members]
+
+
+def add_group_member(
+    db: Session, user: models.User, chat_id: int, user_id: int
+) -> schemas.ChatMemberResponse:
+    _require_group_member(db, user, chat_id)
+
+    target = (
+        db.query(models.User)
+        .filter(
+            models.User.id == user_id,
+            models.User.deleted_at.is_(None),
+        )
+        .first()
+    )
+    if not target:
+        raise HTTPException(status_code=404, detail="Пользователь не найден")
+
+    existing = (
+        db.query(models.ChatMember)
+        .filter(
+            models.ChatMember.chat_id == chat_id,
+            models.ChatMember.user_id == user_id,
+        )
+        .first()
+    )
+    if existing:
+        raise HTTPException(
+            status_code=409,
+            detail="Пользователь уже состоит в группе",
+        )
+
+    db.add(models.ChatMember(chat_id=chat_id, user_id=user_id))
+    try:
+        db.commit()
+    except IntegrityError:
+        # Гонка: параллельный запрос успел добавить того же участника
+        db.rollback()
+        raise HTTPException(
+            status_code=409,
+            detail="Пользователь уже состоит в группе",
+        )
+
+    return _serialize_member(target)
+
+
+def remove_group_member(
+    db: Session, user: models.User, chat_id: int, user_id: int
+) -> None:
+    _require_group_member(db, user, chat_id)
+
+    member = (
+        db.query(models.ChatMember)
+        .filter(
+            models.ChatMember.chat_id == chat_id,
+            models.ChatMember.user_id == user_id,
+        )
+        .first()
+    )
+    if not member:
+        raise HTTPException(status_code=404, detail="Участник не найден")
+
+    db.delete(member)
+    db.commit()
+
+
+def update_group_chat(
+    db: Session,
+    user: models.User,
+    chat_id: int,
+    name: str | None = None,
+    avatar_data: bytes | None = None,
+    avatar_extension: str | None = None,
+) -> schemas.ChatResponse:
+    """Меняет название и/или аватар группы. Доступно любому участнику."""
+    chat = _require_group_member(db, user, chat_id)
+
+    if name is None and avatar_data is None:
+        raise HTTPException(status_code=400, detail="Нечего обновлять")
+
+    if name is not None:
+        chat.name = validation.validate_chat_name(name)
+
+    old_avatar_url = chat.avatar_url
+    new_avatar_url = None
+    if avatar_data is not None:
+        new_avatar_url = media.save_group_avatar(avatar_data, avatar_extension or ".png")
+        chat.avatar_url = new_avatar_url
+
+    try:
+        db.commit()
+    except Exception:
+        db.rollback()
+        # Файл уже записан, а строка в БД — нет: удаляем сироту.
+        if new_avatar_url:
+            media.delete_group_avatar(new_avatar_url)
+        raise
+
+    db.refresh(chat)
+    # Старый файл удаляем только после успешного коммита
+    if old_avatar_url and old_avatar_url != chat.avatar_url:
+        media.delete_group_avatar(old_avatar_url)
+
+    return _group_chat_response(db, chat)
 
 
 # ==========================================

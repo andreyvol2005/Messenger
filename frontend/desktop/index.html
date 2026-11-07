@@ -10,6 +10,7 @@
     <link rel="stylesheet" href="/desktop/css/sidebar.css">
     <link rel="stylesheet" href="/desktop/css/chat.css">
     <link rel="stylesheet" href="/desktop/css/contacts.css">
+    <link rel="stylesheet" href="/desktop/css/groups.css">
 </head>
 <body>
     <div class="chat-layout">
@@ -89,6 +90,40 @@
                 <p id="peer-info-bio" class="peer-info-bio"></p>
                 <p id="peer-info-birth" class="peer-info-birth"></p>
             </aside>
+
+            <!-- Панель группы: участники, название и аватар -->
+            <aside id="group-info" class="peer-info group-info" aria-label="Информация о группе">
+                <button type="button" id="group-info-close" class="peer-info-close"
+                        aria-label="Закрыть" title="Закрыть">×</button>
+                <div id="group-info-avatar" class="avatar avatar-xl">?</div>
+                <button type="button" id="group-avatar-btn" class="group-avatar-btn">
+                    Сменить фото
+                </button>
+                <input type="file" id="group-avatar-input" accept="image/*" hidden>
+                <h2 id="group-info-name" class="peer-info-name"></h2>
+                <p id="group-info-count" class="peer-info-username"></p>
+
+                <label class="field group-name-field">
+                    <span class="field-label">Название группы</span>
+                    <div class="group-name-row">
+                        <input type="text" id="group-name-input" maxlength="50"
+                               placeholder="Название группы">
+                        <button type="button" id="group-name-save">Сохранить</button>
+                    </div>
+                </label>
+
+                <p id="group-info-error" class="error hidden"></p>
+
+                <h3 class="group-section-title">Участники</h3>
+                <ul id="group-members-list" class="group-members-list"></ul>
+
+                <h3 class="group-section-title">Добавить участника</h3>
+                <input type="text" id="group-add-search" class="group-add-search"
+                       placeholder="Имя или @username" autocomplete="off"
+                       aria-label="Поиск пользователя для добавления в группу">
+                <ul id="group-add-results"
+                    class="user-search-results group-add-results hidden"></ul>
+            </aside>
         </main>
     </div>
 
@@ -121,6 +156,14 @@
                     <path d="M17.9 14.9c2.2.6 3.5 2.2 3.5 4.5"/>
                 </svg>
                 <span>Контакты</span>
+            </button>
+            <button type="button" id="menu-create-group" class="menu-item">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <circle cx="9" cy="8" r="3.2"/>
+                    <path d="M3 20c0-3.3 2.7-5.2 6-5.2s6 1.9 6 5.2"/>
+                    <path d="M17 7v6M14 10h6"/>
+                </svg>
+                <span>Создать группу</span>
             </button>
             <button type="button" id="menu-theme" class="menu-item">
                 <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -240,6 +283,45 @@
 
             <p id="contacts-error" class="error hidden contacts-error"></p>
             <ul id="contacts-list" class="contacts-list"></ul>
+        </div>
+    </div>
+
+    <!-- Создание группового чата -->
+    <div id="group-create-modal" class="modal" aria-hidden="true">
+        <div id="group-create-backdrop" class="modal-backdrop"></div>
+
+        <div class="group-create-dialog" role="dialog" aria-modal="true"
+             aria-labelledby="group-create-title">
+            <div class="contacts-header">
+                <h2 id="group-create-title" class="contacts-title">Создать группу</h2>
+                <button type="button" id="group-create-close" class="contacts-close"
+                        aria-label="Закрыть" title="Закрыть">×</button>
+            </div>
+
+            <form id="group-create-form" class="group-create-form">
+                <label class="field">
+                    <span class="field-label">Название группы</span>
+                    <input type="text" id="group-create-name" maxlength="50"
+                           placeholder="Например, Друзья" autocomplete="off">
+                </label>
+
+                <label class="field">
+                    <span class="field-label">Участники</span>
+                    <input type="text" id="group-create-search"
+                           placeholder="Поиск по имени или @username"
+                           autocomplete="off">
+                </label>
+
+                <ul id="group-create-users" class="group-pick-list"></ul>
+                <p id="group-create-error" class="error hidden"></p>
+
+                <div class="group-create-actions">
+                    <button type="button" id="group-create-cancel" class="btn-ghost">
+                        Отмена
+                    </button>
+                    <button type="submit" id="group-create-submit">Создать</button>
+                </div>
+            </form>
         </div>
     </div>
 

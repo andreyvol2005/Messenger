@@ -1,0 +1,287 @@
+/* ============================
+   Групповой чат: панель и создание
+   ============================ */
+
+/* Панель группы использует геометрию peer-info, но прокручивается целиком:
+   участников может быть много. */
+#group-info.open {
+    overflow-y: auto;
+}
+
+.group-avatar-btn {
+    display: block;
+    margin: 0 auto;
+    padding: 6px 12px;
+    background: transparent;
+    border: 1px solid #444;
+    border-radius: 999px;
+    color: #bbb;
+    font-size: 12px;
+}
+
+.group-avatar-btn:hover {
+    background: #2f2f2f;
+    border-color: #555;
+    color: #fff;
+}
+
+.group-avatar-btn:disabled {
+    opacity: 0.6;
+    cursor: default;
+}
+
+.group-name-field {
+    margin-top: 4px;
+}
+
+.group-name-row {
+    display: flex;
+    gap: 8px;
+}
+
+.group-name-row input {
+    flex: 1;
+    min-width: 0;
+    padding: 8px 10px;
+    background: #2a2a2a;
+    border: 1px solid #444;
+    border-radius: 6px;
+    color: #eee;
+    font-size: 14px;
+}
+
+.group-name-row input:focus {
+    outline: none;
+    border-color: #007bff;
+}
+
+.group-name-row button {
+    flex-shrink: 0;
+    padding: 8px 12px;
+    font-size: 12px;
+}
+
+.group-section-title {
+    margin: 4px 0 0;
+    font-size: 13px;
+    font-weight: 600;
+    color: #aaa;
+}
+
+.group-members-list {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.group-member {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 7px 2px;
+    border-bottom: 1px solid #303030;
+}
+
+.group-member-avatar {
+    width: 36px;
+    height: 36px;
+    font-size: 14px;
+}
+
+.group-member-text {
+    flex: 1;
+    min-width: 0;
+}
+
+.group-member-name {
+    font-size: 14px;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.group-member-username {
+    margin-top: 1px;
+    font-size: 12px;
+    color: #888;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.group-member-remove {
+    flex-shrink: 0;
+    padding: 5px 9px;
+    background: transparent;
+    border: 1px solid #5a3036;
+    border-radius: 6px;
+    color: #ff8a99;
+    font-size: 11px;
+}
+
+.group-member-remove:hover {
+    background: rgba(255, 85, 102, 0.12);
+    border-color: #7a3d46;
+    color: #ffb0ba;
+}
+
+.group-member-remove:disabled {
+    opacity: 0.5;
+    cursor: default;
+}
+
+.group-members-empty {
+    padding: 14px 4px;
+    color: #888;
+    font-size: 12px;
+    text-align: center;
+}
+
+.group-add-search {
+    width: 100%;
+    padding: 8px 10px;
+    background: #2a2a2a;
+    border: 1px solid #444;
+    border-radius: 6px;
+    color: #eee;
+    font-size: 14px;
+}
+
+.group-add-search:focus {
+    outline: none;
+    border-color: #007bff;
+}
+
+.group-add-results {
+    width: 100%;
+    max-height: 210px;
+    margin-top: 8px;
+    overflow-y: auto;
+    border: 1px solid #333;
+    border-radius: 8px;
+}
+
+.group-candidate {
+    gap: 8px;
+}
+
+.group-candidate-add {
+    flex-shrink: 0;
+    margin-left: auto;
+    padding: 5px 9px;
+    font-size: 11px;
+}
+
+/* ---------- Создание группы ---------- */
+
+.group-create-dialog {
+    position: relative;
+    width: 100%;
+    max-width: 520px;
+    max-height: 100%;
+    display: flex;
+    flex-direction: column;
+    padding: 20px;
+    background: #252525;
+    border: 1px solid #333;
+    border-radius: 14px;
+    box-shadow: 0 18px 50px rgba(0, 0, 0, 0.45);
+    color-scheme: dark;
+    transform: translateY(10px) scale(0.98);
+    transition: transform 0.18s ease;
+}
+
+.modal.open .group-create-dialog {
+    transform: none;
+}
+
+.group-create-form {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}
+
+.group-create-form .field {
+    margin-top: 0;
+    margin-bottom: 12px;
+}
+
+.group-create-form input[type="text"] {
+    width: 100%;
+    padding: 9px 10px;
+    background: #2a2a2a;
+    border: 1px solid #444;
+    border-radius: 6px;
+    color: #eee;
+    font-size: 14px;
+}
+
+.group-create-form input[type="text"]:focus {
+    outline: none;
+    border-color: #007bff;
+}
+
+.group-pick-list {
+    flex: 1;
+    min-height: 120px;
+    max-height: 300px;
+    margin: 0;
+    padding: 4px;
+    overflow-y: auto;
+    list-style: none;
+    background: #222;
+    border: 1px solid #333;
+    border-radius: 8px;
+}
+
+.group-pick-item {
+    border-radius: 6px;
+}
+
+.group-pick-item:hover {
+    background: #2f2f2f;
+}
+
+.group-pick-label {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 7px 8px;
+    cursor: pointer;
+}
+
+.group-pick-label input[type="checkbox"] {
+    flex-shrink: 0;
+    width: 16px;
+    height: 16px;
+    accent-color: #007bff;
+}
+
+.group-pick-label .user-search-text,
+.group-candidate .user-search-text {
+    flex: 1;
+    min-width: 0;
+}
+
+.group-pick-empty {
+    padding: 22px 8px;
+    color: #888;
+    font-size: 12px;
+    text-align: center;
+}
+
+.group-create-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: 14px;
+}
+
+.group-create-actions button {
+    padding: 9px 16px;
+    font-size: 13px;
+}

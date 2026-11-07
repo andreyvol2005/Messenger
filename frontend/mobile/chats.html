@@ -63,6 +63,14 @@
                 </svg>
                 <span>Контакты</span>
             </button>
+            <button type="button" id="menu-create-group" class="m-menu-item">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <circle cx="9" cy="8" r="3.2"></circle>
+                    <path d="M3 20c0-3.3 2.7-5.2 6-5.2s6 1.9 6 5.2"></path>
+                    <path d="M17 7v6M14 10h6"></path>
+                </svg>
+                <span>Создать группу</span>
+            </button>
             <button type="button" id="menu-theme" class="m-menu-item">
                 <svg viewBox="0 0 24 24" aria-hidden="true">
                     <circle cx="12" cy="12" r="4"></circle>
@@ -182,6 +190,45 @@
 
             <p id="contacts-error" class="error hidden m-contacts-error"></p>
             <ul id="contacts-list" class="m-contacts-list"></ul>
+        </div>
+    </div>
+
+    <!-- Создание группового чата -->
+    <div id="group-create-modal" class="m-modal" aria-hidden="true">
+        <div id="group-create-backdrop" class="m-modal-backdrop"></div>
+
+        <div class="m-modal-dialog m-group-create-dialog" role="dialog" aria-modal="true"
+             aria-labelledby="group-create-title">
+            <div class="m-contacts-header">
+                <h2 id="group-create-title" class="m-modal-title">Создать группу</h2>
+                <button type="button" id="group-create-close" class="m-contacts-close"
+                        aria-label="Закрыть" title="Закрыть">×</button>
+            </div>
+
+            <form id="group-create-form" class="m-group-create-form">
+                <label class="m-field">
+                    <span class="m-field-label">Название группы</span>
+                    <input type="text" id="group-create-name" maxlength="50"
+                           placeholder="Например, Друзья" autocomplete="off">
+                </label>
+
+                <label class="m-field">
+                    <span class="m-field-label">Участники</span>
+                    <input type="text" id="group-create-search"
+                           placeholder="Поиск по имени или @username"
+                           autocomplete="off">
+                </label>
+
+                <ul id="group-create-users" class="m-group-pick-list"></ul>
+                <p id="group-create-error" class="error hidden"></p>
+
+                <div class="m-modal-actions">
+                    <button type="button" id="group-create-cancel" class="m-secondary-btn">
+                        Отмена
+                    </button>
+                    <button type="submit" id="group-create-submit">Создать</button>
+                </div>
+            </form>
         </div>
     </div>
 
