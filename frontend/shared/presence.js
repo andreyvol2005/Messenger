@@ -66,7 +66,9 @@ const TYPING_TIMEOUT = 3500;
 export const Presence = {
     online: new Set(),
     lastSeen: new Map(),
-    // chat_id -> { userId, until, timer }. Состояние эфемерное и только для UI.
+    // chat_id -> Map(user_id -> { userId, nickname, until, timer }).
+    // В группе печатать могут сразу несколько человек, поэтому на чат
+    // храним не одного пользователя, а набор. Состояние эфемерное, только UI.
     typing: new Map(),
     seq: 0,
     lastEvents: new Map(),
@@ -126,29 +128,54 @@ export const Presence = {
         if (!Number.isInteger(chatId) || chatId <= 0) return;
         if (!Number.isInteger(userId) || userId <= 0) return;
 
-        const previous = this.typing.get(chatId);
+        let entries = this.typing.get(chatId);
+        if (!entries) {
+            entries = new Map();
+            this.typing.set(chatId, entries);
+        }
+
+        const previous = entries.get(userId);
         if (previous && previous.timer) clearTimeout(previous.timer);
+
+        const nickname = String(
+            data.nickname || data.sender_nickname || ""
+        ).trim() || (previous && previous.nickname) || "";
 
         const until = Date.now() + TYPING_TIMEOUT;
         const timer = setTimeout(() => {
-            const current = this.typing.get(chatId);
+            const currentEntries = this.typing.get(chatId);
+            const current = currentEntries && currentEntries.get(userId);
             // Пока ждали, могло прийти новое событие с другим сроком
             if (!current || current.until !== until) return;
-            this.typing.delete(chatId);
+            currentEntries.delete(userId);
+            if (!currentEntries.size) this.typing.delete(chatId);
             this.renderStatuses();
         }, TYPING_TIMEOUT);
 
-        this.typing.set(chatId, { userId, until, timer });
+        entries.set(userId, { userId, nickname, until, timer });
         this.renderStatuses();
     },
 
-    clearTyping(chatId) {
+    // Без userId гасит индикатор всего чата, с userId — только этого автора:
+    // в группе остальные могут продолжать печатать.
+    clearTyping(chatId, userId = null) {
         const id = Number(chatId);
-        const entry = this.typing.get(id);
-        if (!entry) return;
+        const entries = this.typing.get(id);
+        if (!entries) return;
 
-        if (entry.timer) clearTimeout(entry.timer);
-        this.typing.delete(id);
+        if (userId !== null && userId !== undefined) {
+            const uid = Number(userId);
+            const entry = entries.get(uid);
+            if (!entry) return;
+            if (entry.timer) clearTimeout(entry.timer);
+            entries.delete(uid);
+            if (!entries.size) this.typing.delete(id);
+        } else {
+            for (const entry of entries.values()) {
+                if (entry.timer) clearTimeout(entry.timer);
+            }
+            this.typing.delete(id);
+        }
         this.renderStatuses();
     },
 
@@ -156,14 +183,36 @@ export const Presence = {
         const id = Number(userId);
         let changed = false;
 
-        for (const [chatId, entry] of [...this.typing]) {
-            if (entry.userId !== id) continue;
+        for (const [chatId, entries] of [...this.typing]) {
+            const entry = entries.get(id);
+            if (!entry) continue;
             if (entry.timer) clearTimeout(entry.timer);
-            this.typing.delete(chatId);
+            entries.delete(id);
+            if (!entries.size) this.typing.delete(chatId);
             changed = true;
         }
 
         if (changed) this.renderStatuses();
+    },
+
+    // Активные (не истёкшие) авторы «печатает...» в чате.
+    typingEntries(chatId) {
+        const entries = this.typing.get(Number(chatId));
+        if (!entries) return [];
+        const now = Date.now();
+        return [...entries.values()].filter((entry) => entry.until > now);
+    },
+
+    // «Аня печатает...», «Аня и Боря печатают...». Имена приходят в самом
+    // событии typing, поэтому дополнительных запросов к API не нужно.
+    typingText(entries) {
+        const names = entries.map((entry) => entry.nickname || "Кто-то");
+        if (names.length === 1) return `${names[0]} печатает...`;
+        if (names.length === 2) return `${names[0]} и ${names[1]} печатают...`;
+        if (names.length === 3) {
+            return `${names[0]}, ${names[1]} и ${names[2]} печатают...`;
+        }
+        return `${names.slice(0, 2).join(", ")} и ещё ${names.length - 2} печатают...`;
     },
 
     async refresh() {
@@ -263,8 +312,8 @@ export const Presence = {
         dot.setAttribute("aria-label", dot.title);
     },
 
-    // Строка статуса под именем в шапке чата. Без собеседника (например,
-    // в «Избранном») элемент просто скрыт.
+    // Строка статуса под именем в шапке личного чата. Без собеседника
+    // (например, в «Избранном») элемент просто скрыт.
     bindStatus(element, userId, chatId) {
         if (!element) return element;
 
@@ -275,9 +324,13 @@ export const Presence = {
             element.classList.add("hidden");
             delete element.dataset.presenceStatusUser;
             delete element.dataset.presenceStatusChat;
+            delete element.dataset.presenceStatusGroup;
+            delete element.dataset.presenceStatusFallback;
             return element;
         }
 
+        delete element.dataset.presenceStatusGroup;
+        delete element.dataset.presenceStatusFallback;
         element.dataset.presenceStatusUser = String(id);
         element.dataset.presenceStatusChat = String(chat);
         element.classList.remove("hidden");
@@ -285,15 +338,50 @@ export const Presence = {
         return element;
     },
 
+    // Статус группы: пока никто не печатает — число участников (fallback),
+    // пока печатают — имена авторов. Несколько человек поддерживаются.
+    bindGroupStatus(element, chatId, fallbackText = "Группа") {
+        if (!element) return element;
+
+        const chat = Number(chatId);
+        if (!Number.isInteger(chat) || chat <= 0) {
+            element.classList.add("hidden");
+            delete element.dataset.presenceStatusUser;
+            delete element.dataset.presenceStatusChat;
+            delete element.dataset.presenceStatusGroup;
+            delete element.dataset.presenceStatusFallback;
+            return element;
+        }
+
+        delete element.dataset.presenceStatusUser;
+        element.dataset.presenceStatusGroup = "1";
+        element.dataset.presenceStatusChat = String(chat);
+        element.dataset.presenceStatusFallback = fallbackText || "Группа";
+        element.classList.remove("hidden");
+        this.updateStatus(element);
+        return element;
+    },
+
     updateStatus(element) {
-        const userId = Number(element.dataset.presenceStatusUser);
         const chatId = Number(element.dataset.presenceStatusChat);
+
+        if (element.dataset.presenceStatusGroup === "1") {
+            const entries = this.typingEntries(chatId);
+            const isTyping = entries.length > 0;
+            element.textContent = isTyping
+                ? this.typingText(entries)
+                : (element.dataset.presenceStatusFallback || "Группа");
+            element.classList.remove("is-online");
+            element.classList.toggle("is-typing", isTyping);
+            return;
+        }
+
+        const userId = Number(element.dataset.presenceStatusUser);
         const online = this.online.has(userId);
 
-        const typing = this.typing.get(chatId);
-        const isTyping = Boolean(
-            typing && typing.userId === userId && typing.until > Date.now()
-        );
+        const entries = this.typing.get(chatId);
+        const typing = entries && entries.get(userId);
+        const isTyping = Boolean(typing && typing.until > Date.now());
 
         element.textContent = isTyping ? "печатает..." : this.presenceText(userId);
         element.classList.toggle("is-online", online && !isTyping);
@@ -301,7 +389,9 @@ export const Presence = {
     },
 
     renderStatuses() {
-        document.querySelectorAll("[data-presence-status-user]").forEach((element) => {
+        document.querySelectorAll(
+            "[data-presence-status-user], [data-presence-status-group]"
+        ).forEach((element) => {
             this.updateStatus(element);
         });
     },

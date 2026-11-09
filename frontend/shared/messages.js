@@ -11,6 +11,7 @@ export const MESSAGE_CLASSES = {
     desktop: {
         row: "message",
         bubble: "message-bubble",
+        sender: "message-sender",
         text: "message-text",
         image: "message-image",
         time: "message-time",
@@ -19,6 +20,7 @@ export const MESSAGE_CLASSES = {
     mobile: {
         row: "m-message",
         bubble: "m-bubble",
+        sender: "m-message-sender",
         text: "m-message-text",
         image: "m-message-image",
         time: "m-message-time",
@@ -201,6 +203,14 @@ export function renderMessage(msg, options) {
             UI.el("div", "message-deleted-text", "Сообщение удалено")
         );
     } else {
+        // В группе по нику видно, кто написал. Свои сообщения не подписываем:
+        // их и так выделяет сторона и цвет пузыря.
+        if (options.showSender && !mine && msg.sender_nickname) {
+            bubble.appendChild(
+                UI.el("div", options.classes.sender, msg.sender_nickname)
+            );
+        }
+
         if (msg.forwarded_from_nickname) {
             bubble.appendChild(
                 UI.el(

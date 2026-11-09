@@ -421,7 +421,10 @@ def test_group_messages_are_visible_to_members_only(client):
         headers=auth(bob["access_token"]),
     )
     assert history.status_code == 200, history.text
-    assert [message["text"] for message in history.json()] == ["Всем привет"]
+    messages = history.json()
+    assert [message["text"] for message in messages] == ["Всем привет"]
+    # Интерфейсу группы нужен ник автора, чтобы подписать сообщение
+    assert messages[0]["sender_nickname"] == alice["nickname"]
 
     # Посторонний не может ни читать, ни писать в группу
     denied_read = client.get(
@@ -447,6 +450,45 @@ def test_group_messages_are_visible_to_members_only(client):
         headers=auth(bob["access_token"]),
     )
     assert after_removal.status_code == 403
+
+
+def test_group_typing_event_contains_sender_nickname(client):
+    alice = register_and_login(client, "group_typing_alice")
+    bob = register_and_login(client, "group_typing_bob")
+    carol = register_and_login(client, "group_typing_carol")
+
+    created = create_group(
+        client,
+        alice,
+        "Печатают",
+        [bob["user_id"], carol["user_id"]],
+    )
+    assert created.status_code == 200, created.text
+    chat_id = created.json()["id"]
+
+    with client.websocket_connect(
+        f"/ws/{bob['user_id']}?token={bob['access_token']}"
+    ) as bob_socket:
+        bob_socket.receive_json()  # собственное online-событие
+
+        with client.websocket_connect(
+            f"/ws/{alice['user_id']}?token={alice['access_token']}"
+        ) as alice_socket:
+            assert bob_socket.receive_json()["user_id"] == alice["user_id"]
+
+            # Alice печатает в группе: Боб должен получить её ник, чтобы
+            # показать в шапке «Имя печатает...», а не безликое «печатает...».
+            alice_socket.send_json({"type": "typing", "chat_id": chat_id})
+            # Обычное сообщение проталкивает очередь событий через TestClient
+            alice_socket.send_json({"chat_id": chat_id, "text": "привет"})
+
+            typing_event = bob_socket.receive_json()
+            assert typing_event == {
+                "type": "typing",
+                "chat_id": chat_id,
+                "user_id": alice["user_id"],
+                "nickname": alice["nickname"],
+            }
 
 
 def test_private_chat_still_works_after_group_changes(client):

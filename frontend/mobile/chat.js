@@ -140,7 +140,11 @@ export const MobileChat = {
     // Параметры общего рендера: мобильные классы, выбор и контекстные действия.
     // В «Избранном» галочки статусов не нужны: там нет собеседника.
     messageOptions() {
-        return MessageActions.messageOptions();
+        return {
+            ...MessageActions.messageOptions(),
+            // В группе подписываем чужие сообщения ником отправителя
+            showSender: this.chatType === "group"
+        };
     },
 
     onIncoming(msg) {
@@ -148,8 +152,9 @@ export const MobileChat = {
         if (msg.chat_id !== this.chatId) return;
 
         const mine = msg.sender_id === Session.userId();
-        // Сообщение пришло — «печатает...» уже неактуально
-        if (!mine) Presence.clearTyping(msg.chat_id);
+        // Сообщение пришло — гасим индикатор только этого автора:
+        // в группе остальные участники могут продолжать печатать.
+        if (!mine) Presence.clearTyping(msg.chat_id, msg.sender_id);
         appendIncoming(document.getElementById("messages"), msg, this.messageOptions());
         if (mine) this.applyCachedStatuses();
         if (!mine) {
@@ -234,12 +239,15 @@ export const MobileChat = {
         if (!element) return;
 
         if (this.chatType === "group") {
-            // Вместо статуса собеседника — число участников группы
-            Presence.bindStatus(element, null, chatId);
-            element.textContent = this.chatMembersCount !== null
-                ? UI.membersLabel(this.chatMembersCount)
-                : "Группа";
-            element.classList.remove("hidden", "is-online", "is-typing");
+            // Пока никто не печатает — число участников; как только кто-то
+            // набирает текст, Presence подменяет строку на «Имя печатает...».
+            Presence.bindGroupStatus(
+                element,
+                chatId,
+                this.chatMembersCount !== null
+                    ? UI.membersLabel(this.chatMembersCount)
+                    : "Группа"
+            );
             return;
         }
 

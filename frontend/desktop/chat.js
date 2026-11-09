@@ -111,14 +111,19 @@ export const Chat = {
     // Параметры общего рендера: классы десктопа, выбор и контекстные действия.
     // В «Избранном» галочки статусов не нужны: там нет собеседника.
     messageOptions() {
-        return MessageActions.messageOptions();
+        return {
+            ...MessageActions.messageOptions(),
+            // В группе подписываем чужие сообщения ником отправителя
+            showSender: this.chatType === "group"
+        };
     },
 
     // Сообщение от другого человека пришло по сокету
     async onIncoming(msg) {
         const mine = msg.sender_id === Session.userId();
-        // Сообщение пришло — «печатает...» уже неактуально
-        if (!mine) Presence.clearTyping(msg.chat_id);
+        // Сообщение пришло — гасим индикатор только этого автора:
+        // в группе остальные участники могут продолжать печатать.
+        if (!mine) Presence.clearTyping(msg.chat_id, msg.sender_id);
         if (msg.chat_id === this.currentChatId) {
             appendIncoming(document.getElementById("messages"), msg, this.messageOptions());
             if (mine) this.applyCachedStatuses(msg.chat_id);
@@ -433,13 +438,15 @@ export const Chat = {
         if (!element) return;
 
         if (this.chatType === "group") {
-            // У группы нет одного собеседника — вместо статуса показываем
-            // число участников. Presence для неё отключаем.
-            Presence.bindStatus(element, null, chatId);
-            element.textContent = this.chatMembersCount !== null
-                ? UI.membersLabel(this.chatMembersCount)
-                : "Группа";
-            element.classList.remove("hidden", "is-online", "is-typing");
+            // Пока никто не печатает — число участников; как только кто-то
+            // набирает текст, Presence подменяет строку на «Имя печатает...».
+            Presence.bindGroupStatus(
+                element,
+                chatId,
+                this.chatMembersCount !== null
+                    ? UI.membersLabel(this.chatMembersCount)
+                    : "Группа"
+            );
             return;
         }
 

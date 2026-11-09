@@ -272,15 +272,25 @@ async def publish_presence(
     )
 
 
-def build_typing_event(chat_id: int, user_id: int) -> dict:
+def build_typing_event(
+    chat_id: int, user_id: int, nickname: str | None = None
+) -> dict:
     return {
         "type": "typing",
         "chat_id": chat_id,
         "user_id": user_id,
+        # Имя нужно групповым чатам: в шапке показываем, кто именно печатает.
+        # В личном чате клиент и так знает собеседника, но поле не мешает.
+        "nickname": nickname,
     }
 
 
-async def publish_typing(db: Session, user_id: int, chat_id: int):
+async def publish_typing(
+    db: Session,
+    user_id: int,
+    chat_id: int,
+    nickname: str | None = None,
+):
     """Эфемерное «печатает…» — только остальным участникам чата.
 
     Состояние не хранится ни в базе, ни в памяти сервера: клиент присылает
@@ -294,8 +304,18 @@ async def publish_typing(db: Session, user_id: int, chat_id: int):
         for member_id in services.chat_member_ids(db, chat_id)
         if member_id != user_id
     ]
-    if recipients:
-        await publish(recipients, build_typing_event(chat_id, user_id))
+    if not recipients:
+        return
+
+    if nickname is None:
+        row = (
+            db.query(models.User.nickname)
+            .filter(models.User.id == user_id)
+            .first()
+        )
+        nickname = row.nickname if row else None
+
+    await publish(recipients, build_typing_event(chat_id, user_id, nickname))
 
 
 async def disconnect_user_everywhere(user_id: int):
