@@ -11,6 +11,7 @@ export const MESSAGE_CLASSES = {
     desktop: {
         row: "message",
         bubble: "message-bubble",
+        sender: "message-sender",
         text: "message-text",
         image: "message-image",
         time: "message-time",
@@ -19,6 +20,7 @@ export const MESSAGE_CLASSES = {
     mobile: {
         row: "m-message",
         bubble: "m-bubble",
+        sender: "m-message-sender",
         text: "m-message-text",
         image: "m-message-image",
         time: "m-message-time",
@@ -142,7 +144,10 @@ export const Receipts = {
     }
 };
 
-export function renderMessage(msg, { classes, showStar, showStatus, onToggleFavorite }) {
+export function renderMessage(
+    msg,
+    { classes, showStar, showStatus, showSender = false, onToggleFavorite }
+) {
     const mine = msg.sender_id === Session.userId();
     const row = UI.el("div", classes.row + (mine ? " mine" : ""));
     row.dataset.msgId = msg.id;
@@ -152,6 +157,12 @@ export function renderMessage(msg, { classes, showStar, showStatus, onToggleFavo
         "div",
         classes.bubble + (msg.media_url ? " has-image" : "")
     );
+
+    // В группе по нику видно, кто написал. Свои сообщения не подписываем:
+    // их и так выделяет сторона и цвет пузыря.
+    if (showSender && !mine && msg.sender_nickname) {
+        bubble.appendChild(UI.el("div", classes.sender, msg.sender_nickname));
+    }
 
     // Картинка идёт первой, подпись (если есть) — под ней
     if (msg.media_url) {

@@ -209,6 +209,7 @@ def test_typing_only_for_chat_members(client):
                 "type": "typing",
                 "chat_id": chat["id"],
                 "user_id": alice["user_id"],
+                "nickname": alice["nickname"],
             }
 
 

@@ -100,7 +100,9 @@ async def websocket_endpoint(websocket: WebSocket, user_id: int, token: str = ""
 
                     try:
                         if services.can_access_chat(db, user, chat_id):
-                            await events.publish_typing(db, user_id, chat_id)
+                            await events.publish_typing(
+                                db, user_id, chat_id, user.nickname
+                            )
                     finally:
                         # Проверка доступа и получатели — обычные чтения.
                         release_read_transaction(db)

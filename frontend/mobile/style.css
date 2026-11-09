@@ -267,6 +267,16 @@
 /* Пузырь с картинкой не растягивается шире неё: 320px картинки + отступы */
 .m-bubble.has-image { max-width: 344px; }
 
+/* Ник отправителя в групповом чате — над текстом сообщения */
+.m-message-sender {
+    margin-bottom: 3px;
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 1.3;
+    color: #8ab4f8;
+    word-break: break-word;
+}
+
 .m-message-text { font-size: 15px; white-space: pre-wrap; word-break: break-word; }
 
 /* Картинка не выходит за пузырь и не растягивается на пол-экрана.

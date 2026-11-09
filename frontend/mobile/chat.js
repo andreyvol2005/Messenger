@@ -127,6 +127,8 @@ export const MobileChat = {
             classes: MESSAGE_CLASSES.mobile,
             showStar: this.chatId !== CONFIG.FAVORITES_CHAT_ID,
             showStatus: this.chatId !== CONFIG.FAVORITES_CHAT_ID,
+            // В группе подписываем чужие сообщения ником отправителя
+            showSender: this.chatType === "group",
             onToggleFavorite: (star, msg) => this.onToggleFavorite(star, msg)
         };
     },
@@ -136,8 +138,9 @@ export const MobileChat = {
         if (msg.chat_id !== this.chatId) return;
 
         const mine = msg.sender_id === Session.userId();
-        // Сообщение пришло — «печатает...» уже неактуально
-        if (!mine) Presence.clearTyping(msg.chat_id);
+        // Сообщение пришло — гасим индикатор только этого автора:
+        // в группе остальные участники могут продолжать печатать.
+        if (!mine) Presence.clearTyping(msg.chat_id, msg.sender_id);
         appendIncoming(document.getElementById("messages"), msg, this.messageOptions());
         if (mine) this.applyCachedStatuses();
         if (!mine) {
@@ -222,12 +225,15 @@ export const MobileChat = {
         if (!element) return;
 
         if (this.chatType === "group") {
-            // Вместо статуса собеседника — число участников группы
-            Presence.bindStatus(element, null, chatId);
-            element.textContent = this.chatMembersCount !== null
-                ? UI.membersLabel(this.chatMembersCount)
-                : "Группа";
-            element.classList.remove("hidden", "is-online", "is-typing");
+            // Пока никто не печатает — число участников; как только кто-то
+            // набирает текст, Presence подменяет строку на «Имя печатает...».
+            Presence.bindGroupStatus(
+                element,
+                chatId,
+                this.chatMembersCount !== null
+                    ? UI.membersLabel(this.chatMembersCount)
+                    : "Группа"
+            );
             return;
         }
 
