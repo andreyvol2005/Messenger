@@ -432,6 +432,21 @@ def test_forward_creates_n_times_m_copies_and_can_keep_reply(client):
     assert reply_copy["reply_to_id"] is None
     assert reply_copy["reply_to_text"] is None
 
+    # Пересланную копию нельзя редактировать, даже если она своя
+    denied_edit = client.patch(
+        f"/api/messages/{bob_copy['id']}",
+        headers=auth(alice["access_token"]),
+        json={"text": "Подмена пересланного"},
+    )
+    assert denied_edit.status_code == 400
+    unchanged = next(
+        row
+        for row in history(client, alice, chat_ab)
+        if row["id"] == bob_copy["id"]
+    )
+    assert unchanged["text"] == "От Боба"
+    assert unchanged["edited_at"] is None
+
     keep = client.post(
         "/api/messages/forward",
         headers=auth(alice["access_token"]),
@@ -469,3 +484,51 @@ def test_forward_creates_n_times_m_copies_and_can_keep_reply(client):
         },
     )
     assert denied_deleted.status_code == 400
+
+
+def test_chat_list_preview_tracks_last_message(client):
+    """Список чатов показывает последнее сообщение.
+
+    В PostgreSQL last_message_id обновляет триггер, но на SQLite его нет:
+    приложение должно само поддерживать поле, иначе в списке навсегда
+    остаётся «Нет сообщений».
+    """
+    alice = register_and_login(client, "msg_preview_alice")
+    bob = register_and_login(client, "msg_preview_bob")
+    chat_id = create_chat(client, alice, bob)
+
+    def chat_preview(user: dict) -> dict:
+        response = client.get("/api/chats", headers=auth(user["access_token"]))
+        assert response.status_code == 200, response.text
+        return next(
+            row for row in response.json()["chats"] if row["id"] == chat_id
+        )
+
+    assert chat_preview(alice)["last_message"] is None
+
+    send(client, alice, chat_id, "Первое сообщение")
+    after_first = chat_preview(alice)
+    assert after_first["last_message"] == "Первое сообщение"
+    assert after_first["last_message_at"] is not None
+
+    send(client, bob, chat_id, "Последнее сообщение")
+    after_second = chat_preview(alice)
+    assert after_second["last_message"] == "Последнее сообщение"
+    assert after_second["last_message_at"] is not None
+
+    # Сообщение только с картинкой тоже даёт понятное превью
+    uploaded = client.post(
+        "/api/messages/upload",
+        headers=auth(alice["access_token"]),
+        data={"chat_id": str(chat_id)},
+        files={"file": ("preview.png", PNG_BYTES, "image/png")},
+    )
+    assert uploaded.status_code == 200, uploaded.text
+    assert chat_preview(bob)["last_message"] == "📷 Изображение"
+
+    # После удаления последнего сообщения остаётся заглушка, а не пустота
+    client.delete(
+        f"/api/messages/{uploaded.json()['id']}",
+        headers=auth(alice["access_token"]),
+    )
+    assert chat_preview(alice)["last_message"] == "Сообщение удалено"

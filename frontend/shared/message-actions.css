@@ -54,14 +54,6 @@
     pointer-events: auto;
 }
 
-@media (hover: hover) {
-    .message:hover > .message-select,
-    .m-message:hover > .message-select {
-        opacity: 1;
-        pointer-events: auto;
-    }
-}
-
 #messages.selection-mode .message-select {
     opacity: 1;
     pointer-events: auto;

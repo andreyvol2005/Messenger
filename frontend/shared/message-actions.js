@@ -110,14 +110,13 @@ export const MessageActions = {
     },
 
     openMenu(x, y, msg) {
+        if (!msg) return;
         this.ensureMenu();
         this.menuMessage = msg;
         const menu = this.menu;
         menu.innerHTML = "";
 
-        const items = msg ? this.contextItems(msg) : [
-            { action: "select", label: "Выделить", icon: "☑" }
-        ];
+        const items = this.contextItems(msg);
         for (const item of items) {
             if (item.hidden) continue;
             const button = UI.el(
@@ -172,7 +171,10 @@ export const MessageActions = {
             { action: "forward", label: "Переслать", icon: "↪" }
         ];
         if (mine) {
-            items.push({ action: "edit", label: "Редактировать", icon: "✎" });
+            // Пересланную копию можно удалить, но не изменить
+            if (!msg.forwarded_from_nickname) {
+                items.push({ action: "edit", label: "Редактировать", icon: "✎" });
+            }
             items.push({ action: "delete", label: "Удалить", icon: "🗑", danger: true });
         }
         items.push({ action: "select", label: "Выделить", icon: "☑" });
@@ -201,6 +203,19 @@ export const MessageActions = {
 
     // ---------- ПКМ и долгое нажатие ----------
 
+    // Строка сообщения на той же высоте, что и курсор. Благодаря этому ПКМ
+    // слева или справа от пузыря открывает меню именно этого сообщения, а
+    // клик выше или ниже ленты не делает ничего.
+    messageRowAtY(y) {
+        const box = this.box();
+        if (!box) return null;
+        for (const row of box.querySelectorAll("[data-msg-id]")) {
+            const rect = row.getBoundingClientRect();
+            if (y >= rect.top && y <= rect.bottom) return row;
+        }
+        return null;
+    },
+
     bindMessagesBox() {
         const box = this.box();
         if (!box) return;
@@ -208,12 +223,10 @@ export const MessageActions = {
         box.addEventListener("contextmenu", (event) => {
             event.preventDefault();
             if (Date.now() - this.lastLongPressAt < 700) return;
-            const row = event.target.closest("[data-msg-id]");
-            this.openMenu(
-                event.clientX,
-                event.clientY,
-                row ? row.__message : null
-            );
+            const row = event.target.closest("[data-msg-id]")
+                || this.messageRowAtY(event.clientY);
+            if (!row) return;
+            this.openMenu(event.clientX, event.clientY, row.__message);
         });
 
         // В режиме выбора клик по сообщению переключает галочку, а не открывает
@@ -252,7 +265,10 @@ export const MessageActions = {
             cancel();
             startX = event.clientX;
             startY = event.clientY;
-            targetRow = event.target.closest("[data-msg-id]");
+            targetRow = event.target.closest("[data-msg-id]")
+                || this.messageRowAtY(startY);
+            // Долгое нажатие выше или ниже сообщений ничего не открывает.
+            if (!targetRow) return;
             timer = setTimeout(() => {
                 timer = null;
                 this.suppressClick = true;
@@ -326,6 +342,11 @@ export const MessageActions = {
     },
 
     syncSelectionUI() {
+        // Сняли последнюю галочку — режим выделения закрывается сам.
+        if (this.selectionMode && this.selected.size === 0) {
+            this.exitSelection();
+            return;
+        }
         const box = this.box();
         if (box) {
             for (const row of box.querySelectorAll("[data-msg-id]")) {
@@ -393,7 +414,10 @@ export const MessageActions = {
         );
         const canReply = Boolean(one);
         const canEdit = Boolean(
-            one && one.sender_id === Session.userId() && !one.is_deleted
+            one
+            && one.sender_id === Session.userId()
+            && !one.is_deleted
+            && !one.forwarded_from_nickname
         );
 
         const states = {
@@ -509,7 +533,11 @@ export const MessageActions = {
 
     beginEdit(msg) {
         if (!msg) return;
-        if (msg.sender_id !== Session.userId() || msg.is_deleted) return;
+        if (
+            msg.sender_id !== Session.userId()
+            || msg.is_deleted
+            || msg.forwarded_from_nickname
+        ) return;
 
         if (this.edit && this.edit.message.id === msg.id) {
             this.input()?.focus();

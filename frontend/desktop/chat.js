@@ -194,7 +194,7 @@ export const Chat = {
                 if (chat.id === this.currentChatId) item.classList.add("active");
 
                 const avatar = UI.avatar(
-                    chat.is_favorites ? "📁" : chat.title,
+                    chat.is_favorites ? "★" : chat.title,
                     chat.is_favorites ? null : chat.avatar_url,
                     "avatar avatar-lg chat-item-avatar"
                 );
@@ -202,7 +202,8 @@ export const Chat = {
                 Presence.attach(avatar, chat.peer_id);
 
                 const body = UI.el("div", "chat-item-body");
-                body.appendChild(UI.el("div", "chat-item-title", chat.title));
+                body.appendChild(UI.el("div", "chat-item-title",
+                    chat.is_favorites ? "★ " + chat.title : chat.title));
                 body.appendChild(UI.el("div", "chat-item-preview",
                     chat.last_message || "Нет сообщений"));
                 item.append(avatar, body);

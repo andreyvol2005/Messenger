@@ -73,7 +73,7 @@ export const MobileChats = {
                 const item = UI.el("li", "m-chat-item");
 
                 const avatar = UI.avatar(
-                    chat.is_favorites ? "📁" : chat.title,
+                    chat.is_favorites ? "★" : chat.title,
                     chat.is_favorites ? null : chat.avatar_url,
                     "m-avatar"
                 );

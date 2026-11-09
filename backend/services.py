@@ -832,6 +832,15 @@ def _insert_message(
         forwarded_from_nickname=forwarded_from_nickname,
     )
     db.add(msg)
+    # В PostgreSQL last_message_id обновляет триггер, но приложение не должно
+    # зависеть только от него: та же логика нужна и на SQLite, и в старых базах,
+    # где триггер мог не создаться. Для «Избранного» строки в chats нет.
+    db.flush()
+    if not is_favorites(chat_id):
+        db.query(models.Chat).filter(models.Chat.id == chat_id).update(
+            {models.Chat.last_message_id: msg.id},
+            synchronize_session=False,
+        )
     db.commit()
     db.refresh(msg)
     return msg
@@ -921,6 +930,11 @@ def edit_message(
     _require_own_message(db, user, msg)
     if msg.is_deleted:
         raise HTTPException(status_code=400, detail="Удалённое сообщение нельзя изменить")
+    if msg.forwarded_from_nickname is not None:
+        raise HTTPException(
+            status_code=400,
+            detail="Пересланное сообщение нельзя изменить",
+        )
 
     normalized_text = text.strip() if text and text.strip() else None
     resulting_media = new_media_url or msg.media_url
