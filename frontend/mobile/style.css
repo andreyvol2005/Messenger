@@ -284,17 +284,6 @@
 }
 .m-message-time { margin-top: 3px; font-size: 10px; color: #999; text-align: right; }
 
-.m-star {
-    flex-shrink: 0;
-    padding: 2px 6px;
-    background: transparent;
-    color: #888;
-    font-size: 13px;
-    line-height: 1;
-}
-.m-star:hover { background: transparent; color: #ffcc4d; }
-.m-star.active { color: #ffcc4d; }
-
 /* ============================
    Поле ввода — прижато к низу, не уезжает под клавиатуру
    ============================ */

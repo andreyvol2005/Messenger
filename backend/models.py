@@ -71,15 +71,22 @@ class ChatMember(Base):
 class Message(Base):
     __tablename__ = "messages"
     id = Column(Integer, primary_key=True, index=True)
-    # NULL = сообщение в «Избранном» (виртуальная папка, строки в chats нет)
+    # NULL = сообщение в «Избранном» (виртуальная папка, строки в chats нет).
+    # Такие строки — личные заметки и копии пересланных сообщений владельца.
     chat_id = Column(Integer, ForeignKey("chats.id", ondelete="CASCADE"), nullable=True)
     sender_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     text = Column(Text, nullable=True)
     media_url = Column(Text, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     reply_to_id = Column(Integer, ForeignKey("messages.id", ondelete="SET NULL"), nullable=True)
+    # Снимок цитаты: оригинал может быть удалён, а историю ответа показываем.
+    reply_to_nickname = Column(String(30), nullable=True)
+    reply_to_text = Column(Text, nullable=True)
+    # NULL — сообщение не редактировали.
+    edited_at = Column(DateTime, nullable=True)
+    # Немедленный отправитель оригинала при пересылке (не первый автор).
+    forwarded_from_nickname = Column(String(30), nullable=True)
     is_deleted = Column(Boolean, default=False)
-    is_favorite = Column(Boolean, nullable=False, default=False)
 
 class Contact(Base):
     __tablename__ = "contacts"

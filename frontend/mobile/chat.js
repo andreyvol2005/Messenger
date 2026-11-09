@@ -18,6 +18,7 @@ import {
     Receipts,
     updateMessageStatuses
 } from "../shared/messages.js";
+import { MessageActions } from "../shared/message-actions.js";
 
 export const MobileChat = {
     chatId: null,
@@ -46,16 +47,26 @@ export const MobileChat = {
         }
         this.chatId = parsed;
 
+        MessageActions.init({
+            mode: "mobile",
+            classes: MESSAGE_CLASSES.mobile,
+            getChatId: () => this.chatId,
+            onChanged: () => {}
+        });
+
         document.getElementById("back-btn").onclick = () => window.location.href = PATHS.MOBILE_CHATS;
         document.getElementById("message-form").onsubmit = (e) => this.sendMessage(e);
         const messageInput = document.getElementById("message-input");
         if (messageInput) {
             messageInput.addEventListener("input", () => {
-                this.saveDraft(this.chatId, messageInput.value);
-                this.resizeInput(messageInput);
-                if (messageInput.value.trim()) {
-                    Realtime.sendTyping(this.chatId);
+                // Во время правки не затираем черновик нового сообщения
+                if (!MessageActions.isEditing()) {
+                    this.saveDraft(this.chatId, messageInput.value);
+                    if (messageInput.value.trim()) {
+                        Realtime.sendTyping(this.chatId);
+                    }
                 }
+                this.resizeInput(messageInput);
             });
             messageInput.addEventListener("keydown", (e) => {
                 if (e.key === "Enter" && !e.shiftKey) {
@@ -109,6 +120,12 @@ export const MobileChat = {
         document.addEventListener("messenger:avatar-updated", () => this.loadTitle());
         // Группу переименовали, сменили аватар или состав участников
         document.addEventListener("messenger:chat-updated", () => this.loadTitle());
+        document.addEventListener("messenger:message-edited", (event) => {
+            MessageActions.onMessageEdited(event.detail || {});
+        });
+        document.addEventListener("messenger:message-deleted", (event) => {
+            MessageActions.onMessageDeleted(event.detail || {});
+        });
 
         await this.loadTitle();
         await this.loadMessages();
@@ -120,15 +137,10 @@ export const MobileChat = {
         }
     },
 
-    // Параметры общего рендера: мобильные классы, звезда только вне избранного.
-    // В «Избранном» галочки не нужны: там нет собеседника.
+    // Параметры общего рендера: мобильные классы, выбор и контекстные действия.
+    // В «Избранном» галочки статусов не нужны: там нет собеседника.
     messageOptions() {
-        return {
-            classes: MESSAGE_CLASSES.mobile,
-            showStar: this.chatId !== CONFIG.FAVORITES_CHAT_ID,
-            showStatus: this.chatId !== CONFIG.FAVORITES_CHAT_ID,
-            onToggleFavorite: (star, msg) => this.onToggleFavorite(star, msg)
-        };
+        return MessageActions.messageOptions();
     },
 
     onIncoming(msg) {
@@ -378,17 +390,6 @@ export const MobileChat = {
         await Receipts.acknowledgeHistory(box, this.chatId);
     },
 
-    async onToggleFavorite(star, msg) {
-        try {
-            const updated = await API.toggleFavorite(msg.id);
-            msg.is_favorite = updated.is_favorite;
-            star.classList.toggle("active", updated.is_favorite);
-            star.textContent = updated.is_favorite ? "★" : "☆";
-        } catch (err) {
-            alert(err.message);
-        }
-    },
-
     draftKey(chatId) {
         return `messenger_draft_${Session.userId()}_${chatId}`;
     },
@@ -426,14 +427,28 @@ export const MobileChat = {
     async sendMessage(e) {
         e.preventDefault();
         const input = document.getElementById("message-input");
+
+        // Enter в режиме правки сохраняет изменение, а не отправляет новое
+        if (MessageActions.isEditing()) {
+            if (!MessageActions.canSaveEdit(input.value)) return;
+            try {
+                await MessageActions.saveEdit(input.value);
+            } catch (err) {
+                alert(err.message);
+            }
+            return;
+        }
+
         const text = input.value.trim();
         if (!text) return;
 
+        const replyToId = MessageActions.replyToId();
         input.value = "";
         this.clearDraft(this.chatId);
         this.resizeInput(input);
         try {
-            const msg = await API.sendMessage(this.chatId, text);
+            const msg = await API.sendMessage(this.chatId, text, replyToId);
+            MessageActions.clearReply();
             const box = document.getElementById("messages");
             const hint = box.querySelector(".empty-hint");
             if (hint) hint.remove();
@@ -463,8 +478,21 @@ export const MobileChat = {
             return;
         }
 
+        // В режиме правки скрепка выбирает новое фото, отправка — по Enter
+        if (MessageActions.isEditing()) {
+            MessageActions.setEditImage(file);
+            return;
+        }
+
+        const replyToId = MessageActions.replyToId();
         try {
-            const msg = await API.uploadImage(this.chatId, file);
+            const msg = await API.uploadImage(
+                this.chatId,
+                file,
+                "",
+                replyToId
+            );
+            MessageActions.clearReply();
             const box = document.getElementById("messages");
             const hint = box.querySelector(".empty-hint");
             if (hint) hint.remove();

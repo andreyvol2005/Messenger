@@ -102,6 +102,21 @@ export const Realtime = {
             }));
             return;
         }
+
+        // Сообщение отредактировали или удалили — меняем существующую строку,
+        // а не добавляем новую. id уже показанного сообщения в seen не важен.
+        if (data.type === "message_edited") {
+            document.dispatchEvent(new CustomEvent("messenger:message-edited", {
+                detail: data
+            }));
+            return;
+        }
+        if (data.type === "message_deleted") {
+            document.dispatchEvent(new CustomEvent("messenger:message-deleted", {
+                detail: data
+            }));
+            return;
+        }
         if (data.type && data.type !== "message") return;
 
         if (typeof data.id === "number") {

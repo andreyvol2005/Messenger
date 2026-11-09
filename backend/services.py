@@ -205,11 +205,14 @@ def _unread_counts(db: Session, user_id: int) -> dict[int, int]:
 
 
 def list_chats(db: Session, user: models.User) -> schemas.ChatListResponse:
-    # «Избранное» всегда первым — это виртуальная папка, а не строка в chats
+    # «Избранное» — папка с копиями и заметками: настоящей строки в chats нет.
     last_favorite = (
         db.query(models.Message)
-        .filter(models.Message.is_favorite == True, models.Message.sender_id == user.id)
-        .order_by(models.Message.created_at.desc())
+        .filter(
+            models.Message.chat_id.is_(None),
+            models.Message.sender_id == user.id,
+        )
+        .order_by(models.Message.created_at.desc(), models.Message.id.desc())
         .first()
     )
     chats = [
@@ -218,7 +221,11 @@ def list_chats(db: Session, user: models.User) -> schemas.ChatListResponse:
             title=FAVORITES_TITLE,
             is_favorites=True,
             last_message=(
-                _message_preview(last_favorite.text, last_favorite.media_url)
+                _message_preview(
+                    last_favorite.text,
+                    last_favorite.media_url,
+                    last_favorite.is_deleted,
+                )
                 if last_favorite
                 else None
             ),
@@ -236,7 +243,13 @@ def list_chats(db: Session, user: models.User) -> schemas.ChatListResponse:
 
     last_msg = aliased(models.Message)
     rows = (
-        db.query(models.Chat, last_msg.text, last_msg.media_url, last_msg.created_at)
+        db.query(
+            models.Chat,
+            last_msg.text,
+            last_msg.media_url,
+            last_msg.created_at,
+            last_msg.is_deleted,
+        )
         .join(models.ChatMember, models.ChatMember.chat_id == models.Chat.id)
         .outerjoin(last_msg, models.Chat.last_message_id == last_msg.id)
         .filter(models.ChatMember.user_id == user.id)
@@ -246,7 +259,7 @@ def list_chats(db: Session, user: models.User) -> schemas.ChatListResponse:
     group_ids = [chat.id for chat, *_ in rows if chat.type == "group"]
     group_counts = _group_member_counts(db, group_ids)
 
-    for chat, last_text, last_media, last_at in rows:
+    for chat, last_text, last_media, last_at, last_deleted in rows:
         title = chat.name
         peer_id = None
         peer_username = None
@@ -272,7 +285,7 @@ def list_chats(db: Session, user: models.User) -> schemas.ChatListResponse:
                 id=chat.id,
                 title=title or "Без названия",
                 is_favorites=False,
-                last_message=_message_preview(last_text, last_media),
+                last_message=_message_preview(last_text, last_media, bool(last_deleted)),
                 last_message_at=last_at,
                 peer_id=peer_id,
                 peer_username=peer_username,
@@ -304,8 +317,12 @@ def _group_member_counts(db: Session, chat_ids: List[int]) -> dict[int, int]:
     return {chat_id: count for chat_id, count in rows}
 
 
-def _message_preview(text: str | None, media_url: str | None) -> str | None:
+def _message_preview(
+    text: str | None, media_url: str | None, is_deleted: bool = False
+) -> str | None:
     """Превью для списка чатов: у сообщения только с картинкой текста нет."""
+    if is_deleted:
+        return "Сообщение удалено"
     if text:
         return text
     if media_url:
@@ -647,20 +664,63 @@ def _message_status(
 
 
 def serialize_message(
-    msg: models.Message, nickname: str | None, status: str = "sent"
+    msg: models.Message,
+    nickname: str | None,
+    status: str = "sent",
+    view_chat_id: int | None = None,
 ) -> schemas.MessageResponse:
+    # В базе у «Избранного» chat_id = NULL, а клиент работает с -1.
+    chat_id = view_chat_id if view_chat_id is not None else msg.chat_id
+    if chat_id is None:
+        chat_id = FAVORITES_CHAT_ID
+
+    deleted = bool(msg.is_deleted)
     return schemas.MessageResponse(
         id=msg.id,
-        chat_id=msg.chat_id,
+        chat_id=chat_id,
         sender_id=msg.sender_id,
         sender_nickname=nickname,
-        text=msg.text,
-        media_url=msg.media_url,
+        # У заглушки не должно быть ни текста, ни картинки, ни цитаты.
+        text=None if deleted else msg.text,
+        media_url=None if deleted else msg.media_url,
         created_at=msg.created_at,
-        reply_to_id=msg.reply_to_id,
-        is_favorite=msg.is_favorite,
+        reply_to_id=None if deleted else msg.reply_to_id,
+        reply_to_nickname=None if deleted else msg.reply_to_nickname,
+        reply_to_text=None if deleted else msg.reply_to_text,
+        edited_at=msg.edited_at,
+        forwarded_from_nickname=None if deleted else msg.forwarded_from_nickname,
+        is_deleted=deleted,
         status=status,
     )
+
+
+def _message_sender_nickname(db: Session, msg: models.Message) -> str | None:
+    row = (
+        db.query(models.User.nickname)
+        .filter(models.User.id == msg.sender_id)
+        .first()
+    )
+    return row[0] if row else None
+
+
+def _serialize_for_user(
+    db: Session,
+    user: models.User,
+    msg: models.Message,
+    view_chat_id: int | None = None,
+) -> schemas.MessageResponse:
+    """Сериализация действия пользователя: ник, чат и актуальные галочки."""
+    nickname = (
+        user.nickname
+        if msg.sender_id == user.id
+        else _message_sender_nickname(db, msg)
+    )
+    chat_id = view_chat_id if view_chat_id is not None else msg.chat_id
+    status = "sent"
+    if chat_id not in (None, FAVORITES_CHAT_ID):
+        delivered_to, read_by = _receipt_bounds(db, chat_id, user.id)
+        status = _message_status(msg, user.id, delivered_to, read_by)
+    return serialize_message(msg, nickname, status, view_chat_id=chat_id)
 
 
 def list_messages(
@@ -673,13 +733,14 @@ def list_messages(
         models.User, models.User.id == models.Message.sender_id
     )
     if is_favorites(chat_id):
-        # «Избранное» приватно: видно только то, что добавил сам пользователь
+        # «Избранное» приватно: заметки и копии принадлежат только владельцу
         query = query.filter(
-            models.Message.is_favorite == True,
+            models.Message.chat_id.is_(None),
             models.Message.sender_id == user.id,
         )
     else:
-        query = query.filter(models.Message.chat_id == chat_id, models.Message.is_deleted == False)
+        # Удалённые сообщения остаются в ленте заглушками
+        query = query.filter(models.Message.chat_id == chat_id)
 
     rows = query.order_by(
         models.Message.created_at.desc(), models.Message.id.desc()
@@ -695,9 +756,57 @@ def list_messages(
             msg,
             nickname,
             _message_status(msg, user.id, delivered_to, read_by),
+            view_chat_id=chat_id,
         )
         for msg, nickname in rows
     ]
+
+
+def _reply_snapshot(
+    db: Session,
+    user: models.User,
+    chat_id: int,
+    reply_to_id: int | None,
+) -> tuple[str | None, str | None]:
+    """Проверяет оригинал и сохраняет снимок цитаты.
+
+    Ответ разрешён и на удалённое сообщение: в цитате тогда будет заглушка.
+    """
+    if reply_to_id is None:
+        return None, None
+
+    row = (
+        db.query(models.Message, models.User.nickname)
+        .join(models.User, models.User.id == models.Message.sender_id)
+        .filter(models.Message.id == reply_to_id)
+        .first()
+    )
+    if not row:
+        raise HTTPException(status_code=404, detail="Сообщение для ответа не найдено")
+
+    target, nickname = row
+    if is_favorites(chat_id):
+        # В «Избранном» можно отвечать только на свои заметки и копии
+        if target.chat_id is not None or target.sender_id != user.id:
+            raise HTTPException(
+                status_code=404,
+                detail="Сообщение для ответа не найдено",
+            )
+    elif target.chat_id != chat_id:
+        raise HTTPException(
+            status_code=400,
+            detail="Нельзя ответить на сообщение из другого чата",
+        )
+
+    if target.is_deleted:
+        preview = "Сообщение удалено"
+    elif target.text:
+        preview = target.text
+    elif target.media_url:
+        preview = "📷 Изображение"
+    else:
+        preview = ""
+    return nickname, preview
 
 
 def _insert_message(
@@ -707,6 +816,9 @@ def _insert_message(
     text: str | None,
     reply_to_id: int | None,
     media_url: str | None = None,
+    reply_to_nickname: str | None = None,
+    reply_to_text: str | None = None,
+    forwarded_from_nickname: str | None = None,
 ) -> models.Message:
     # В избранном chat_id не хранится — строка в chats просто не нужна
     msg = models.Message(
@@ -715,7 +827,9 @@ def _insert_message(
         text=text,
         media_url=media_url,
         reply_to_id=reply_to_id,
-        is_favorite=is_favorites(chat_id),
+        reply_to_nickname=reply_to_nickname,
+        reply_to_text=reply_to_text,
+        forwarded_from_nickname=forwarded_from_nickname,
     )
     db.add(msg)
     db.commit()
@@ -735,8 +849,17 @@ def create_message(
     if not can_access_chat(db, user, chat_id):
         raise HTTPException(status_code=403, detail="No access to this chat")
 
-    msg = _insert_message(db, user, chat_id, text, reply_to_id)
-    return serialize_message(msg, user.nickname)
+    reply_nickname, reply_text = _reply_snapshot(db, user, chat_id, reply_to_id)
+    msg = _insert_message(
+        db,
+        user,
+        chat_id,
+        text,
+        reply_to_id,
+        reply_to_nickname=reply_nickname,
+        reply_to_text=reply_text,
+    )
+    return serialize_message(msg, user.nickname, view_chat_id=chat_id)
 
 
 def create_image_message(
@@ -753,24 +876,228 @@ def create_image_message(
 
     # Подпись необязательна: у сообщения только с картинкой text остаётся NULL
     text = caption.strip() if caption and caption.strip() else None
-    msg = _insert_message(db, user, chat_id, text, reply_to_id, media_url=media_url)
-    return serialize_message(msg, user.nickname)
+    reply_nickname, reply_text = _reply_snapshot(db, user, chat_id, reply_to_id)
+    msg = _insert_message(
+        db,
+        user,
+        chat_id,
+        text,
+        reply_to_id,
+        media_url=media_url,
+        reply_to_nickname=reply_nickname,
+        reply_to_text=reply_text,
+    )
+    return serialize_message(msg, user.nickname, view_chat_id=chat_id)
 
 
-def toggle_favorite(
-    db: Session, user: models.User, message_id: int
-) -> schemas.MessageResponse:
+def _get_message(db: Session, message_id: int) -> models.Message:
     msg = db.query(models.Message).filter(models.Message.id == message_id).first()
     if not msg:
         raise HTTPException(status_code=404, detail="Message not found")
-    # В избранное можно добавить только своё сообщение
-    if msg.sender_id != user.id:
-        raise HTTPException(status_code=403, detail="Can favorite own messages only")
+    return msg
 
-    msg.is_favorite = not msg.is_favorite
+
+def _require_own_message(
+    db: Session, user: models.User, msg: models.Message
+) -> None:
+    if msg.sender_id != user.id:
+        raise HTTPException(
+            status_code=403,
+            detail="Можно изменять и удалять только свои сообщения",
+        )
+    if msg.chat_id is not None and not can_access_chat(db, user, msg.chat_id):
+        raise HTTPException(status_code=403, detail="Нет доступа к этому чату")
+
+
+def edit_message(
+    db: Session,
+    user: models.User,
+    message_id: int,
+    text: str | None,
+    new_media_url: str | None = None,
+) -> schemas.MessageResponse:
+    """Правит текст/подпись и при необходимости заменяет картинку."""
+    msg = _get_message(db, message_id)
+    _require_own_message(db, user, msg)
+    if msg.is_deleted:
+        raise HTTPException(status_code=400, detail="Удалённое сообщение нельзя изменить")
+
+    normalized_text = text.strip() if text and text.strip() else None
+    resulting_media = new_media_url or msg.media_url
+    if not normalized_text and not resulting_media:
+        raise HTTPException(status_code=400, detail="Сообщение не может быть пустым")
+
+    msg.text = normalized_text
+    if new_media_url:
+        # Старый файл не удаляем: на него могут ссылаться пересланные копии.
+        msg.media_url = new_media_url
+    msg.edited_at = datetime.utcnow()
     db.commit()
     db.refresh(msg)
-    return serialize_message(msg, user.nickname)
+
+    return _serialize_for_user(db, user, msg)
+
+
+def delete_messages(
+    db: Session, user: models.User, message_ids: List[int]
+) -> List[schemas.MessageRemovedResponse]:
+    """Удаляет свои сообщения: заглушка в чате или копия из «Избранного»."""
+    ids: List[int] = []
+    for raw_id in message_ids:
+        message_id = int(raw_id)
+        if message_id not in ids:
+            ids.append(message_id)
+    if not ids:
+        raise HTTPException(status_code=400, detail="Не выбрано ни одного сообщения")
+
+    rows = (
+        db.query(models.Message)
+        .filter(models.Message.id.in_(ids))
+        .all()
+    )
+    by_id = {msg.id: msg for msg in rows}
+    if len(by_id) != len(ids):
+        raise HTTPException(status_code=404, detail="Сообщение не найдено")
+
+    ordered = [by_id[message_id] for message_id in ids]
+    for msg in ordered:
+        _require_own_message(db, user, msg)
+        if msg.is_deleted:
+            raise HTTPException(
+                status_code=400,
+                detail="Сообщение уже удалено",
+            )
+
+    results: List[schemas.MessageRemovedResponse] = []
+    for msg in ordered:
+        # Все ответы на удалённый оригинал должны показать заглушку в цитате.
+        db.query(models.Message).filter(
+            models.Message.reply_to_id == msg.id
+        ).update(
+            {models.Message.reply_to_text: "Сообщение удалено"},
+            synchronize_session=False,
+        )
+
+        if msg.chat_id is None:
+            # В «Избранном» копия исчезает без заглушки. Ссылку на неё
+            # обнуляем вручную: SQLite в тестах не применяет ON DELETE SET NULL.
+            db.query(models.Message).filter(
+                models.Message.reply_to_id == msg.id
+            ).update(
+                {models.Message.reply_to_id: None},
+                synchronize_session=False,
+            )
+            message_id = msg.id
+            db.delete(msg)
+            results.append(
+                schemas.MessageRemovedResponse(
+                    id=message_id,
+                    chat_id=FAVORITES_CHAT_ID,
+                    removed=True,
+                    message=None,
+                )
+            )
+            continue
+
+        msg.is_deleted = True
+        msg.text = None
+        msg.media_url = None
+        results.append(
+            schemas.MessageRemovedResponse(
+                id=msg.id,
+                chat_id=msg.chat_id,
+                removed=False,
+                message=_serialize_for_user(db, user, msg),
+            )
+        )
+
+    db.commit()
+    return results
+
+
+def _unique_positive_ids(values: List[int], label: str) -> List[int]:
+    result: List[int] = []
+    for raw in values:
+        value = int(raw)
+        if value not in result:
+            result.append(value)
+    if not result:
+        raise HTTPException(status_code=400, detail=f"Не выбрано: {label}")
+    return result
+
+
+def forward_messages(
+    db: Session,
+    user: models.User,
+    message_ids: List[int],
+    chat_ids: List[int],
+    keep_reply: bool = False,
+) -> List[schemas.MessageResponse]:
+    """Пересылает каждое сообщение в каждый выбранный чат (N × M копий)."""
+    ids = _unique_positive_ids(message_ids, "сообщения")
+    targets = _unique_positive_ids(chat_ids, "чаты")
+
+    for target in targets:
+        if not can_access_chat(db, user, target):
+            raise HTTPException(status_code=403, detail="Нет доступа к одному из чатов")
+
+    rows = (
+        db.query(models.Message, models.User.nickname)
+        .join(models.User, models.User.id == models.Message.sender_id)
+        .filter(models.Message.id.in_(ids))
+        .all()
+    )
+    by_id = {msg.id: (msg, nickname) for msg, nickname in rows}
+    if len(by_id) != len(ids):
+        raise HTTPException(status_code=404, detail="Сообщение не найдено")
+
+    ordered = [by_id[message_id] for message_id in ids]
+    for source, _nickname in ordered:
+        if source.is_deleted:
+            raise HTTPException(
+                status_code=400,
+                detail="Удалённое сообщение нельзя переслать",
+            )
+        if source.chat_id is None:
+            if source.sender_id != user.id:
+                raise HTTPException(status_code=403, detail="Нет доступа к сообщению")
+        elif not can_access_chat(db, user, source.chat_id):
+            raise HTTPException(status_code=403, detail="Нет доступа к сообщению")
+
+    created: List[tuple[models.Message, int]] = []
+    for target in targets:
+        for source, nickname in ordered:
+            # forwarded_from_nickname — немедленный отправитель оригинала,
+            # даже если тот сам был переслан раньше.
+            msg = models.Message(
+                chat_id=None if is_favorites(target) else target,
+                sender_id=user.id,
+                text=source.text,
+                media_url=source.media_url,
+                reply_to_id=None,
+                reply_to_nickname=source.reply_to_nickname if keep_reply else None,
+                reply_to_text=source.reply_to_text if keep_reply else None,
+                forwarded_from_nickname=nickname,
+            )
+            db.add(msg)
+            created.append((msg, target))
+
+    try:
+        db.flush()
+        responses = [
+            serialize_message(
+                msg,
+                user.nickname,
+                "sent",
+                view_chat_id=target,
+            )
+            for msg, target in created
+        ]
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise
+    return responses
 
 
 def update_message_receipt(
