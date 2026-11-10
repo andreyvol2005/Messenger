@@ -2,7 +2,6 @@
 
 import { API } from "../shared/api.js";
 import { Session } from "../shared/session.js";
-import { Theme } from "../shared/theme.js";
 import { UI } from "../shared/ui.js";
 import { Validation } from "../shared/validation.js";
 
@@ -10,10 +9,6 @@ const LoginPage = {
     mode: "login",
 
     init() {
-        // Вход оформлен в той же теме, что и остальной интерфейс. Масштаб
-        // сюда не применяем: страница входа должна оставаться компактной.
-        Theme.apply(Session.theme());
-
         document.getElementById("tab-login").onclick = () => this.setMode("login");
         document.getElementById("tab-register").onclick = () => this.setMode("register");
         document.getElementById("auth-form").onsubmit = (e) => this.submit(e);

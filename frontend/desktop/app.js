@@ -1,8 +1,7 @@
 // Входная точка десктопной версии: проверяет сессию и собирает виджеты.
 
-import { Preferences } from "../shared/preferences.js";
 import { Session } from "../shared/session.js";
-import { Settings } from "../shared/settings.js";
+import { Theme } from "../shared/theme.js";
 import { GroupCreate } from "../shared/group-create.js";
 import { GroupInfo } from "../shared/group-info.js";
 import { Chat } from "./chat.js";
@@ -15,8 +14,7 @@ import { PeerInfo } from "./peer-info.js";
 document.addEventListener("DOMContentLoaded", () => {
     if (!Session.requireAuth()) return;
 
-    Preferences.applyAll();
-    Settings.init();
+    Theme.apply(Session.theme());
 
     GroupInfo.init({
         onChanged: () => Chat.refreshCurrentChat(),

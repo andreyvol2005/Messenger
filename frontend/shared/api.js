@@ -235,16 +235,6 @@ export const API = {
         });
     },
 
-    uploadWallpaper(file) {
-        const form = new FormData();
-        form.append("file", file);
-
-        return this.request("/api/accounts/wallpaper", {
-            method: "POST",
-            body: form
-        });
-    },
-
     getMe() {
         return this.request("/api/me");
     },

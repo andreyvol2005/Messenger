@@ -84,8 +84,7 @@ export const UI = {
         if (!node) {
             node = UI.el("div", "toast");
             node.id = "toast";
-            // Внутри #app-root уведомление масштабируется вместе с интерфейсом.
-            (document.getElementById("app-root") || document.body).appendChild(node);
+            document.body.appendChild(node);
         }
         node.textContent = message;
         node.classList.add("show");

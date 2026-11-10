@@ -19,15 +19,10 @@ AVATARS_URL_PREFIX = "/uploads/avatars"
 # можно удалить или сменить картинку, не задевая личные профили.
 GROUP_AVATARS_DIR = os.path.join(UPLOADS_ROOT, "group_avatars")
 GROUP_AVATARS_URL_PREFIX = "/uploads/group_avatars"
-# Обои чата — клиентская настройка: путь хранится в localStorage, поэтому
-# файлы лежат отдельно и не связаны ни с одним сообщением или профилем.
-WALLPAPERS_DIR = os.path.join(UPLOADS_ROOT, "wallpapers")
-WALLPAPERS_URL_PREFIX = "/uploads/wallpapers"
 
 MAX_IMAGE_SIZE = 5 * 1024 * 1024  # 5 МБ
 MAX_AVATAR_SIZE = 5 * 1024 * 1024  # 5 МБ
 MAX_GROUP_AVATAR_SIZE = 5 * 1024 * 1024  # 5 МБ
-MAX_WALLPAPER_SIZE = 10 * 1024 * 1024  # 10 МБ: обои обычно крупнее аватарок
 
 # content-type от клиента легко подделать, поэтому формат определяем по первым
 # байтам файла, а имя генерируем сами: в filename могло прийти что угодно,
@@ -53,16 +48,11 @@ def ensure_group_avatars_dir() -> None:
     os.makedirs(GROUP_AVATARS_DIR, exist_ok=True)
 
 
-def ensure_wallpapers_dir() -> None:
-    os.makedirs(WALLPAPERS_DIR, exist_ok=True)
-
-
 def ensure_upload_dirs() -> None:
     """Создаёт все папки загрузок до монтирования /uploads в StaticFiles."""
     ensure_images_dir()
     ensure_avatars_dir()
     ensure_group_avatars_dir()
-    ensure_wallpapers_dir()
 
 
 def detect_image_extension(head: bytes) -> str | None:
@@ -101,15 +91,6 @@ def save_group_avatar(data: bytes, extension: str) -> str:
     with open(os.path.join(GROUP_AVATARS_DIR, filename), "wb") as file:
         file.write(data)
     return f"{GROUP_AVATARS_URL_PREFIX}/{filename}"
-
-
-def save_wallpaper(data: bytes, extension: str) -> str:
-    """Пишет обои чата под случайным именем и возвращает URL для localStorage."""
-    ensure_wallpapers_dir()
-    filename = f"{uuid.uuid4().hex}{extension}"
-    with open(os.path.join(WALLPAPERS_DIR, filename), "wb") as file:
-        file.write(data)
-    return f"{WALLPAPERS_URL_PREFIX}/{filename}"
 
 
 def delete_image(media_url: str) -> None:

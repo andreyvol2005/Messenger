@@ -4,10 +4,10 @@
 import { API } from "../shared/api.js";
 import { CONFIG, PATHS } from "../shared/config.js";
 import { ContactSuggestion } from "../shared/contact-suggestion.js";
-import { Preferences } from "../shared/preferences.js";
 import { Presence } from "../shared/presence.js";
 import { Realtime } from "../shared/realtime.js";
 import { Session } from "../shared/session.js";
+import { Theme } from "../shared/theme.js";
 import { UI } from "../shared/ui.js";
 import { GroupInfo } from "../shared/group-info.js";
 import {
@@ -36,7 +36,7 @@ export const MobileChat = {
     async init() {
         if (!Session.requireAuth()) return;
 
-        Preferences.applyAll();
+        Theme.apply(Session.theme());
 
         // Без id (например, заход вручную) — возвращаем к списку
         const raw = new URLSearchParams(window.location.search).get("id");

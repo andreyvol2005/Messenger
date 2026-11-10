@@ -2,7 +2,7 @@
 
 .chat-layout {
     display: flex;
-    height: 100%;
+    height: 100vh;
     /* Высота страницы фиксирована: длинная лента прокручивается внутри,
        а не растягивает весь макет вместе с полем ввода. */
     min-height: 0;
@@ -19,8 +19,8 @@
     flex-direction: column;
     align-items: center;
     padding-top: 12px;
-    background: var(--bg-rail);
-    border-right: 1px solid var(--bg-active);
+    background: #1a1a1a;
+    border-right: 1px solid #333;
 }
 
 .rail-btn {
@@ -40,17 +40,17 @@
     display: block;
     width: 18px;
     height: 2px;
-    background: var(--text-muted);
+    background: #aaa;
     border-radius: 2px;
     transition: background 0.15s ease;
 }
 
 .rail-btn:hover {
-    background: var(--bg-input);
+    background: #2a2a2a;
 }
 
 .rail-btn:hover span {
-    background: var(--text-strong);
+    background: #fff;
 }
 
 /* ============================
@@ -60,7 +60,7 @@
     position: fixed;
     inset: 0;
     z-index: 30;
-    background: var(--overlay);
+    background: rgba(0, 0, 0, 0.55);
     opacity: 0;
     pointer-events: none;
     transition: opacity 0.25s ease;
@@ -80,8 +80,8 @@
     max-width: 85vw;
     height: 100%;
     padding: 18px 14px;
-    background: var(--bg-panel);
-    border-right: 1px solid var(--bg-active);
+    background: #232323;
+    border-right: 1px solid #333;
     transform: translateX(-100%);
     transition: transform 0.25s ease;
     display: flex;
@@ -97,7 +97,7 @@
     align-items: center;
     gap: 12px;
     padding: 6px 4px 18px;
-    border-bottom: 1px solid var(--bg-active);
+    border-bottom: 1px solid #333;
 }
 
 .side-menu-user-text {
@@ -114,7 +114,7 @@
 
 .side-menu-sub {
     font-size: 12px;
-    color: var(--text-muted);
+    color: #888;
     margin-top: 2px;
 }
 
@@ -132,15 +132,15 @@
     width: 100%;
     padding: 11px 12px;
     background: transparent;
-    color: var(--text-soft);
+    color: #ddd;
     font-size: 14px;
     text-align: left;
     border-radius: 8px;
 }
 
 .menu-item:hover {
-    background: var(--bg-hover);
-    color: var(--text-strong);
+    background: #2f2f2f;
+    color: #fff;
 }
 
 .menu-item svg {
@@ -163,7 +163,7 @@
     flex-shrink: 0;
     overflow: hidden;
     border-radius: 50%;
-    background: linear-gradient(135deg, var(--accent-light), var(--accent-active));
+    background: linear-gradient(135deg, #3b82f6, #1e40af);
     color: #fff;
     font-weight: 600;
     line-height: 1;
