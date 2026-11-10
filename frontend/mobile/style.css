@@ -1,12 +1,13 @@
 /* Мобильная версия: каждая страница занимает весь экран.
-   100dvh вместо 100vh — чтобы адресная строка в мобильном браузере
-   не срезала нижнюю часть, и safe-area под «домашней полоской» iPhone. */
+   Высота берётся от #app-root, который уже учитывает 100dvh и масштаб:
+   иначе при увеличении интерфейса нижняя часть уезжала бы за экран.
+   safe-area оставляет место под «домашней полоской» iPhone. */
 
 .m-page {
     display: flex;
     flex-direction: column;
-    height: 100dvh;
-    max-height: 100dvh;
+    height: 100%;
+    max-height: 100%;
     overflow: hidden;
 }
 
@@ -20,8 +21,8 @@
     gap: 8px;
     padding: 12px 14px;
     padding-top: calc(12px + env(safe-area-inset-top));
-    background: #252525;
-    border-bottom: 1px solid #333;
+    background: var(--bg-elevated);
+    border-bottom: 1px solid var(--bg-active);
 }
 .m-title { flex: 1; font-size: 18px; font-weight: 600; }
 .m-title-chat { text-align: center; }
@@ -47,14 +48,14 @@
     max-width: 100%;
     font-size: 11px;
     line-height: 1.25;
-    color: #8a8a8a;
+    color: var(--text-muted);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
 }
 .m-chat-status.is-online,
 .m-chat-status.is-typing {
-    color: #4caf50;
+    color: var(--online);
 }
 
 /* Аватарка собеседника в шапке чата */
@@ -67,24 +68,24 @@
     justify-content: center;
     overflow: hidden;
     border-radius: 50%;
-    background: #3a3a3a;
-    color: #ddd;
+    background: var(--bg-control);
+    color: var(--text-soft);
     font-size: 14px;
     font-weight: 600;
 }
 .m-icon-btn {
     padding: 4px 10px;
     background: transparent;
-    color: #ccc;
+    color: var(--text-soft);
     font-size: 18px;
     line-height: 1;
 }
-.m-icon-btn:hover { background: #2f2f2f; color: #fff; }
+.m-icon-btn:hover { background: var(--bg-hover); color: var(--text-strong); }
 
 .m-back-btn {
     padding: 2px 10px 4px;
     background: transparent;
-    color: #007bff;
+    color: var(--accent);
     font-size: 28px;
     line-height: 1;
 }
@@ -96,8 +97,8 @@
 .m-search-form {
     flex-shrink: 0;
     padding: 10px 12px;
-    background: #252525;
-    border-bottom: 1px solid #333;
+    background: var(--bg-elevated);
+    border-bottom: 1px solid var(--bg-active);
 }
 
 .m-search-field {
@@ -105,13 +106,13 @@
     align-items: center;
     gap: 8px;
     padding: 0 12px;
-    background: #2a2a2a;
+    background: var(--bg-input);
     border: 1px solid transparent;
     border-radius: 999px;
 }
 
 .m-search-field:focus-within {
-    border-color: #007bff;
+    border-color: var(--accent);
 }
 
 .m-search-field svg {
@@ -119,7 +120,7 @@
     height: 18px;
     flex-shrink: 0;
     fill: none;
-    stroke: #888;
+    stroke: var(--text-muted);
     stroke-width: 1.8;
     stroke-linecap: round;
     stroke-linejoin: round;
@@ -138,7 +139,7 @@
     border-color: transparent;
 }
 
-.m-new-chat-error { padding: 8px 14px; background: #252525; }
+.m-new-chat-error { padding: 8px 14px; background: var(--bg-elevated); }
 
 /* ============================
    Список чатов
@@ -155,12 +156,12 @@
     align-items: center;
     gap: 12px;
     padding: 12px 14px;
-    border-bottom: 1px solid #2a2a2a;
+    border-bottom: 1px solid var(--bg-input);
     cursor: pointer;
     /* убирает подсветку тапа на мобильных и серое мерцание при прокрутке */
     -webkit-tap-highlight-color: transparent;
 }
-.m-chat-item:active { background: #2f2f2f; }
+.m-chat-item:active { background: var(--bg-hover); }
 
 .m-avatar {
     flex-shrink: 0;
@@ -170,13 +171,13 @@
     align-items: center;
     justify-content: center;
     overflow: hidden;
-    background: #3a3a3a;
+    background: var(--bg-control);
     border-radius: 50%;
     font-size: 17px;
     font-weight: 600;
-    color: #ddd;
+    color: var(--text-soft);
 }
-.m-avatar-fav { background: #4a3a10; color: #ffcc4d; }
+.m-avatar-fav { background: var(--favorite-bg); color: var(--favorite-text); }
 
 .m-chat-body { flex: 1; min-width: 0; }
 .m-chat-title {
@@ -196,7 +197,7 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    background: #007bff;
+    background: var(--accent);
     color: #fff;
     border-radius: 999px;
     font-size: 11px;
@@ -205,13 +206,13 @@
 }
 .m-chat-preview {
     font-size: 13px;
-    color: #888;
+    color: var(--text-muted);
     margin-top: 2px;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
 }
-.m-loading { padding: 32px; text-align: center; color: #888; }
+.m-loading { padding: 32px; text-align: center; color: var(--text-muted); }
 
 /* Подсказка «добавить в контакты»: на узком экране текст занимает
    отдельную строку, кнопки уходят под него */
@@ -259,10 +260,10 @@
 .m-bubble {
     min-width: 0;
     padding: 8px 12px;
-    background: #2a2a2a;
+    background: var(--bg-input);
     border-radius: 12px 12px 12px 4px;
 }
-.m-message.mine .m-bubble { background: #1f4d80; border-radius: 12px 12px 4px 12px; }
+.m-message.mine .m-bubble { background: var(--bubble-out); border-radius: 12px 12px 4px 12px; }
 
 /* Пузырь с картинкой не растягивается шире неё: 320px картинки + отступы */
 .m-bubble.has-image { max-width: 344px; }
@@ -273,7 +274,7 @@
     font-size: 12px;
     font-weight: 600;
     line-height: 1.3;
-    color: #8ab4f8;
+    color: var(--sender);
     word-break: break-word;
 }
 
@@ -292,7 +293,7 @@
     margin-bottom: 4px;
     border-radius: 10px;
 }
-.m-message-time { margin-top: 3px; font-size: 10px; color: #999; text-align: right; }
+.m-message-time { margin-top: 3px; font-size: 10px; color: var(--text-muted); text-align: right; }
 
 /* ============================
    Поле ввода — прижато к низу, не уезжает под клавиатуру
@@ -323,13 +324,13 @@
     height: 42px;
     padding: 0;
     background: transparent;
-    color: #bbb;
+    color: var(--text-soft);
     font-size: 20px;
     line-height: 1;
     border-radius: 50%;
 }
-.m-attach-btn:hover { background: #2f2f2f; color: #fff; }
-.m-attach-btn:active { background: #333; }
+.m-attach-btn:hover { background: var(--bg-hover); color: var(--text-strong); }
+.m-attach-btn:active { background: var(--bg-active); }
 .m-send-btn {
     flex-shrink: 0;
     width: 42px;
@@ -339,7 +340,7 @@
     align-items: center;
     justify-content: center;
     border-radius: 50%;
-    background: #007bff;
+    background: var(--accent);
 }
 
 .m-send-btn svg {
@@ -391,21 +392,21 @@
 .m-modal-backdrop {
     position: absolute;
     inset: 0;
-    background: rgba(0, 0, 0, 0.62);
+    background: var(--overlay);
 }
 
 .m-modal-dialog {
     position: relative;
     width: 100%;
     max-width: 480px;
-    max-height: calc(100dvh - 24px);
+    max-height: 100%;
     overflow-y: auto;
     padding: 20px 18px;
-    background: #252525;
-    border: 1px solid #333;
+    background: var(--bg-elevated);
+    border: 1px solid var(--bg-active);
     border-radius: 16px;
-    box-shadow: 0 18px 50px rgba(0, 0, 0, 0.45);
-    color-scheme: dark;
+    box-shadow: 0 18px 50px var(--shadow);
+    color-scheme: inherit;
     transform: translateY(16px);
     transition: transform 0.18s ease;
 }
@@ -430,23 +431,23 @@
 }
 
 .m-secondary-btn {
-    background: #333;
-    color: #ddd;
+    background: var(--bg-active);
+    color: var(--text-soft);
 }
 
 .m-secondary-btn:hover {
-    background: #3d3d3d;
-    color: #fff;
+    background: var(--bg-control-strong);
+    color: var(--text-strong);
 }
 
 .m-danger {
     margin-top: 18px;
     padding-top: 14px;
-    border-top: 1px solid #3a2a2c;
+    border-top: 1px solid var(--danger-border-soft);
 }
 
 .m-danger summary {
-    color: #ff6b7a;
+    color: var(--danger);
     font-size: 13px;
     cursor: pointer;
     user-select: none;
@@ -454,7 +455,7 @@
 
 .m-danger-text {
     margin-top: 8px;
-    color: #999;
+    color: var(--text-muted);
     font-size: 12px;
     line-height: 1.5;
 }
@@ -462,7 +463,7 @@
 .m-danger label {
     display: block;
     margin-top: 12px;
-    color: #999;
+    color: var(--text-muted);
     font-size: 12px;
 }
 
@@ -477,17 +478,17 @@
 .m-danger-btn {
     width: 100%;
     margin-top: 14px;
-    background: #b32436;
+    background: var(--danger-strong);
     font-size: 13px;
     font-weight: 600;
 }
 
 .m-danger-btn:hover {
-    background: #cf2b40;
+    background: var(--danger-hover);
 }
 
 .m-danger-btn:active {
-    background: #971d2d;
+    background: var(--danger-active);
 }
 
 .m-danger-btn:disabled {
@@ -517,24 +518,24 @@
     display: block;
     width: 18px;
     height: 2px;
-    background: #aaa;
+    background: var(--text-muted);
     border-radius: 2px;
     transition: background 0.15s ease;
 }
 
 .m-hamburger-btn:active {
-    background: #2a2a2a;
+    background: var(--bg-input);
 }
 
 .m-hamburger-btn:active span {
-    background: #fff;
+    background: var(--text-strong);
 }
 
 .m-drawer-backdrop {
     position: fixed;
     inset: 0;
     z-index: 40;
-    background: rgba(0, 0, 0, 0.55);
+    background: var(--overlay);
     opacity: 0;
     pointer-events: none;
     transition: opacity 0.25s ease;
@@ -552,13 +553,13 @@
     z-index: 50;
     width: 300px;
     max-width: 84vw;
-    height: 100dvh;
+    height: 100%;
     display: flex;
     flex-direction: column;
     padding: calc(18px + env(safe-area-inset-top)) 14px 18px;
-    background: #232323;
-    border-right: 1px solid #333;
-    box-shadow: 8px 0 30px rgba(0, 0, 0, 0.35);
+    background: var(--bg-panel);
+    border-right: 1px solid var(--bg-active);
+    box-shadow: 8px 0 30px var(--shadow);
     transform: translateX(-100%);
     transition: transform 0.25s ease;
 }
@@ -572,7 +573,7 @@
     align-items: center;
     gap: 12px;
     padding: 6px 4px 18px;
-    border-bottom: 1px solid #333;
+    border-bottom: 1px solid var(--bg-active);
 }
 
 .m-drawer-user-text {
@@ -590,7 +591,7 @@
 .m-drawer-sub {
     margin-top: 2px;
     font-size: 12px;
-    color: #888;
+    color: var(--text-muted);
 }
 
 .m-drawer-nav {
@@ -607,7 +608,7 @@
     width: 100%;
     padding: 12px;
     background: transparent;
-    color: #ddd;
+    color: var(--text-soft);
     font-size: 15px;
     text-align: left;
     border-radius: 8px;
@@ -615,8 +616,8 @@
 }
 
 .m-menu-item:active {
-    background: #2f2f2f;
-    color: #fff;
+    background: var(--bg-hover);
+    color: var(--text-strong);
 }
 
 .m-menu-item svg {
@@ -640,7 +641,7 @@
     flex-shrink: 0;
     overflow: hidden;
     border-radius: 50%;
-    background: linear-gradient(135deg, #3b82f6, #1e40af);
+    background: linear-gradient(135deg, var(--accent-light), var(--accent-active));
     color: #fff;
     font-weight: 600;
     line-height: 1;
@@ -669,7 +670,7 @@
     z-index: 80;
     display: flex;
     flex-direction: column;
-    background: #252525;
+    background: var(--bg-elevated);
     opacity: 0;
     pointer-events: none;
     transition: opacity 0.22s ease;
@@ -681,7 +682,7 @@
 .m-peer-info-backdrop {
     position: absolute;
     inset: 0;
-    background: rgba(0, 0, 0, 0.62);
+    background: var(--overlay);
 }
 .m-peer-info-content {
     position: relative;
@@ -701,9 +702,9 @@
     width: 36px;
     height: 36px;
     border-radius: 50%;
-    border: 1px solid #444;
-    background: #2a2a2a;
-    color: #ccc;
+    border: 1px solid var(--border-strong);
+    background: var(--bg-input);
+    color: var(--text-soft);
     font-size: 26px;
     line-height: 1;
     cursor: pointer;
@@ -712,7 +713,7 @@
     justify-content: center;
 }
 .m-peer-info-close:active {
-    background: #333;
+    background: var(--bg-active);
 }
 .m-peer-info-name {
     margin: 6px 0 4px;
@@ -724,14 +725,14 @@
 .m-peer-info-username {
     margin: 0 0 20px;
     font-size: 14px;
-    color: #888;
+    color: var(--text-muted);
     text-align: center;
 }
 .m-peer-info-field {
     margin: 0;
     font-size: 15px;
     line-height: 1.5;
-    color: #eee;
+    color: var(--text);
     text-align: center;
 }
 
@@ -747,16 +748,16 @@
     margin: 10px auto 0;
     padding: 6px 12px;
     background: transparent;
-    border: 1px solid #444;
+    border: 1px solid var(--border-strong);
     border-radius: 999px;
-    color: #bbb;
+    color: var(--text-soft);
     font-size: 12px;
 }
 
 .m-profile-avatar-btn:hover {
-    background: #2f2f2f;
-    border-color: #555;
-    color: #fff;
+    background: var(--bg-hover);
+    border-color: var(--border-hover);
+    color: var(--text-strong);
 }
 
 .m-profile-avatar-btn:disabled {
@@ -774,7 +775,7 @@
 .m-profile-since {
     margin-top: 4px;
     font-size: 12px;
-    color: #888;
+    color: var(--text-muted);
     min-height: 15px;
 }
 
@@ -788,17 +789,17 @@
     display: block;
     margin-bottom: 6px;
     font-size: 12px;
-    color: #999;
+    color: var(--text-muted);
 }
 
 .m-profile-dialog input,
 .m-profile-dialog textarea {
     width: 100%;
     padding: 9px 10px;
-    background: #2a2a2a;
-    border: 1px solid #444;
+    background: var(--bg-input);
+    border: 1px solid var(--border-strong);
     border-radius: 6px;
-    color: #eee;
+    color: var(--text);
     font-size: 15px;
     font-family: inherit;
 }
@@ -811,7 +812,7 @@
 .m-profile-dialog input:focus,
 .m-profile-dialog textarea:focus {
     outline: none;
-    border-color: #007bff;
+    border-color: var(--accent);
 }
 
 /* «@» перед username — статичный префикс, вводится только handle */
@@ -820,18 +821,18 @@
     align-items: center;
     width: 100%;
     padding-left: 10px;
-    background: #2a2a2a;
-    border: 1px solid #444;
+    background: var(--bg-input);
+    border: 1px solid var(--border-strong);
     border-radius: 6px;
 }
 
 .input-with-prefix:focus-within {
-    border-color: #007bff;
+    border-color: var(--accent);
 }
 
 .input-prefix {
     flex-shrink: 0;
-    color: #888;
+    color: var(--text-muted);
     font-size: 14px;
 }
 
@@ -851,12 +852,12 @@
 
 .m-logout-btn {
     background: transparent;
-    color: #ff6b7a;
+    color: var(--danger);
 }
 
 .m-logout-btn:hover {
-    background: rgba(255, 85, 102, 0.12);
-    color: #ff8a99;
+    background: var(--danger-overlay);
+    color: var(--danger-soft);
 }
 
 .m-profile-dialog .m-danger {
@@ -864,7 +865,7 @@
 }
 
 .m-profile-dialog .m-danger summary:hover {
-    color: #ff8a99;
+    color: var(--danger-soft);
 }
 
 /* ============================
@@ -891,14 +892,14 @@
     padding: 0;
     border-radius: 50%;
     background: transparent;
-    color: #999;
+    color: var(--text-muted);
     font-size: 24px;
     line-height: 1;
 }
 
 .m-contacts-close:active {
-    background: #2f2f2f;
-    color: #fff;
+    background: var(--bg-hover);
+    color: var(--text-strong);
 }
 
 .m-contacts-add-toggle {
@@ -910,20 +911,20 @@
     margin-bottom: 12px;
     padding: 11px 12px;
     background: transparent;
-    border: 1px dashed #444;
+    border: 1px dashed var(--border-strong);
     border-radius: 8px;
-    color: #bbb;
+    color: var(--text-soft);
     font-size: 13px;
 }
 
 .m-contacts-add-toggle:active {
-    background: #2f2f2f;
-    border-color: #555;
-    color: #fff;
+    background: var(--bg-hover);
+    border-color: var(--border-hover);
+    color: var(--text-strong);
 }
 
 .m-contacts-add-plus {
-    color: #4da3ff;
+    color: var(--accent-soft);
     font-size: 16px;
     line-height: 1;
 }
@@ -955,8 +956,8 @@
     max-height: 200px;
     overflow-y: auto;
     list-style: none;
-    background: #2a2a2a;
-    border: 1px solid #333;
+    background: var(--bg-input);
+    border: 1px solid var(--bg-active);
     border-radius: 8px;
 }
 
@@ -975,13 +976,13 @@
     align-items: center;
     gap: 12px;
     padding: 11px 4px;
-    border-bottom: 1px solid #2a2a2a;
+    border-bottom: 1px solid var(--bg-input);
     cursor: pointer;
     -webkit-tap-highlight-color: transparent;
 }
 
 .m-contact-item:active {
-    background: #2f2f2f;
+    background: var(--bg-hover);
 }
 
 .m-contact-avatar {
@@ -1005,7 +1006,7 @@
 
 .m-contact-username {
     margin-top: 2px;
-    color: #888;
+    color: var(--text-muted);
     font-size: 12px;
     white-space: nowrap;
     overflow: hidden;
@@ -1014,7 +1015,7 @@
 
 .m-contacts-empty {
     padding: 28px 8px;
-    color: #888;
+    color: var(--text-muted);
     font-size: 13px;
     text-align: center;
 }
@@ -1024,7 +1025,7 @@
 .m-group-create-dialog {
     display: flex;
     flex-direction: column;
-    max-height: calc(100dvh - 24px);
+    max-height: 100%;
 }
 
 .m-group-create-form {
@@ -1041,17 +1042,17 @@
 .m-group-create-form input[type="text"] {
     width: 100%;
     padding: 9px 10px;
-    background: #2a2a2a;
-    border: 1px solid #444;
+    background: var(--bg-input);
+    border: 1px solid var(--border-strong);
     border-radius: 6px;
-    color: #eee;
+    color: var(--text);
     font-size: 15px;
     font-family: inherit;
 }
 
 .m-group-create-form input[type="text"]:focus {
     outline: none;
-    border-color: #007bff;
+    border-color: var(--accent);
 }
 
 .m-group-pick-list,
@@ -1063,8 +1064,8 @@
     padding: 4px;
     overflow-y: auto;
     list-style: none;
-    background: #222;
-    border: 1px solid #333;
+    background: var(--bg-soft);
+    border: 1px solid var(--bg-active);
     border-radius: 8px;
 }
 
@@ -1075,7 +1076,7 @@
 
 .m-group-pick-item:active,
 .m-group-create-form .group-pick-item:active {
-    background: #2f2f2f;
+    background: var(--bg-hover);
 }
 
 .m-group-pick-label,
@@ -1092,7 +1093,7 @@
     flex-shrink: 0;
     width: 17px;
     height: 17px;
-    accent-color: #007bff;
+    accent-color: var(--accent);
 }
 
 .m-group-pick-label .user-search-text,
@@ -1104,7 +1105,7 @@
 .m-group-pick-empty,
 .m-group-create-form .group-pick-empty {
     padding: 22px 8px;
-    color: #888;
+    color: var(--text-muted);
     font-size: 12px;
     text-align: center;
 }
@@ -1114,16 +1115,16 @@
     margin: 0 auto;
     padding: 7px 13px;
     background: transparent;
-    border: 1px solid #444;
+    border: 1px solid var(--border-strong);
     border-radius: 999px;
-    color: #bbb;
+    color: var(--text-soft);
     font-size: 12px;
 }
 
 .m-group-avatar-btn:active {
-    background: #2f2f2f;
-    border-color: #555;
-    color: #fff;
+    background: var(--bg-hover);
+    border-color: var(--border-hover);
+    color: var(--text-strong);
 }
 
 .m-group-avatar-btn:disabled {
@@ -1139,17 +1140,17 @@
     flex: 1;
     min-width: 0;
     padding: 9px 10px;
-    background: #2a2a2a;
-    border: 1px solid #444;
+    background: var(--bg-input);
+    border: 1px solid var(--border-strong);
     border-radius: 6px;
-    color: #eee;
+    color: var(--text);
     font-size: 15px;
     font-family: inherit;
 }
 
 .m-group-name-row input:focus {
     outline: none;
-    border-color: #007bff;
+    border-color: var(--accent);
 }
 
 .m-group-name-row button {
@@ -1162,7 +1163,7 @@
     margin: 4px 0 0;
     font-size: 14px;
     font-weight: 600;
-    color: #aaa;
+    color: var(--text-muted);
 }
 
 .m-group-members-list,
@@ -1181,7 +1182,7 @@
     align-items: center;
     gap: 10px;
     padding: 8px 2px;
-    border-bottom: 1px solid #303030;
+    border-bottom: 1px solid var(--border-soft);
 }
 
 .m-group-member-avatar,
@@ -1210,7 +1211,7 @@
 #group-info .group-member-username {
     margin-top: 1px;
     font-size: 12px;
-    color: #888;
+    color: var(--text-muted);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -1221,15 +1222,15 @@
     flex-shrink: 0;
     padding: 6px 10px;
     background: transparent;
-    border: 1px solid #5a3036;
+    border: 1px solid var(--danger-border);
     border-radius: 6px;
-    color: #ff8a99;
+    color: var(--danger-soft);
     font-size: 11px;
 }
 
 .m-group-member-remove:active,
 #group-info .group-member-remove:active {
-    background: rgba(255, 85, 102, 0.12);
+    background: var(--danger-overlay);
 }
 
 .m-group-member-remove:disabled,
@@ -1240,7 +1241,7 @@
 .m-group-members-empty,
 #group-info .group-members-empty {
     padding: 14px 4px;
-    color: #888;
+    color: var(--text-muted);
     font-size: 12px;
     text-align: center;
 }
@@ -1248,17 +1249,17 @@
 .m-group-add-search {
     width: 100%;
     padding: 9px 10px;
-    background: #2a2a2a;
-    border: 1px solid #444;
+    background: var(--bg-input);
+    border: 1px solid var(--border-strong);
     border-radius: 6px;
-    color: #eee;
+    color: var(--text);
     font-size: 15px;
     font-family: inherit;
 }
 
 .m-group-add-search:focus {
     outline: none;
-    border-color: #007bff;
+    border-color: var(--accent);
 }
 
 .m-group-add-results {
@@ -1266,7 +1267,7 @@
     max-height: 210px;
     margin-top: 8px;
     overflow-y: auto;
-    border: 1px solid #333;
+    border: 1px solid var(--bg-active);
     border-radius: 8px;
 }
 

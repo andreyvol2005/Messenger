@@ -7,22 +7,246 @@ html {
     color-scheme: dark;
 }
 
-html[data-theme="light"] {
-    color-scheme: light;
-    filter: invert(1) hue-rotate(180deg);
+/* Цветовые токены интерфейса. Тёмная тема — базовая, светлая
+   переопределяет только значения переменных. */
+:root {
+    --bg: #1e1e1e;
+    --bg-rail: #1a1a1a;
+    --bg-panel: #232323;
+    --bg-elevated: #252525;
+    --bg-input: #2a2a2a;
+    --bg-soft: #222;
+    --bg-hover: #2f2f2f;
+    --bg-active: #333;
+    --bg-control: #3a3a3a;
+    --bg-control-strong: #3d3d3d;
+    --bg-control-hover: #4a4a4a;
+
+    --border: #333;
+    --border-soft: #303030;
+    --border-strong: #444;
+    --border-hover: #555;
+    --border-check: #7b7b7b;
+
+    --text: #eee;
+    --text-strong: #fff;
+    --text-soft: #bbb;
+    --text-muted: #888;
+    --text-dim: #666;
+
+    --accent: #007bff;
+    --accent-hover: #0056b3;
+    --accent-active: #004494;
+    --accent-light: #3b82f6;
+    --accent-soft: #4da3ff;
+    --select: #2f80ed;
+
+    --danger: #ff5566;
+    --danger-soft: #ff8a99;
+    --danger-strong: #b32436;
+    --danger-hover: #cf2b40;
+    --danger-active: #971d2d;
+    --danger-text-soft: #ffb0ba;
+    --danger-border: #5a3036;
+    --danger-border-hover: #7a3d46;
+    --danger-border-soft: #3a2a2c;
+    --danger-overlay: rgba(255, 85, 102, 0.12);
+
+    --bubble-in: #2a2a2a;
+    --bubble-out: #1f4d80;
+    --bubble-deleted: #262626;
+
+    --sender: #8ab4f8;
+    --quote-name: #7fb6ff;
+    --quote-text: #b3c0cd;
+    --quote-border: #5c9fe8;
+    --quote-bg: rgba(255, 255, 255, 0.06);
+    --quote-hover: rgba(92, 159, 232, 0.16);
+    --forwarded: #7ec8e3;
+    --edited: #9fb0c0;
+    --author: #a6b3c0;
+
+    --status-sent: #8d8d8d;
+    --status-delivered: #c2c2c2;
+    --status-read: #5cb8ff;
+    --online: #4caf50;
+    --presence: #22c55e;
+    --jump-highlight: #ffd166;
+
+    --favorite-text: #ffcc4d;
+    --favorite-bg: #4a3a10;
+    --favorite-gradient-start: #b8860b;
+    --favorite-gradient-end: #6b4e07;
+
+    --selection-bg: #24303c;
+    --selection-border: #384754;
+    --selection-text: #dbe7f3;
+    --selection-muted: #a9c6e4;
+    --selection-btn: #2f6fc0;
+    --selection-btn-hover: #3b82d6;
+    --selection-ghost-border: #465868;
+    --selection-ghost: #b9c7d5;
+    --selection-ghost-hover: #314050;
+    --selection-disabled: #3b4652;
+
+    --composer-bg: #233041;
+    --composer-border: #33495f;
+    --composer-edit-bg: #332b20;
+    --composer-edit-border: #55452c;
+    --composer-edit-accent: #e0a33a;
+    --composer-edit-accent-soft: #ffc46b;
+    --composer-icon: #79b6ff;
+    --composer-label: #6fb1ff;
+    --banner-text: #a9b7c6;
+    --banner-cancel: #93a5b8;
+
+    --suggestion-bg: #1e2d3d;
+    --suggestion-border: #2d4560;
+    --suggestion-text: #cfe4ff;
+    --suggestion-muted: #8fa7bf;
+
+    --overlay: rgba(0, 0, 0, 0.62);
+    --shadow: rgba(0, 0, 0, 0.45);
+    --hover-overlay: rgba(255, 255, 255, 0.08);
+    --image-bg: #0b0b0b;
 }
 
-/* Картинки и иконки возвращаем к исходному виду */
-html[data-theme="light"] img,
-html[data-theme="light"] video,
-html[data-theme="light"] svg {
-    filter: invert(1) hue-rotate(180deg);
+body[data-theme="light"] {
+    --bg: #eef2f7;
+    --bg-rail: #e4eaf2;
+    --bg-panel: #ffffff;
+    --bg-elevated: #ffffff;
+    --bg-input: #f1f5fa;
+    --bg-soft: #f7f9fc;
+    --bg-hover: #e9eff6;
+    --bg-active: #dfe8f2;
+    --bg-control: #e4eaf2;
+    --bg-control-strong: #d5dfe9;
+    --bg-control-hover: #cdd8e4;
+
+    --border: #d7dfe9;
+    --border-soft: #e6ecf3;
+    --border-strong: #c3ceda;
+    --border-hover: #aebbc9;
+    --border-check: #9aa7b5;
+
+    --text: #17212b;
+    --text-strong: #0b131b;
+    --text-soft: #354454;
+    --text-muted: #637282;
+    --text-dim: #8a97a6;
+
+    --accent: #0b74d1;
+    --accent-hover: #095fae;
+    --accent-active: #074b8b;
+    --accent-light: #3b82f6;
+    --accent-soft: #0b74d1;
+    --select: #2f80ed;
+
+    --danger: #c6283a;
+    --danger-soft: #d64556;
+    --danger-strong: #a51f30;
+    --danger-hover: #b82638;
+    --danger-active: #8d1927;
+    --danger-text-soft: #b82638;
+    --danger-border: #e3b5bc;
+    --danger-border-hover: #d2949e;
+    --danger-border-soft: #f0d6da;
+    --danger-overlay: rgba(198, 40, 58, 0.1);
+
+    --bubble-in: #ffffff;
+    --bubble-out: #d7eaff;
+    --bubble-deleted: #f2f2f2;
+
+    --sender: #2563a8;
+    --quote-name: #1d5f9e;
+    --quote-text: #4b5d6e;
+    --quote-border: #4a8fd4;
+    --quote-bg: rgba(0, 0, 0, 0.05);
+    --quote-hover: rgba(74, 143, 212, 0.14);
+    --forwarded: #0f7490;
+    --edited: #637282;
+    --author: #5a6b7b;
+
+    --status-sent: #7c8794;
+    --status-delivered: #5f6b78;
+    --status-read: #0b74d1;
+    --online: #1f8b3b;
+    --presence: #16a34a;
+    --jump-highlight: #d99a00;
+
+    --favorite-text: #8a5a00;
+    --favorite-bg: #f7e7bf;
+    --favorite-gradient-start: #d9a520;
+    --favorite-gradient-end: #a97a0a;
+
+    --selection-bg: #e7f1fb;
+    --selection-border: #c6dcf0;
+    --selection-text: #1f3a52;
+    --selection-muted: #4a6b88;
+    --selection-btn: #2f6fc0;
+    --selection-btn-hover: #3b82d6;
+    --selection-ghost-border: #b7c8d8;
+    --selection-ghost: #526a80;
+    --selection-ghost-hover: #dbe8f4;
+    --selection-disabled: #d7e0e9;
+
+    --composer-bg: #e7f1fb;
+    --composer-border: #c6dcf0;
+    --composer-edit-bg: #fbf2df;
+    --composer-edit-border: #e8d3a9;
+    --composer-edit-accent: #b37816;
+    --composer-edit-accent-soft: #b37816;
+    --composer-icon: #2f6fc0;
+    --composer-label: #2f6fc0;
+    --banner-text: #52677a;
+    --banner-cancel: #6d8194;
+
+    --suggestion-bg: #eaf3ff;
+    --suggestion-border: #c6dcf0;
+    --suggestion-text: #174a7c;
+    --suggestion-muted: #56708a;
+
+    --overlay: rgba(20, 32, 45, 0.45);
+    --shadow: rgba(20, 35, 50, 0.2);
+    --hover-overlay: rgba(0, 0, 0, 0.06);
+    --image-bg: #0b0b0b;
 }
 
 body {
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-    background: #1e1e1e;
-    color: #eee;
+    min-height: 100dvh;
+    background: var(--bg);
+    color: var(--text);
+}
+
+/* Корень приложения. Масштаб применяется трансформацией, а размеры
+   компенсируются делением на тот же коэффициент: макет остаётся
+   в границах экрана и не создаёт лишней прокрутки. */
+#app-root {
+    width: calc(100% / var(--ui-scale, 1.6));
+    height: calc(100dvh / var(--ui-scale, 1.6));
+    transform: scale(var(--ui-scale, 1.6));
+    transform-origin: top left;
+    overflow: hidden;
+    background: var(--bg);
+    color: var(--text);
+}
+
+/* Обои показываем только в области сообщений. */
+.messages,
+.m-messages {
+    background-color: var(--bg);
+}
+
+body.has-wallpaper .messages,
+body.has-wallpaper .m-messages {
+    background-image:
+        linear-gradient(rgba(0, 0, 0, 0.28), rgba(0, 0, 0, 0.28)),
+        var(--chat-wallpaper);
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
 }
 
 .hidden { display: none !important; }
@@ -32,34 +256,34 @@ button {
     border: none;
     border-radius: 6px;
     padding: 10px 16px;
-    background: #007bff;
+    background: var(--accent);
     color: #fff;
     font-size: 14px;
     font-family: inherit;
 }
-button:hover { background: #0056b3; }
-button:active { background: #004494; }
+button:hover { background: var(--accent-hover); }
+button:active { background: var(--accent-active); }
 
 input {
     padding: 10px;
-    border: 1px solid #444;
+    border: 1px solid var(--border-strong);
     border-radius: 6px;
-    background: #2a2a2a;
-    color: #eee;
+    background: var(--bg-input);
+    color: var(--text);
     font-size: 16px; /* без 16px мобильные браузеры зумят страницу при фокусе */
     font-family: inherit;
     width: 100%;
 }
-input:focus { outline: none; border-color: #007bff; }
+input:focus { outline: none; border-color: var(--accent); }
 
 /* Браузерное автозаполнение иначе красит поле в светлый фон. */
 input:autofill,
 textarea:autofill {
-    background-color: #2a2a2a !important;
-    box-shadow: 0 0 0 1000px #2a2a2a inset !important;
-    -webkit-text-fill-color: #eee !important;
-    color: #eee !important;
-    caret-color: #eee;
+    background-color: var(--bg-input) !important;
+    box-shadow: 0 0 0 1000px var(--bg-input) inset !important;
+    -webkit-text-fill-color: var(--text) !important;
+    color: var(--text) !important;
+    caret-color: var(--text);
 }
 
 input:-webkit-autofill,
@@ -70,17 +294,17 @@ textarea:-webkit-autofill,
 textarea:-webkit-autofill:hover,
 textarea:-webkit-autofill:focus,
 textarea:-webkit-autofill:active {
-    background-color: #2a2a2a !important;
-    -webkit-box-shadow: 0 0 0 1000px #2a2a2a inset !important;
-    -webkit-text-fill-color: #eee !important;
-    color: #eee !important;
-    caret-color: #eee;
+    background-color: var(--bg-input) !important;
+    -webkit-box-shadow: 0 0 0 1000px var(--bg-input) inset !important;
+    -webkit-text-fill-color: var(--text) !important;
+    color: var(--text) !important;
+    caret-color: var(--text);
 }
 
-.error { color: #ff5566; font-size: 13px; }
+.error { color: var(--danger); font-size: 13px; }
 
-.loading { padding: 40px; text-align: center; color: #888; }
-.empty-hint { color: #666; text-align: center; padding: 24px; }
+.loading { padding: 40px; text-align: center; color: var(--text-muted); }
+.empty-hint { color: var(--text-dim); text-align: center; padding: 24px; }
 
 /* Всплывающее уведомление: заглушки разделов и подтверждения действий */
 .toast {
@@ -90,10 +314,10 @@ textarea:-webkit-autofill:active {
     z-index: 80;
     max-width: 80vw;
     padding: 10px 16px;
-    background: #333;
-    border: 1px solid #444;
+    background: var(--bg-active);
+    border: 1px solid var(--border-strong);
     border-radius: 8px;
-    color: #eee;
+    color: var(--text);
     font-size: 13px;
     text-align: center;
     opacity: 0;
@@ -114,7 +338,7 @@ textarea:-webkit-autofill:active {
     max-width: 360px;
     margin: 80px auto;
     padding: 32px;
-    background: #252525;
+    background: var(--bg-elevated);
     border-radius: 12px;
 }
 .auth-title { text-align: center; margin-bottom: 24px; font-size: 24px; }
@@ -123,18 +347,18 @@ textarea:-webkit-autofill:active {
 .tab {
     flex: 1;
     background: transparent;
-    color: #888;
+    color: var(--text-muted);
     border-bottom: 2px solid transparent;
     border-radius: 0;
 }
 .tab:hover { background: transparent; }
-.tab.active { color: #fff; border-bottom-color: #007bff; }
+.tab.active { color: var(--text-strong); border-bottom-color: var(--accent); }
 
 .auth-form { display: flex; flex-direction: column; gap: 12px; }
 .auth-form button[type="submit"] { margin-top: 8px; }
 .auth-hint {
     margin-top: 10px;
-    color: #888;
+    color: var(--text-muted);
     font-size: 12px;
     line-height: 1.4;
     text-align: center;
@@ -148,8 +372,8 @@ textarea:-webkit-autofill:active {
     list-style: none;
     max-height: 220px;
     overflow-y: auto;
-    background: #252525;
-    border-bottom: 1px solid #333;
+    background: var(--bg-elevated);
+    border-bottom: 1px solid var(--bg-active);
 }
 
 .chat-sidebar .user-search-results,
@@ -165,11 +389,11 @@ textarea:-webkit-autofill:active {
     gap: 10px;
     padding: 8px 12px;
     cursor: pointer;
-    border-bottom: 1px solid #2f2f2f;
+    border-bottom: 1px solid var(--bg-hover);
 }
 
 .user-search-item:hover {
-    background: #2f2f2f;
+    background: var(--bg-hover);
 }
 
 .user-search-avatar {
@@ -181,7 +405,7 @@ textarea:-webkit-autofill:active {
     justify-content: center;
     overflow: hidden;
     border-radius: 50%;
-    background: linear-gradient(135deg, #3b82f6, #1e40af);
+    background: linear-gradient(135deg, var(--accent-light), var(--accent-active));
     color: #fff;
     font-size: 13px;
     font-weight: 600;
@@ -216,9 +440,9 @@ textarea:-webkit-autofill:active {
     width: 13px;
     height: 13px;
     display: block;
-    border: 2px solid #252525;
+    border: 2px solid var(--bg-elevated);
     border-radius: 50%;
-    background: #22c55e;
+    background: var(--presence);
     box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.25);
     opacity: 0;
     transform: scale(0.6);
@@ -245,7 +469,7 @@ textarea:-webkit-autofill:active {
 
 .user-search-username {
     margin-top: 1px;
-    color: #888;
+    color: var(--text-muted);
     font-size: 12px;
     white-space: nowrap;
     overflow: hidden;
@@ -254,7 +478,7 @@ textarea:-webkit-autofill:active {
 
 .user-search-empty {
     padding: 8px 12px;
-    color: #888;
+    color: var(--text-muted);
     font-size: 12px;
 }
 
@@ -267,9 +491,9 @@ textarea:-webkit-autofill:active {
     align-items: center;
     gap: 10px;
     padding: 10px 16px;
-    background: #1e2d3d;
-    border-bottom: 1px solid #2d4560;
-    color: #cfe4ff;
+    background: var(--suggestion-bg);
+    border-bottom: 1px solid var(--suggestion-border);
+    color: var(--suggestion-text);
     font-size: 13px;
 }
 
@@ -281,7 +505,7 @@ textarea:-webkit-autofill:active {
 .contact-suggestion-error {
     display: block;
     margin-top: 2px;
-    color: #ff8a99;
+    color: var(--danger-soft);
     font-size: 12px;
 }
 
@@ -289,17 +513,17 @@ textarea:-webkit-autofill:active {
     flex-shrink: 0;
     padding: 7px 11px;
     border-radius: 6px;
-    background: #2563eb;
+    background: var(--accent);
     color: #fff;
     font-size: 12px;
 }
 
 .contact-suggestion-add:hover {
-    background: #1d4ed8;
+    background: var(--accent-hover);
 }
 
 .contact-suggestion-add:active {
-    background: #1e40af;
+    background: var(--accent-active);
 }
 
 .contact-suggestion-add:disabled {
@@ -314,14 +538,14 @@ textarea:-webkit-autofill:active {
     padding: 0;
     border-radius: 50%;
     background: transparent;
-    color: #8fa7bf;
+    color: var(--suggestion-muted);
     font-size: 20px;
     line-height: 1;
 }
 
 .contact-suggestion-close:hover {
-    background: rgba(255, 255, 255, 0.08);
-    color: #fff;
+    background: var(--hover-overlay);
+    color: var(--text-strong);
 }
 
 /* ============================
@@ -346,14 +570,14 @@ textarea:-webkit-autofill:active {
     stroke-linejoin: round;
 }
 
-.message-status.sent { color: #8d8d8d; }
-.message-status.delivered { color: #c2c2c2; }
-.message-status.read { color: #5cb8ff; }
+.message-status.sent { color: var(--status-sent); }
+.message-status.delivered { color: var(--status-delivered); }
+.message-status.read { color: var(--status-read); }
 
 @media (max-width: 768px) {
     .auth-container {
         margin: 0;
-        min-height: 100dvh;
+        min-height: 100%;
         max-width: none;
         display: flex;
         flex-direction: column;
@@ -374,7 +598,7 @@ body.image-viewer-open {
     position: fixed;
     inset: 0;
     z-index: 2000;
-    background: #0b0b0b;
+    background: var(--image-bg);
     overscroll-behavior: none;
 }
 
@@ -424,9 +648,9 @@ body.image-viewer-open {
     gap: 2px;
     padding: 5px;
     background: rgba(38, 38, 38, 0.96);
-    border: 1px solid #444;
+    border: 1px solid var(--border-strong);
     border-radius: 999px;
-    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5);
+    box-shadow: 0 8px 30px var(--shadow);
     transform: translateX(-50%);
 }
 
@@ -439,22 +663,22 @@ body.image-viewer-open {
     padding: 0;
     border-radius: 50%;
     background: transparent;
-    color: #eee;
+    color: var(--text);
     font-size: 22px;
     line-height: 1;
 }
 
 .image-viewer-toolbar button:hover {
-    background: #3a3a3a;
+    background: var(--bg-control);
 }
 
 .image-viewer-toolbar button:active {
-    background: #4a4a4a;
+    background: var(--bg-control-hover);
 }
 
 .image-viewer-zoom {
     min-width: 58px;
-    color: #ddd;
+    color: var(--text-soft);
     font-size: 13px;
     text-align: center;
     font-variant-numeric: tabular-nums;
@@ -477,20 +701,20 @@ body.image-viewer-open {
     height: 44px;
     padding: 0 0 2px;
     background: rgba(38, 38, 38, 0.96);
-    border: 1px solid #444;
+    border: 1px solid var(--border-strong);
     border-radius: 50%;
-    color: #eee;
+    color: var(--text);
     font-size: 30px;
     line-height: 1;
-    box-shadow: 0 6px 22px rgba(0, 0, 0, 0.45);
+    box-shadow: 0 6px 22px var(--shadow);
 }
 
 .image-viewer-close:hover {
-    background: #3a3a3a;
+    background: var(--bg-control);
 }
 
 .image-viewer button:focus-visible {
-    outline: 2px solid #5cb8ff;
+    outline: 2px solid var(--status-read);
     outline-offset: 2px;
 }
 

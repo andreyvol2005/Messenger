@@ -46,7 +46,8 @@ export const Session = {
         localStorage.setItem(CONFIG.STORAGE.USERNAME, data.username || "");
         localStorage.setItem(CONFIG.STORAGE.NICKNAME, data.nickname || "");
         localStorage.setItem(CONFIG.STORAGE.AVATAR, data.avatar_url || "");
-        if (data.theme) localStorage.setItem(CONFIG.STORAGE.THEME, data.theme);
+        // Тема — локальная настройка браузера, поэтому theme из ответа логина
+        // не сохраняем: иначе сервер перебивал бы выбор пользователя.
     },
 
     // После смены username/nickname сессия не сбрасывается: JWT привязан к id
@@ -64,7 +65,13 @@ export const Session = {
     },
 
     logout() {
-        localStorage.clear();
+        // Удаляем только данные сессии. Тема, обои и масштаб — настройки
+        // браузера, они должны переживать выход из аккаунта.
+        localStorage.removeItem(CONFIG.STORAGE.TOKEN);
+        localStorage.removeItem(CONFIG.STORAGE.USER_ID);
+        localStorage.removeItem(CONFIG.STORAGE.USERNAME);
+        localStorage.removeItem(CONFIG.STORAGE.NICKNAME);
+        localStorage.removeItem(CONFIG.STORAGE.AVATAR);
         window.location.replace(PATHS.LOGIN);
     },
 
