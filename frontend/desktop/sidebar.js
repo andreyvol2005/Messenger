@@ -5,8 +5,9 @@ export const Sidebar = {
     MIN: 72,
     MAX: 560,
     DEFAULT: 280,
-    // Ниже этой ширины текст в списке скрывается, остаются только иконки
-    ICONS: 150,
+    // При сужении панель останавливается на 150 px, а при дальнейшем
+    // движении курсора влево сразу сворачивается до одних аватарок.
+    SNAP: 150,
     KEY: "messenger_sidebar_width",
 
     init() {
@@ -35,15 +36,23 @@ export const Sidebar = {
         return Math.min(this.MAX, Math.max(this.MIN, Math.round(width)));
     },
 
+    snap(width) {
+        // Промежуточные ширины не показываем: панель либо остаётся
+        // 150-пиксельной, либо сворачивается до колонки с аватарками.
+        if (width <= 0) return this.MIN;
+        if (width < this.SNAP) return this.SNAP;
+        return this.clamp(width);
+    },
+
     apply(width) {
-        const clamped = this.clamp(width);
+        const snapped = this.snap(width);
         document.documentElement.style.setProperty(
             "--sidebar-width",
-            `${clamped}px`
+            `${snapped}px`
         );
         // В узком состоянии прячем поиск и подписи, оставляя только аватарки
-        this.sidebar.classList.toggle("icons", clamped <= this.ICONS);
-        this.handle.setAttribute("aria-valuenow", String(clamped));
+        this.sidebar.classList.toggle("icons", snapped <= this.MIN);
+        this.handle.setAttribute("aria-valuenow", String(snapped));
     },
 
     start(e) {
@@ -72,6 +81,8 @@ export const Sidebar = {
         this.handle.removeEventListener("pointercancel", this.onUp);
 
         const width = Math.round(this.sidebar.getBoundingClientRect().width);
-        localStorage.setItem(this.KEY, String(width));
+        // Свёрнутое состояние храним как 0 — так же, как старая версия,
+        // чтобы после перезагрузки снова открыться колонкой с аватарками.
+        localStorage.setItem(this.KEY, width <= this.MIN ? "0" : String(width));
     }
 };
