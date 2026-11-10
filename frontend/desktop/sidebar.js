@@ -1,12 +1,12 @@
 // Изменение ширины левой панели: перетаскивание разделителя и двойной клик.
 
 export const Sidebar = {
-    MIN: 0,
+    // Минимальная ширина — колонка только с аватарками чатов
+    MIN: 72,
     MAX: 560,
     DEFAULT: 280,
-    // При сужении панель останавливается на 150 px, а при дальнейшем
-    // движении курсора влево сразу схлопывается полностью — как в Telegram.
-    SNAP: 150,
+    // Ниже этой ширины текст в списке скрывается, остаются только иконки
+    ICONS: 150,
     KEY: "messenger_sidebar_width",
 
     init() {
@@ -14,13 +14,14 @@ export const Sidebar = {
         this.handle = document.getElementById("sidebar-resizer");
         if (!this.sidebar || !this.handle) return;
 
-        // 0 — допустимая ширина (панель свёрнута), поэтому проверяем не на
-        // truthy, а на то, что значение вообще сохранено и является числом
+        this.handle.setAttribute("aria-valuemin", String(this.MIN));
+        this.handle.setAttribute("aria-valuemax", String(this.MAX));
+
+        // 0 из старой версии больше не сворачивает панель полностью:
+        // минимальное состояние — колонка с иконками чатов.
         const raw = localStorage.getItem(this.KEY);
-        if (raw !== null && raw !== "") {
-            const saved = Number(raw);
-            if (Number.isFinite(saved)) this.apply(this.snap(saved));
-        }
+        const saved = raw !== null && raw !== "" ? Number(raw) : NaN;
+        this.apply(Number.isFinite(saved) ? saved : this.DEFAULT);
 
         this.handle.addEventListener("pointerdown", (e) => this.start(e));
 
@@ -31,23 +32,18 @@ export const Sidebar = {
     },
 
     clamp(width) {
-        return Math.min(this.MAX, Math.max(this.MIN, width));
-    },
-
-    snap(width) {
-        // Ширины от 1 до 149 px не показываем: панель либо остаётся
-        // 150-пиксельной полосой, либо закрывается полностью.
-        if (width <= 0) return 0;
-        if (width < this.SNAP) return this.SNAP;
-        return this.clamp(width);
+        return Math.min(this.MAX, Math.max(this.MIN, Math.round(width)));
     },
 
     apply(width) {
-        document.documentElement.style.setProperty("--sidebar-width", `${width}px`);
-        // На нуле убираем разделительную рамку, чтобы панель исчезла полностью
-        if (this.sidebar) {
-            this.sidebar.classList.toggle("collapsed", width <= 0);
-        }
+        const clamped = this.clamp(width);
+        document.documentElement.style.setProperty(
+            "--sidebar-width",
+            `${clamped}px`
+        );
+        // В узком состоянии прячем поиск и подписи, оставляя только аватарки
+        this.sidebar.classList.toggle("icons", clamped <= this.ICONS);
+        this.handle.setAttribute("aria-valuenow", String(clamped));
     },
 
     start(e) {
@@ -59,7 +55,7 @@ export const Sidebar = {
         this.handle.setPointerCapture(e.pointerId);
 
         this.onMove = (ev) => {
-            this.apply(this.snap(this.startWidth + ev.clientX - this.startX));
+            this.apply(this.startWidth + ev.clientX - this.startX);
         };
         this.onUp = () => this.stop();
 

@@ -201,9 +201,12 @@ export const Chat = {
                 if (chat.is_favorites) avatar.classList.add("avatar-fav");
                 Presence.attach(avatar, chat.peer_id);
 
+                const title = chat.is_favorites ? "★ " + chat.title : chat.title;
+                // В узком режиме текст скрыт, поэтому название остаётся в подсказке
+                item.title = title;
+
                 const body = UI.el("div", "chat-item-body");
-                body.appendChild(UI.el("div", "chat-item-title",
-                    chat.is_favorites ? "★ " + chat.title : chat.title));
+                body.appendChild(UI.el("div", "chat-item-title", title));
                 body.appendChild(UI.el("div", "chat-item-preview",
                     chat.last_message || "Нет сообщений"));
                 item.append(avatar, body);

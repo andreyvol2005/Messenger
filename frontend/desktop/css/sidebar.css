@@ -9,9 +9,35 @@
     border-right: 1px solid #333;
 }
 
-/* Полностью свёрнутая панель: ширины 0 недостаточно — осталась бы рамка */
-.chat-sidebar.collapsed {
-    border-right: 0;
+/* Узкая панель: поиск и подписи скрыты, остаются только аватарки чатов */
+.chat-sidebar.icons .sidebar-header,
+.chat-sidebar.icons #user-search-results,
+.chat-sidebar.icons #new-chat-error,
+.chat-sidebar.icons .chat-item.loading-item {
+    display: none;
+}
+
+.chat-sidebar.icons .chat-item {
+    position: relative;
+    justify-content: center;
+    gap: 0;
+    padding: 10px 0;
+}
+
+.chat-sidebar.icons .chat-item-body {
+    display: none;
+}
+
+/* Бейдж непрочитанных — поверх правого верхнего угла аватарки */
+.chat-sidebar.icons .chat-item-unread {
+    position: absolute;
+    top: 4px;
+    right: calc(50% - 30px);
+    min-width: 18px;
+    height: 18px;
+    padding: 0 5px;
+    font-size: 10px;
+    box-shadow: 0 0 0 2px #252525;
 }
 
 .resizer {
