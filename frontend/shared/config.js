@@ -2,7 +2,8 @@
 
 export const CONFIG = {
     API_BASE: "",
-    // Виртуальный чат: на бэке он соответствует chat_id = NULL, is_favorite = true
+    // Виртуальная папка: на бэке это сообщения с chat_id = NULL, принадлежащие
+    // владельцу (sender_id). Клиент работает с привычным id -1.
     FAVORITES_CHAT_ID: -1,
     MOBILE_MAX_WIDTH: 768,
     // Лимит совпадает с проверкой на бэкенде (backend/media.py)

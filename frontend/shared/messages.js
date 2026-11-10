@@ -15,7 +15,7 @@ export const MESSAGE_CLASSES = {
         text: "message-text",
         image: "message-image",
         time: "message-time",
-        star: "message-star"
+        select: "message-select"
     },
     mobile: {
         row: "m-message",
@@ -24,7 +24,7 @@ export const MESSAGE_CLASSES = {
         text: "m-message-text",
         image: "m-message-image",
         time: "m-message-time",
-        star: "m-star"
+        select: "message-select"
     }
 };
 
@@ -132,6 +132,8 @@ export const Receipts = {
         let latest = 0;
         for (const row of box.querySelectorAll("[data-msg-id]")) {
             if (row.classList.contains("mine")) continue;
+            // Заглушка удалённого сообщения не требует отметки о прочтении
+            if (row.dataset.deleted === "true") continue;
             const id = Number(row.dataset.msgId) || 0;
             if (id > latest) latest = id;
         }
@@ -144,71 +146,163 @@ export const Receipts = {
     }
 };
 
-export function renderMessage(
-    msg,
-    { classes, showStar, showStatus, showSender = false, onToggleFavorite }
-) {
-    const mine = msg.sender_id === Session.userId();
-    const row = UI.el("div", classes.row + (mine ? " mine" : ""));
-    row.dataset.msgId = msg.id;
+function quotePreview(msg, options) {
+    // У пересланной копии может не быть reply_to_id, но снимок цитаты есть.
+    if (
+        msg.reply_to_id == null
+        && !msg.reply_to_nickname
+        && !msg.reply_to_text
+    ) {
+        return null;
+    }
 
-    // Пузырь по ширине подстраивается под текст, время — строкой ниже, справа
+    const target = options.findMessage ? options.findMessage(msg.reply_to_id) : null;
+    let text = msg.reply_to_text || "";
+    if (target && target.is_deleted) {
+        text = "Сообщение удалено";
+    } else if (!text && target) {
+        text = target.text || (target.media_url ? "📷 Изображение" : "Сообщение");
+    } else if (!text) {
+        text = "Сообщение";
+    }
+
+    const nickname = msg.reply_to_nickname
+        || (target && target.sender_nickname)
+        || "Сообщение";
+    return {
+        id: msg.reply_to_id,
+        nickname,
+        text,
+        clickable: Boolean(target && msg.reply_to_id)
+    };
+}
+
+export function renderMessage(msg, options) {
+    const mine = msg.sender_id === Session.userId();
+    const row = UI.el("div", options.classes.row + (mine ? " mine" : ""));
+    row.dataset.msgId = msg.id;
+    row.dataset.senderId = msg.sender_id;
+    row.dataset.deleted = msg.is_deleted ? "true" : "false";
+    // Контекстное меню и выбор работают по исходным данным строки
+    row.__message = msg;
+    if (msg.is_deleted) row.classList.add("deleted");
+
     const bubble = UI.el(
         "div",
-        classes.bubble + (msg.media_url ? " has-image" : "")
+        options.classes.bubble
+            + (msg.media_url && !msg.is_deleted ? " has-image" : "")
+            + (msg.is_deleted ? " is-deleted" : "")
     );
 
-    // В группе по нику видно, кто написал. Свои сообщения не подписываем:
-    // их и так выделяет сторона и цвет пузыря.
-    if (showSender && !mine && msg.sender_nickname) {
-        bubble.appendChild(UI.el("div", classes.sender, msg.sender_nickname));
+    if (msg.is_deleted) {
+        // Заглушка: автор и время остаются, содержимое недоступно
+        bubble.appendChild(
+            UI.el("div", "message-author", msg.sender_nickname || "Пользователь")
+        );
+        bubble.appendChild(
+            UI.el("div", "message-deleted-text", "Сообщение удалено")
+        );
+    } else {
+        // В группе по нику видно, кто написал. Свои сообщения не подписываем:
+        // их и так выделяет сторона и цвет пузыря.
+        if (options.showSender && !mine && msg.sender_nickname) {
+            bubble.appendChild(
+                UI.el("div", options.classes.sender, msg.sender_nickname)
+            );
+        }
+
+        if (msg.forwarded_from_nickname) {
+            bubble.appendChild(
+                UI.el(
+                    "div",
+                    "message-forwarded",
+                    `Переслано от ${msg.forwarded_from_nickname}`
+                )
+            );
+        }
+
+        const quote = quotePreview(msg, options);
+        if (quote) {
+            const quoteNode = UI.el(
+                "div",
+                "message-quote" + (quote.clickable ? " clickable" : "")
+            );
+            if (quote.id !== null && quote.id !== undefined) {
+                quoteNode.dataset.replyId = quote.id;
+            }
+            quoteNode.appendChild(
+                UI.el("div", "message-quote-name", quote.nickname)
+            );
+            quoteNode.appendChild(
+                UI.el("div", "message-quote-text", quote.text)
+            );
+            if (quote.clickable) {
+                quoteNode.title = "Перейти к сообщению";
+                quoteNode.addEventListener("click", (event) => {
+                    event.stopPropagation();
+                    options.onQuoteClick?.(quote.id);
+                });
+            }
+            bubble.appendChild(quoteNode);
+        }
+
+        // Картинка идёт первой, подпись (если есть) — под ней
+        if (msg.media_url) {
+            const image = UI.el("img", options.classes.image);
+            image.src = CONFIG.API_BASE + msg.media_url;
+            image.alt = "Изображение";
+            image.loading = "lazy";
+            // Картинку можно открыть на весь экран и рассмотреть в масштабе
+            image.tabIndex = 0;
+            image.title = "Открыть изображение";
+            image.setAttribute("role", "button");
+            image.setAttribute("aria-label", "Открыть изображение");
+            image.addEventListener("click", () => {
+                openImageLightbox(image.currentSrc || image.src, image.alt);
+            });
+            image.addEventListener("keydown", (event) => {
+                if (event.key !== "Enter" && event.key !== " ") return;
+                event.preventDefault();
+                openImageLightbox(image.currentSrc || image.src, image.alt);
+            });
+            bubble.appendChild(image);
+        }
+
+        // У сообщения только с картинкой текста нет — пустой div не нужен
+        if (msg.text) {
+            bubble.appendChild(UI.el("div", options.classes.text, msg.text));
+        }
     }
 
-    // Картинка идёт первой, подпись (если есть) — под ней
-    if (msg.media_url) {
-        const image = UI.el("img", classes.image);
-        image.src = CONFIG.API_BASE + msg.media_url;
-        image.alt = "Изображение";
-        image.loading = "lazy";
-        // Картинку можно открыть на весь экран и рассмотреть в масштабе
-        image.tabIndex = 0;
-        image.title = "Открыть изображение";
-        image.setAttribute("role", "button");
-        image.setAttribute("aria-label", "Открыть изображение");
-        image.addEventListener("click", () => {
-            openImageLightbox(image.currentSrc || image.src, image.alt);
-        });
-        image.addEventListener("keydown", (event) => {
-            if (event.key !== "Enter" && event.key !== " ") return;
-            event.preventDefault();
-            openImageLightbox(image.currentSrc || image.src, image.alt);
-        });
-        bubble.appendChild(image);
-    }
-
-    // У сообщения только с картинкой текста нет — пустой div не нужен
-    if (msg.text) {
-        bubble.appendChild(UI.el("div", classes.text, msg.text));
-    }
-
-    const meta = UI.el("div", classes.time);
+    const meta = UI.el("div", options.classes.time);
     meta.appendChild(UI.el("span", "message-time-text", UI.formatClock(msg.created_at)));
-    // В «Избранном» собеседника нет — галочки там ничего не значат
-    if (mine && showStatus) {
+    if (mine && options.showStatus && !msg.is_deleted) {
         meta.appendChild(createStatusIcon(msg.status));
+    }
+    if (msg.edited_at && !msg.is_deleted) {
+        meta.appendChild(UI.el("span", "message-edited", "изменено"));
     }
     bubble.appendChild(meta);
     row.appendChild(bubble);
 
-    // Звезда доступна только для своих сообщений — так же проверяет и бэкенд.
-    // В избранном она лишняя: там все сообщения уже в избранном.
-    if (mine && showStar) {
-        const star = UI.el("button", classes.star + (msg.is_favorite ? " active" : ""),
-            msg.is_favorite ? "★" : "☆");
-        star.title = "В избранное";
-        star.onclick = () => onToggleFavorite(star, msg);
-        row.appendChild(star);
+    // Чекбокс всегда в DOM: на десктопе появляется при наведении, на телефоне
+    // и в режиме выбора — постоянно.
+    if (options.onToggleSelect) {
+        const selected = options.isSelected ? options.isSelected(msg.id) : false;
+        const check = UI.el("button", options.classes.select + (selected ? " checked" : ""));
+        check.type = "button";
+        check.setAttribute("role", "checkbox");
+        check.setAttribute("aria-checked", selected ? "true" : "false");
+        check.setAttribute("aria-label", "Выбрать сообщение");
+        check.title = "Выбрать";
+        check.addEventListener("click", (event) => {
+            event.stopPropagation();
+            options.onToggleSelect(msg);
+        });
+        row.classList.toggle("selected", selected);
+        row.appendChild(check);
     }
+
     return row;
 }
 
@@ -229,6 +323,22 @@ export function appendIncoming(box, msg, options) {
     appendMessage(box, msg, options);
     const nearBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 120;
     if (nearBottom) UI.scrollToBottom(box);
+}
+
+// Заменяет строку после правки или удаления. Сообщение может быть не в текущей
+// ленте (например, правка пришла из другой вкладки) — тогда ничего не делаем.
+export function updateMessageRow(box, msg, options) {
+    const row = box.querySelector(`[data-msg-id="${msg.id}"]`);
+    if (!row) return false;
+    row.replaceWith(renderMessage(msg, options));
+    return true;
+}
+
+export function removeMessageRow(box, messageId) {
+    const row = box.querySelector(`[data-msg-id="${messageId}"]`);
+    if (!row) return false;
+    row.remove();
+    return true;
 }
 
 export async function loadMessageHistory(box, chatId, options) {

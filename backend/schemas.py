@@ -116,6 +116,7 @@ class MessageCreate(BaseModel):
 
 class MessageResponse(BaseModel):
     id: int
+    # У «Избранного» клиентский id -1, даже если в базе chat_id = NULL
     chat_id: Optional[int] = None
     sender_id: int
     sender_nickname: Optional[str] = None
@@ -124,9 +125,38 @@ class MessageResponse(BaseModel):
     media_url: Optional[str] = None
     created_at: datetime
     reply_to_id: Optional[int] = None
-    is_favorite: bool = False
+    # Снимок цитаты на момент ответа
+    reply_to_nickname: Optional[str] = None
+    reply_to_text: Optional[str] = None
+    edited_at: Optional[datetime] = None
+    # Кто отправил оригинал: подпись «Переслано от …»
+    forwarded_from_nickname: Optional[str] = None
+    # Удалённое сообщение: клиент рисует заглушку вместо текста и картинки
+    is_deleted: bool = False
     # sent | delivered | read. Показывается только у своих сообщений
     status: str = "sent"
+
+
+class MessageBatchDelete(BaseModel):
+    message_ids: List[int]
+
+
+class MessageForward(BaseModel):
+    message_ids: List[int]
+    chat_ids: List[int]
+    # Сохранять ли снимок ответной цитаты в пересланной копии
+    keep_reply: bool = False
+
+
+class MessageRemovedResponse(BaseModel):
+    """Результат удаления: заглушка в чате или физическое удаление копии."""
+
+    id: int
+    # Клиентский id чата: -1 для «Избранного»
+    chat_id: int
+    # True — строку убрали из «Избранного»; False — в чате осталась заглушка
+    removed: bool
+    message: Optional[MessageResponse] = None
 
 
 class ReceiptUpdate(BaseModel):

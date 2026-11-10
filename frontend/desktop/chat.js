@@ -15,6 +15,7 @@ import {
     Receipts,
     updateMessageStatuses
 } from "../shared/messages.js";
+import { MessageActions } from "../shared/message-actions.js";
 import { UserSearch } from "../shared/user-search.js";
 import { GroupInfo } from "../shared/group-info.js";
 import { PeerInfo } from "./peer-info.js";
@@ -32,15 +33,26 @@ export const Chat = {
     statusBounds: new Map(),
 
     async init() {
+        MessageActions.init({
+            mode: "desktop",
+            classes: MESSAGE_CLASSES.desktop,
+            getChatId: () => this.currentChatId,
+            onChanged: () => this.refreshList()
+        });
+
         document.getElementById("message-form").onsubmit = (e) => this.sendMessage(e);
         const messageInput = document.getElementById("message-input");
         if (messageInput) {
             messageInput.addEventListener("input", () => {
-                this.saveDraft(this.currentChatId, messageInput.value);
-                this.resizeInput(messageInput);
-                if (messageInput.value.trim()) {
-                    Realtime.sendTyping(this.currentChatId);
+                // Во время правки поле временно показывает текст сообщения,
+                // а не черновик нового — не затираем сохранённый черновик.
+                if (!MessageActions.isEditing()) {
+                    this.saveDraft(this.currentChatId, messageInput.value);
+                    if (messageInput.value.trim()) {
+                        Realtime.sendTyping(this.currentChatId);
+                    }
                 }
+                this.resizeInput(messageInput);
             });
             messageInput.addEventListener("keydown", (e) => {
                 if (e.key === "Enter" && !e.shiftKey) {
@@ -73,6 +85,13 @@ export const Chat = {
             this.refreshList();
         });
 
+        document.addEventListener("messenger:message-edited", (event) => {
+            MessageActions.onMessageEdited(event.detail || {});
+        });
+        document.addEventListener("messenger:message-deleted", (event) => {
+            MessageActions.onMessageDeleted(event.detail || {});
+        });
+
         Realtime.connect(
             (msg) => this.onIncoming(msg),
             (status) => this.onStatus(status)
@@ -89,16 +108,13 @@ export const Chat = {
         await this.loadChats();
     },
 
-    // Параметры общего рендера: классы десктопа, звезда только вне избранного.
-    // В «Избранном» галочки не нужны: там нет собеседника.
+    // Параметры общего рендера: классы десктопа, выбор и контекстные действия.
+    // В «Избранном» галочки статусов не нужны: там нет собеседника.
     messageOptions() {
         return {
-            classes: MESSAGE_CLASSES.desktop,
-            showStar: this.currentChatId !== CONFIG.FAVORITES_CHAT_ID,
-            showStatus: this.currentChatId !== CONFIG.FAVORITES_CHAT_ID,
+            ...MessageActions.messageOptions(),
             // В группе подписываем чужие сообщения ником отправителя
-            showSender: this.chatType === "group",
-            onToggleFavorite: (star, msg) => this.onToggleFavorite(star, msg)
+            showSender: this.chatType === "group"
         };
     },
 
@@ -247,11 +263,14 @@ export const Chat = {
         chatType = "private",
         membersCount = null
     ) {
-        // Сохраняем черновик текущего чата перед переключением
-        if (this.currentChatId !== null) {
+        // Сохраняем черновик текущего чата перед переключением. Если открыта
+        // правка, в поле лежит текст сообщения, а не черновик — его не трогаем.
+        if (this.currentChatId !== null && !MessageActions.isEditing()) {
             const currentInput = document.getElementById("message-input");
             if (currentInput) this.saveDraft(this.currentChatId, currentInput.value);
         }
+        // Ответ, правка и выбранные сообщения не переносятся в другой чат
+        MessageActions.reset();
 
         this.currentChatId = chatId;
         this.peerUsername = peerUsername || null;
@@ -345,6 +364,7 @@ export const Chat = {
     closeChat() {
         if (GroupInfo.isOpen()) GroupInfo.close();
         if (PeerInfo.isOpen()) PeerInfo.close();
+        MessageActions.reset();
 
         this.currentChatId = null;
         this.peerUsername = null;
@@ -482,30 +502,35 @@ export const Chat = {
         this.updateContactSuggestion();
     },
 
-    async onToggleFavorite(star, msg) {
-        try {
-            const updated = await API.toggleFavorite(msg.id);
-            msg.is_favorite = updated.is_favorite;
-            star.classList.toggle("active", updated.is_favorite);
-            star.textContent = updated.is_favorite ? "★" : "☆";
-            // Обновляем превью в списке чатов
-            await this.loadChats();
-        } catch (err) {
-            alert(err.message);
-        }
-    },
-
     async sendMessage(e) {
         e.preventDefault();
         const input = document.getElementById("message-input");
+
+        // Enter в режиме правки сохраняет изменение, а не отправляет новое
+        if (MessageActions.isEditing()) {
+            if (!MessageActions.canSaveEdit(input.value)) return;
+            try {
+                await MessageActions.saveEdit(input.value);
+            } catch (err) {
+                alert(err.message);
+            }
+            return;
+        }
+
         const text = input.value.trim();
         if (!text || this.currentChatId === null) return;
 
+        const replyToId = MessageActions.replyToId();
         input.value = "";
         this.clearDraft(this.currentChatId);
         this.resizeInput(input);
         try {
-            const msg = await API.sendMessage(this.currentChatId, text);
+            const msg = await API.sendMessage(
+                this.currentChatId,
+                text,
+                replyToId
+            );
+            MessageActions.clearReply();
             const box = document.getElementById("messages");
             const hint = box.querySelector(".empty-hint");
             if (hint) hint.remove();
@@ -571,8 +596,22 @@ export const Chat = {
             return;
         }
 
+        // В режиме правки скрепка выбирает новую картинку, а не отправляет
+        // отдельное сообщение. Файл загрузится только по Enter/сохранению.
+        if (MessageActions.isEditing()) {
+            MessageActions.setEditImage(file);
+            return;
+        }
+
+        const replyToId = MessageActions.replyToId();
         try {
-            const msg = await API.uploadImage(this.currentChatId, file);
+            const msg = await API.uploadImage(
+                this.currentChatId,
+                file,
+                "",
+                replyToId
+            );
+            MessageActions.clearReply();
             const box = document.getElementById("messages");
             const hint = box.querySelector(".empty-hint");
             if (hint) hint.remove();

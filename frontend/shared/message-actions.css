@@ -1,0 +1,588 @@
+/* Общие элементы действий с сообщениями: галочки выбора, цитаты, подписи
+   пересылки, контекстное меню, панель выбора и диалоги. */
+
+/* ============================
+   Выбор сообщений
+   ============================ */
+.message,
+.m-message {
+    position: relative;
+}
+
+.message-select {
+    position: absolute;
+    top: -6px;
+    left: -6px;
+    z-index: 2;
+    width: 22px;
+    height: 22px;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 2px solid #7b7b7b;
+    border-radius: 6px;
+    background: #252525;
+    color: transparent;
+    font-size: 13px;
+    line-height: 1;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.12s ease, background 0.12s ease, border-color 0.12s ease;
+}
+
+.message-select::after {
+    content: "✓";
+    display: block;
+    color: transparent;
+    font-weight: 700;
+    transform: translateY(-1px);
+}
+
+.message-select.checked {
+    background: #2f80ed;
+    border-color: #2f80ed;
+}
+
+.message-select.checked::after {
+    color: #fff;
+}
+
+.message-select.checked,
+.message.selected > .message-select {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+#messages.selection-mode .message-select {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+#messages.selection-mode .message,
+#messages.selection-mode .m-message {
+    cursor: pointer;
+}
+
+.message.selected > .message-bubble,
+.m-message.selected > .m-bubble {
+    box-shadow: 0 0 0 2px #2f80ed;
+}
+
+.message-jump > .message-bubble,
+.m-message.message-jump > .m-bubble {
+    animation: message-jump 1.2s ease;
+}
+
+@keyframes message-jump {
+    0%, 100% { box-shadow: none; }
+    20%, 60% { box-shadow: 0 0 0 3px #ffd166; }
+}
+
+/* ============================
+   Цитата ответа, пересылка и правка
+   ============================ */
+.message-quote {
+    max-width: 100%;
+    margin-bottom: 5px;
+    padding: 4px 8px;
+    border-left: 3px solid #5c9fe8;
+    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.06);
+    overflow: hidden;
+}
+
+.message-quote.clickable {
+    cursor: pointer;
+}
+
+.message-quote.clickable:hover {
+    background: rgba(92, 159, 232, 0.16);
+}
+
+.message-quote-name {
+    font-size: 11px;
+    font-weight: 600;
+    color: #7fb6ff;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.message-quote-text {
+    margin-top: 1px;
+    color: #b3c0cd;
+    font-size: 12px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.message-forwarded {
+    margin-bottom: 3px;
+    color: #7ec8e3;
+    font-size: 11px;
+    font-weight: 600;
+}
+
+.message-edited {
+    margin-left: 6px;
+    color: #9fb0c0;
+    font-size: 10px;
+}
+
+.message-author {
+    margin-bottom: 2px;
+    color: #a6b3c0;
+    font-size: 11px;
+    font-weight: 600;
+}
+
+.message-deleted-text {
+    color: #9a9a9a;
+    font-size: 13px;
+    font-style: italic;
+}
+
+.message-bubble.is-deleted,
+.m-bubble.is-deleted {
+    background: #262626;
+    border: 1px dashed #444;
+}
+
+/* ============================
+   Контекстное меню
+   ============================ */
+.ma-menu {
+    position: fixed;
+    z-index: 1200;
+    min-width: 210px;
+    padding: 6px;
+    background: #252525;
+    border: 1px solid #3b3b3b;
+    border-radius: 10px;
+    box-shadow: 0 14px 40px rgba(0, 0, 0, 0.5);
+}
+
+.ma-menu-item {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 11px;
+    border-radius: 7px;
+    background: transparent;
+    color: #eee;
+    font-size: 14px;
+    text-align: left;
+}
+
+.ma-menu-item:hover {
+    background: #343434;
+}
+
+.ma-menu-item:active {
+    background: #3d3d3d;
+}
+
+.ma-menu-item:disabled {
+    opacity: 0.38;
+    cursor: default;
+    background: transparent;
+}
+
+.ma-menu-item.danger {
+    color: #ff7b88;
+}
+
+.ma-menu-icon {
+    width: 19px;
+    flex-shrink: 0;
+    color: #9fb0c0;
+    text-align: center;
+}
+
+.ma-menu-item.danger .ma-menu-icon {
+    color: #ff7b88;
+}
+
+/* ============================
+   Панель выбранных сообщений над лентой
+   ============================ */
+.selection-panel {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px 12px;
+    padding: 8px 12px;
+    background: #24303c;
+    border-bottom: 1px solid #384754;
+    color: #dbe7f3;
+    font-size: 13px;
+}
+
+.selection-count {
+    font-size: 12px;
+    font-weight: 600;
+    white-space: nowrap;
+    color: #a9c6e4;
+}
+
+.selection-actions {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-left: auto;
+}
+
+.selection-actions button {
+    padding: 6px 10px;
+    border-radius: 6px;
+    background: #2f6fc0;
+    color: #fff;
+    font-size: 12px;
+}
+
+.selection-actions button:hover {
+    background: #3b82d6;
+}
+
+.selection-actions button.ghost {
+    background: transparent;
+    color: #b9c7d5;
+    border: 1px solid #465868;
+}
+
+.selection-actions button.ghost:hover {
+    background: #314050;
+}
+
+.selection-actions button.danger {
+    background: #a83242;
+}
+
+.selection-actions button.danger:hover {
+    background: #c03c4e;
+}
+
+.selection-actions button:disabled {
+    opacity: 0.36;
+    cursor: default;
+    background: #3b4652;
+    border-color: transparent;
+}
+
+/* ============================
+   Плашка ответа/редактирования над полем ввода
+   ============================ */
+.composer-banner {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 12px;
+    background: #233041;
+    border-top: 1px solid #33495f;
+    border-left: 3px solid #3b82f6;
+}
+
+.composer-banner[data-kind="edit"] {
+    background: #332b20;
+    border-top-color: #55452c;
+    border-left-color: #e0a33a;
+}
+
+.composer-banner-icon {
+    flex-shrink: 0;
+    width: 22px;
+    color: #79b6ff;
+    font-size: 18px;
+    text-align: center;
+}
+
+.composer-banner[data-kind="edit"] .composer-banner-icon {
+    color: #ffc46b;
+}
+
+.composer-banner-body {
+    flex: 1;
+    min-width: 0;
+}
+
+.composer-banner-head {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    min-width: 0;
+}
+
+.composer-banner-label {
+    flex-shrink: 0;
+    color: #6fb1ff;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+}
+
+.composer-banner[data-kind="edit"] .composer-banner-label {
+    color: #ffc46b;
+}
+
+.composer-banner-title {
+    min-width: 0;
+    color: #eee;
+    font-size: 13px;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.composer-banner-preview {
+    margin-top: 1px;
+    color: #a9b7c6;
+    font-size: 12px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.composer-banner-file {
+    margin-top: 2px;
+    color: #ffc46b;
+    font-size: 12px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.composer-banner-cancel {
+    flex-shrink: 0;
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    border-radius: 50%;
+    background: transparent;
+    color: #93a5b8;
+    font-size: 20px;
+    line-height: 1;
+}
+
+.composer-banner-cancel:hover {
+    background: rgba(255, 255, 255, 0.08);
+    color: #fff;
+}
+
+/* ============================
+   Модальные окна действий
+   ============================ */
+.ma-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 1300;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+}
+
+.ma-modal-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.64);
+}
+
+.ma-dialog {
+    position: relative;
+    width: 100%;
+    max-width: 430px;
+    max-height: 86vh;
+    display: flex;
+    flex-direction: column;
+    padding: 18px;
+    background: #252525;
+    border: 1px solid #3a3a3a;
+    border-radius: 12px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.55);
+}
+
+.ma-dialog-small {
+    max-width: 370px;
+}
+
+.ma-dialog-title {
+    font-size: 18px;
+    line-height: 1.3;
+}
+
+.ma-dialog-subtitle {
+    margin-top: 3px;
+    color: #999;
+    font-size: 12px;
+}
+
+.ma-dialog-text {
+    margin-top: 12px;
+    color: #c9c9c9;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+.ma-dialog-error {
+    padding: 18px;
+    color: #ff8a99;
+    font-size: 13px;
+    text-align: center;
+}
+
+.ma-forward-chats {
+    min-height: 60px;
+    max-height: 42vh;
+    margin-top: 12px;
+    overflow-y: auto;
+    background: #1f1f1f;
+    border: 1px solid #383838;
+    border-radius: 8px;
+}
+
+.ma-forward-chat {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    cursor: pointer;
+    border-bottom: 1px solid #303030;
+}
+
+.ma-forward-chat:last-child {
+    border-bottom: none;
+}
+
+.ma-forward-chat:hover {
+    background: #2c2c2c;
+}
+
+.ma-forward-chat input,
+.ma-check input {
+    width: auto;
+    flex-shrink: 0;
+    accent-color: #2f80ed;
+}
+
+.ma-forward-chat-text {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+}
+
+.ma-forward-chat-title {
+    color: #eee;
+    font-size: 14px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.ma-forward-chat-type {
+    color: #888;
+    font-size: 11px;
+}
+
+.ma-check {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    align-self: flex-start;
+    margin-top: 12px;
+    color: #ccc;
+    font-size: 13px;
+    cursor: pointer;
+}
+
+.ma-check:has(input:disabled) {
+    opacity: 0.45;
+    cursor: default;
+}
+
+.ma-dialog-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: 16px;
+}
+
+.ma-btn {
+    padding: 9px 14px;
+    border-radius: 7px;
+    background: #007bff;
+    color: #fff;
+    font-size: 14px;
+}
+
+.ma-btn:hover {
+    background: #0056b3;
+}
+
+.ma-btn:disabled {
+    opacity: 0.55;
+    cursor: default;
+}
+
+.ma-btn-ghost {
+    background: transparent;
+    color: #ccc;
+    border: 1px solid #444;
+}
+
+.ma-btn-ghost:hover {
+    background: #333;
+}
+
+.ma-btn-danger {
+    background: #b03a48;
+}
+
+.ma-btn-danger:hover {
+    background: #c94757;
+}
+
+/* На телефоне пункты меню крупнее: по ним удобно попадать пальцем */
+@media (max-width: 768px) {
+    .ma-menu {
+        min-width: 220px;
+    }
+
+    .ma-menu-item {
+        padding: 12px 13px;
+        font-size: 15px;
+    }
+
+    .selection-panel {
+        align-items: flex-start;
+    }
+
+    .selection-actions {
+        margin-left: 0;
+    }
+
+    .selection-actions button {
+        padding: 7px 9px;
+    }
+
+    .ma-dialog {
+        max-height: 90vh;
+    }
+}
+
+/* На сенсорных экранах долгое нажатие не должно выделять текст сообщения */
+@media (hover: none) {
+    .message,
+    .m-message {
+        -webkit-touch-callout: none;
+        user-select: none;
+    }
+}

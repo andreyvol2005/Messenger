@@ -92,6 +92,8 @@ CREATE TABLE chat_members (
 -- ====================================================
 -- chat_id NULL означает, что сообщение лежит в «Избранном»:
 -- это виртуальная папка без строки в chats, а не отдельный чат.
+-- Копии в «Избранном» принадлежат владельцу (sender_id), а forwarded_from_nickname
+-- хранит автора оригинала, чтобы показать «Переслано от …».
 CREATE TABLE messages (
     id SERIAL PRIMARY KEY,
     chat_id INTEGER REFERENCES chats(id) ON DELETE CASCADE,
@@ -100,8 +102,14 @@ CREATE TABLE messages (
     media_url TEXT DEFAULT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     reply_to_id INTEGER REFERENCES messages(id) ON DELETE SET NULL,
-    is_deleted BOOLEAN DEFAULT FALSE,
-    is_favorite BOOLEAN NOT NULL DEFAULT FALSE
+    -- Снимок цитаты на момент ответа: оригинал может быть удалён или изменён.
+    reply_to_nickname VARCHAR(30) DEFAULT NULL,
+    reply_to_text TEXT DEFAULT NULL,
+    -- Время последней правки; NULL — сообщение не редактировали.
+    edited_at TIMESTAMP DEFAULT NULL,
+    -- Немедленный отправитель оригинала при пересылке.
+    forwarded_from_nickname VARCHAR(30) DEFAULT NULL,
+    is_deleted BOOLEAN DEFAULT FALSE
 );
 
 -- last_message_id ссылается на messages, поэтому добавляем после её создания
@@ -123,8 +131,10 @@ CREATE INDEX idx_messages_chat_created ON messages(chat_id, created_at DESC);
 CREATE INDEX idx_messages_sender ON messages(sender_id);
 CREATE INDEX idx_chat_members_user ON chat_members(user_id);
 CREATE INDEX idx_contacts_user ON contacts(user_id);
--- Частичный индекс: обычный idx_messages_chat_created избранное не покрывает
-CREATE INDEX idx_messages_favorites ON messages(created_at DESC) WHERE is_favorite;
+-- Частичный индекс: обычный idx_messages_chat_created избранное не покрывает.
+-- Сортировка идёт по времени, поэтому владелец входит в ключ индекса.
+CREATE INDEX idx_messages_favorites
+    ON messages(sender_id, created_at DESC) WHERE chat_id IS NULL;
 
 -- ====================================================
 -- Триггер последнего сообщения

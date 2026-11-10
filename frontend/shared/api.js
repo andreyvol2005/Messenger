@@ -157,10 +157,12 @@ export const API = {
         });
     },
 
-    sendMessage(chatId, text) {
+    sendMessage(chatId, text, replyToId = null) {
+        const payload = { chat_id: chatId, text };
+        if (replyToId) payload.reply_to_id = replyToId;
         return this.request("/api/messages", {
             method: "POST",
-            body: JSON.stringify({ chat_id: chatId, text })
+            body: JSON.stringify(payload)
         }).then((msg) => {
             // Сообщение уже показано по ответу, а сервер разошлёт его же по сокету.
             // Помечаем как увиденное, чтобы Realtime не показал его второй раз.
@@ -169,15 +171,49 @@ export const API = {
         });
     },
 
-    toggleFavorite(messageId) {
-        return this.request(`/api/messages/${messageId}/favorite`, { method: "POST" });
+    editMessage(messageId, text, file = null) {
+        // multipart нужен и для текста: так одним запросом можно заменить фото.
+        const form = new FormData();
+        form.append("text", text || "");
+        if (file) form.append("file", file);
+
+        return this.request(`/api/messages/${messageId}`, {
+            method: "PATCH",
+            body: form
+        });
     },
 
-    uploadImage(chatId, file, caption = "") {
+    deleteMessage(messageId) {
+        return this.request(`/api/messages/${messageId}`, { method: "DELETE" });
+    },
+
+    deleteMessages(messageIds) {
+        return this.request("/api/messages/batch-delete", {
+            method: "POST",
+            body: JSON.stringify({ message_ids: messageIds })
+        });
+    },
+
+    forwardMessages(messageIds, chatIds, keepReply = false) {
+        return this.request("/api/messages/forward", {
+            method: "POST",
+            body: JSON.stringify({
+                message_ids: messageIds,
+                chat_ids: chatIds,
+                keep_reply: Boolean(keepReply)
+            })
+        }).then((messages) => {
+            for (const msg of messages) Realtime.markSeen(msg.id);
+            return messages;
+        });
+    },
+
+    uploadImage(chatId, file, caption = "", replyToId = null) {
         const form = new FormData();
         form.append("chat_id", chatId);
         form.append("file", file);
         if (caption) form.append("caption", caption);
+        if (replyToId) form.append("reply_to_id", replyToId);
 
         return this.request("/api/messages/upload", {
             method: "POST",

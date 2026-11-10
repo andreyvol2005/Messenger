@@ -99,8 +99,48 @@ def build_event(msg, chat_id: int, sender_nickname: str | None) -> dict:
         # через пробел и показал бы Invalid Date. Формат совпадает с REST.
         "created_at": msg.created_at.isoformat(),
         "reply_to_id": msg.reply_to_id,
-        "is_favorite": msg.is_favorite,
+        "reply_to_nickname": msg.reply_to_nickname,
+        "reply_to_text": msg.reply_to_text,
+        "edited_at": msg.edited_at.isoformat() if msg.edited_at else None,
+        "forwarded_from_nickname": msg.forwarded_from_nickname,
+        "is_deleted": bool(msg.is_deleted),
     }
+
+
+def build_response_event(event_type: str, msg) -> dict:
+    """Событие по готовому ответу API (редактирование, заглушка удаления)."""
+    return {
+        "type": event_type,
+        "id": msg.id,
+        "chat_id": msg.chat_id,
+        "sender_id": msg.sender_id,
+        "sender_nickname": msg.sender_nickname,
+        "text": msg.text,
+        "media_url": msg.media_url,
+        "created_at": msg.created_at.isoformat(),
+        "reply_to_id": msg.reply_to_id,
+        "reply_to_nickname": msg.reply_to_nickname,
+        "reply_to_text": msg.reply_to_text,
+        "edited_at": msg.edited_at.isoformat() if msg.edited_at else None,
+        "forwarded_from_nickname": msg.forwarded_from_nickname,
+        "is_deleted": bool(msg.is_deleted),
+        "status": getattr(msg, "status", "sent"),
+    }
+
+
+def build_delete_event(item) -> dict:
+    """Событие удаления: для «Избранного» строку нужно просто убрать."""
+    if item.removed or item.message is None:
+        return {
+            "type": "message_deleted",
+            "id": item.id,
+            "chat_id": item.chat_id,
+            "removed": True,
+        }
+
+    event = build_response_event("message_deleted", item.message)
+    event["removed"] = False
+    return event
 
 
 def build_receipt_event(

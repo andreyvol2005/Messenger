@@ -11,6 +11,7 @@
     <link rel="stylesheet" href="/desktop/css/chat.css">
     <link rel="stylesheet" href="/desktop/css/contacts.css">
     <link rel="stylesheet" href="/desktop/css/groups.css">
+    <link rel="stylesheet" href="/shared/message-actions.css">
 </head>
 <body>
     <div class="chat-layout">
@@ -66,7 +67,33 @@
                             class="contact-suggestion-close"
                             aria-label="Скрыть" title="Скрыть">×</button>
                 </div>
+                <div id="selection-panel" class="selection-panel hidden">
+                    <div id="selection-count" class="selection-count">Выберите сообщения</div>
+                    <div class="selection-actions">
+                        <button type="button" data-selection-action="copy">Копировать</button>
+                        <button type="button" data-selection-action="reply">Ответить</button>
+                        <button type="button" data-selection-action="forward">Переслать</button>
+                        <button type="button" data-selection-action="edit">Редактировать</button>
+                        <button type="button" data-selection-action="delete"
+                                class="danger">Удалить</button>
+                        <button type="button" data-selection-action="cancel"
+                                class="ghost">Отмена</button>
+                    </div>
+                </div>
                 <div id="messages" class="messages"></div>
+                <div id="composer-banner" class="composer-banner hidden">
+                    <div class="composer-banner-icon">↩</div>
+                    <div class="composer-banner-body">
+                        <div class="composer-banner-head">
+                            <span id="composer-banner-label" class="composer-banner-label">Ответ</span>
+                            <span id="composer-banner-title" class="composer-banner-title"></span>
+                        </div>
+                        <div id="composer-banner-preview" class="composer-banner-preview"></div>
+                        <div id="composer-banner-file" class="composer-banner-file hidden"></div>
+                    </div>
+                    <button type="button" id="composer-banner-cancel" class="composer-banner-cancel"
+                            title="Отмена" aria-label="Отменить">×</button>
+                </div>
                 <form id="message-form" class="message-form">
                 <button type="button" id="attach-btn" class="attach-btn"
                         title="Прикрепить изображение"
