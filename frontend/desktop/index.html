@@ -12,8 +12,10 @@
     <link rel="stylesheet" href="/desktop/css/contacts.css">
     <link rel="stylesheet" href="/desktop/css/groups.css">
     <link rel="stylesheet" href="/shared/message-actions.css">
+    <link rel="stylesheet" href="/shared/settings.css">
 </head>
 <body>
+    <div id="app-root">
     <div class="chat-layout">
         <!-- Узкая колонка слева: из неё открывается выдвижное меню -->
         <aside class="app-rail">
@@ -192,12 +194,12 @@
                 </svg>
                 <span>Создать группу</span>
             </button>
-            <button type="button" id="menu-theme" class="menu-item">
+            <button type="button" id="menu-settings" class="menu-item">
                 <svg viewBox="0 0 24 24" aria-hidden="true">
-                    <circle cx="12" cy="12" r="4"></circle>
-                    <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"></path>
+                    <circle cx="12" cy="12" r="3"></circle>
+                    <path d="M19.4 15a1.7 1.7 0 0 0 .34 1.87l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1 1.55V21a2 2 0 1 1-4 0v-.09a1.7 1.7 0 0 0-1.1-1.55 1.7 1.7 0 0 0-1.87.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.7 1.7 0 0 0 .34-1.87 1.7 1.7 0 0 0-1.55-1H3a2 2 0 1 1 0-4h.09a1.7 1.7 0 0 0 1.55-1.1 1.7 1.7 0 0 0-.34-1.87l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.7 1.7 0 0 0 1.87.34h.08a1.7 1.7 0 0 0 1-1.55V3a2 2 0 1 1 4 0v.09a1.7 1.7 0 0 0 1 1.55 1.7 1.7 0 0 0 1.87-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.7 1.7 0 0 0-.34 1.87v.08a1.7 1.7 0 0 0 1.55 1H21a2 2 0 1 1 0 4h-.09a1.7 1.7 0 0 0-1.55 1z"></path>
                 </svg>
-                <span>Сменить тему</span>
+                <span>Настройки</span>
             </button>
         </nav>
     </aside>
@@ -350,6 +352,7 @@
                 </div>
             </form>
         </div>
+    </div>
     </div>
 
     <script type="module" src="/desktop/app.js"></script>

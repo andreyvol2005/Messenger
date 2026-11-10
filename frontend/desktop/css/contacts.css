@@ -9,11 +9,11 @@
     display: flex;
     flex-direction: column;
     padding: 20px;
-    background: #252525;
-    border: 1px solid #333;
+    background: var(--bg-elevated);
+    border: 1px solid var(--bg-active);
     border-radius: 14px;
-    box-shadow: 0 18px 50px rgba(0, 0, 0, 0.45);
-    color-scheme: dark;
+    box-shadow: 0 18px 50px var(--shadow);
+    color-scheme: inherit;
     transform: translateY(10px) scale(0.98);
     transition: transform 0.18s ease;
 }
@@ -41,14 +41,14 @@
     padding: 0;
     border-radius: 50%;
     background: transparent;
-    color: #999;
+    color: var(--text-muted);
     font-size: 24px;
     line-height: 1;
 }
 
 .contacts-close:hover {
-    background: #2f2f2f;
-    color: #fff;
+    background: var(--bg-hover);
+    color: var(--text-strong);
 }
 
 .contacts-add-toggle {
@@ -60,20 +60,20 @@
     margin-bottom: 12px;
     padding: 10px 12px;
     background: transparent;
-    border: 1px dashed #444;
+    border: 1px dashed var(--border-strong);
     border-radius: 8px;
-    color: #bbb;
+    color: var(--text-soft);
     font-size: 13px;
 }
 
 .contacts-add-toggle:hover {
-    background: #2f2f2f;
-    border-color: #555;
-    color: #fff;
+    background: var(--bg-hover);
+    border-color: var(--border-hover);
+    color: var(--text-strong);
 }
 
 .contacts-add-plus {
-    color: #4da3ff;
+    color: var(--accent-soft);
     font-size: 16px;
     line-height: 1;
 }
@@ -103,7 +103,7 @@
 .contact-search-results {
     margin-top: 8px;
     max-height: 200px;
-    border: 1px solid #333;
+    border: 1px solid var(--bg-active);
     border-radius: 8px;
 }
 
@@ -130,7 +130,7 @@
 }
 
 .contact-item:hover {
-    background: #2f2f2f;
+    background: var(--bg-hover);
 }
 
 .contact-text {
@@ -147,7 +147,7 @@
 
 .contact-username {
     margin-top: 2px;
-    color: #888;
+    color: var(--text-muted);
     font-size: 12px;
     white-space: nowrap;
     overflow: hidden;
@@ -156,7 +156,7 @@
 
 .contacts-empty {
     padding: 28px 8px;
-    color: #888;
+    color: var(--text-muted);
     font-size: 13px;
     text-align: center;
 }
