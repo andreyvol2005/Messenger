@@ -427,9 +427,30 @@ export const MobileChat = {
 
     resizeInput(input) {
         if (!input) return;
+
+        const styles = getComputedStyle(input);
+        const lineHeight = parseFloat(styles.lineHeight) || 22.4;
+        const verticalPadding =
+            parseFloat(styles.paddingTop) + parseFloat(styles.paddingBottom);
+        const verticalBorder =
+            parseFloat(styles.borderTopWidth) + parseFloat(styles.borderBottomWidth);
+        // Поле растёт до 10 строк, дальше включается внутренняя прокрутка.
+        const maxHeight = lineHeight * 10 + verticalPadding + verticalBorder;
+        const wasScrollable = input.classList.contains("is-scrollable");
+
         input.style.height = "auto";
-        const next = Math.min(input.scrollHeight, 240);
-        input.style.height = next + "px";
+        // scrollHeight не учитывает рамку, а при border-box она входит в высоту.
+        const contentHeight = input.scrollHeight + verticalBorder;
+        const scrollable = contentHeight > maxHeight;
+
+        input.classList.toggle("is-scrollable", scrollable);
+        input.style.height = Math.min(contentHeight, maxHeight) + "px";
+
+        if (scrollable && !wasScrollable) {
+            input.scrollTop = input.scrollHeight;
+        } else if (!scrollable) {
+            input.scrollTop = 0;
+        }
     },
 
     async sendMessage(e) {

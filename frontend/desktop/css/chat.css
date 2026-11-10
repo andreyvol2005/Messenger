@@ -89,6 +89,7 @@
     display: flex;
     gap: 8px;
     padding: 12px;
+    align-items: flex-end;
 }
 
 .message-form input,
@@ -97,10 +98,17 @@
     border-radius: 20px;
     padding: 10px 16px;
     resize: none;
-    max-height: 240px; /* ~10 строк */
-    overflow-y: auto;
+    /* 10 строк: line-height 1.4 * 10 + вертикальные паддинги и рамка */
+    max-height: calc(14em + 22px);
+    overflow-y: hidden;
     line-height: 1.4;
     font-family: inherit;
+    font-size: 16px;
+}
+
+/* Прокрутка появляется только после переполнения 10 строк. */
+.message-form textarea.is-scrollable {
+    overflow-y: auto;
 }
 
 .message-form button {
