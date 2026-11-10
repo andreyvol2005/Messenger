@@ -9,6 +9,43 @@
     border-right: 1px solid #333;
 }
 
+/* Перед сворачиванием: компактные строки, чтобы текст ещё помещался */
+.chat-sidebar.compact .sidebar-header {
+    padding: 8px;
+}
+
+.chat-sidebar.compact .chat-item {
+    position: relative;
+    gap: 8px;
+    padding: 8px 10px;
+}
+
+.chat-sidebar.compact .chat-item-avatar {
+    width: 36px;
+    height: 36px;
+    font-size: 15px;
+}
+
+.chat-sidebar.compact .chat-item-preview {
+    display: none;
+}
+
+.chat-sidebar.compact .chat-item-title {
+    margin-bottom: 0;
+    font-size: 13px;
+}
+
+.chat-sidebar.compact .chat-item-unread {
+    position: absolute;
+    top: 4px;
+    right: 6px;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 5px;
+    font-size: 10px;
+    box-shadow: 0 0 0 2px #252525;
+}
+
 /* Узкая панель: поиск и подписи скрыты, остаются только аватарки чатов */
 .chat-sidebar.icons .sidebar-header,
 .chat-sidebar.icons #user-search-results,

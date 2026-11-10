@@ -5,9 +5,11 @@ export const Sidebar = {
     MIN: 72,
     MAX: 560,
     DEFAULT: 280,
-    // При сужении панель останавливается на 150 px, а при дальнейшем
-    // движении курсора влево сразу сворачивается до одних аватарок.
-    SNAP: 150,
+    // Плавное сужение идёт до 100 px, а при дальнейшем движении
+    // курсора влево панель сворачивается до одних аватарок.
+    SNAP: 100,
+    // Ниже этой ширины строки уплотняются, чтобы текст ещё читался
+    COMPACT: 150,
     KEY: "messenger_sidebar_width",
 
     init() {
@@ -38,7 +40,7 @@ export const Sidebar = {
 
     snap(width) {
         // Промежуточные ширины не показываем: панель либо остаётся
-        // 150-пиксельной, либо сворачивается до колонки с аватарками.
+        // 100-пиксельной, либо сворачивается до колонки с аватарками.
         if (width <= 0) return this.MIN;
         if (width < this.SNAP) return this.SNAP;
         return this.clamp(width);
@@ -52,6 +54,11 @@ export const Sidebar = {
         );
         // В узком состоянии прячем поиск и подписи, оставляя только аватарки
         this.sidebar.classList.toggle("icons", snapped <= this.MIN);
+        // Перед сворачиванием уплотняем строки, чтобы текст ещё читался
+        this.sidebar.classList.toggle(
+            "compact",
+            snapped > this.MIN && snapped < this.COMPACT
+        );
         this.handle.setAttribute("aria-valuenow", String(snapped));
     },
 
