@@ -9,6 +9,7 @@ import {
     removeMessageRow,
     updateMessageRow
 } from "./messages.js";
+import { Preferences } from "./preferences.js";
 import { Session } from "./session.js";
 import { UI } from "./ui.js";
 
@@ -105,7 +106,9 @@ export const MessageActions = {
             this.closeMenu();
             this.runAction(button.dataset.action, message);
         });
-        document.body.appendChild(menu);
+        // Меню живёт внутри #app-root, чтобы масштаб интерфейса применялся
+        // и к нему. Координаты указателя при открытии пересчитываются ниже.
+        (document.getElementById("app-root") || document.body).appendChild(menu);
         this.menu = menu;
     },
 
@@ -135,16 +138,23 @@ export const MessageActions = {
         menu.style.left = "0px";
         menu.style.top = "0px";
 
-        // После отрисовки пододвигаем меню, чтобы оно не вышло за экран
+        // После отрисовки пододвигаем меню, чтобы оно не вышло за экран.
+        // Указатель и окно измеряются в экранных пикселях, а меню — в
+        // координатах #app-root, поэтому делим всё на коэффициент масштаба.
+        const factor = Preferences.factor();
         const rect = menu.getBoundingClientRect();
         const margin = 8;
+        const viewWidth = window.innerWidth / factor;
+        const viewHeight = window.innerHeight / factor;
+        const menuWidth = rect.width / factor;
+        const menuHeight = rect.height / factor;
         const left = Math.min(
-            Math.max(margin, x),
-            Math.max(margin, window.innerWidth - rect.width - margin)
+            Math.max(margin, x / factor),
+            Math.max(margin, viewWidth - menuWidth - margin)
         );
         const top = Math.min(
-            Math.max(margin, y),
-            Math.max(margin, window.innerHeight - rect.height - margin)
+            Math.max(margin, y / factor),
+            Math.max(margin, viewHeight - menuHeight - margin)
         );
         menu.style.left = `${left}px`;
         menu.style.top = `${top}px`;

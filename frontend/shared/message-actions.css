@@ -20,9 +20,9 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    border: 2px solid #7b7b7b;
+    border: 2px solid var(--border-check);
     border-radius: 6px;
-    background: #252525;
+    background: var(--bg-elevated);
     color: transparent;
     font-size: 13px;
     line-height: 1;
@@ -40,8 +40,8 @@
 }
 
 .message-select.checked {
-    background: #2f80ed;
-    border-color: #2f80ed;
+    background: var(--select);
+    border-color: var(--select);
 }
 
 .message-select.checked::after {
@@ -66,7 +66,7 @@
 
 .message.selected > .message-bubble,
 .m-message.selected > .m-bubble {
-    box-shadow: 0 0 0 2px #2f80ed;
+    box-shadow: 0 0 0 2px var(--select);
 }
 
 .message-jump > .message-bubble,
@@ -76,7 +76,7 @@
 
 @keyframes message-jump {
     0%, 100% { box-shadow: none; }
-    20%, 60% { box-shadow: 0 0 0 3px #ffd166; }
+    20%, 60% { box-shadow: 0 0 0 3px var(--jump-highlight); }
 }
 
 /* ============================
@@ -86,9 +86,9 @@
     max-width: 100%;
     margin-bottom: 5px;
     padding: 4px 8px;
-    border-left: 3px solid #5c9fe8;
+    border-left: 3px solid var(--quote-border);
     border-radius: 4px;
-    background: rgba(255, 255, 255, 0.06);
+    background: var(--quote-bg);
     overflow: hidden;
 }
 
@@ -97,13 +97,13 @@
 }
 
 .message-quote.clickable:hover {
-    background: rgba(92, 159, 232, 0.16);
+    background: var(--quote-hover);
 }
 
 .message-quote-name {
     font-size: 11px;
     font-weight: 600;
-    color: #7fb6ff;
+    color: var(--quote-name);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -111,7 +111,7 @@
 
 .message-quote-text {
     margin-top: 1px;
-    color: #b3c0cd;
+    color: var(--quote-text);
     font-size: 12px;
     white-space: nowrap;
     overflow: hidden;
@@ -120,34 +120,34 @@
 
 .message-forwarded {
     margin-bottom: 3px;
-    color: #7ec8e3;
+    color: var(--forwarded);
     font-size: 11px;
     font-weight: 600;
 }
 
 .message-edited {
     margin-left: 6px;
-    color: #9fb0c0;
+    color: var(--edited);
     font-size: 10px;
 }
 
 .message-author {
     margin-bottom: 2px;
-    color: #a6b3c0;
+    color: var(--author);
     font-size: 11px;
     font-weight: 600;
 }
 
 .message-deleted-text {
-    color: #9a9a9a;
+    color: var(--text-muted);
     font-size: 13px;
     font-style: italic;
 }
 
 .message-bubble.is-deleted,
 .m-bubble.is-deleted {
-    background: #262626;
-    border: 1px dashed #444;
+    background: var(--bubble-deleted);
+    border: 1px dashed var(--border-strong);
 }
 
 /* ============================
@@ -158,10 +158,10 @@
     z-index: 1200;
     min-width: 210px;
     padding: 6px;
-    background: #252525;
-    border: 1px solid #3b3b3b;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border);
     border-radius: 10px;
-    box-shadow: 0 14px 40px rgba(0, 0, 0, 0.5);
+    box-shadow: 0 14px 40px var(--shadow);
 }
 
 .ma-menu-item {
@@ -172,17 +172,17 @@
     padding: 9px 11px;
     border-radius: 7px;
     background: transparent;
-    color: #eee;
+    color: var(--text);
     font-size: 14px;
     text-align: left;
 }
 
 .ma-menu-item:hover {
-    background: #343434;
+    background: var(--bg-hover);
 }
 
 .ma-menu-item:active {
-    background: #3d3d3d;
+    background: var(--bg-control-strong);
 }
 
 .ma-menu-item:disabled {
@@ -192,18 +192,18 @@
 }
 
 .ma-menu-item.danger {
-    color: #ff7b88;
+    color: var(--danger-soft);
 }
 
 .ma-menu-icon {
     width: 19px;
     flex-shrink: 0;
-    color: #9fb0c0;
+    color: var(--edited);
     text-align: center;
 }
 
 .ma-menu-item.danger .ma-menu-icon {
-    color: #ff7b88;
+    color: var(--danger-soft);
 }
 
 /* ============================
@@ -216,9 +216,9 @@
     flex-wrap: wrap;
     gap: 8px 12px;
     padding: 8px 12px;
-    background: #24303c;
-    border-bottom: 1px solid #384754;
-    color: #dbe7f3;
+    background: var(--selection-bg);
+    border-bottom: 1px solid var(--selection-border);
+    color: var(--selection-text);
     font-size: 13px;
 }
 
@@ -226,7 +226,7 @@
     font-size: 12px;
     font-weight: 600;
     white-space: nowrap;
-    color: #a9c6e4;
+    color: var(--selection-muted);
 }
 
 .selection-actions {
@@ -240,37 +240,37 @@
 .selection-actions button {
     padding: 6px 10px;
     border-radius: 6px;
-    background: #2f6fc0;
+    background: var(--selection-btn);
     color: #fff;
     font-size: 12px;
 }
 
 .selection-actions button:hover {
-    background: #3b82d6;
+    background: var(--selection-btn-hover);
 }
 
 .selection-actions button.ghost {
     background: transparent;
-    color: #b9c7d5;
-    border: 1px solid #465868;
+    color: var(--selection-ghost);
+    border: 1px solid var(--selection-ghost-border);
 }
 
 .selection-actions button.ghost:hover {
-    background: #314050;
+    background: var(--selection-ghost-hover);
 }
 
 .selection-actions button.danger {
-    background: #a83242;
+    background: var(--danger-strong);
 }
 
 .selection-actions button.danger:hover {
-    background: #c03c4e;
+    background: var(--danger-hover);
 }
 
 .selection-actions button:disabled {
     opacity: 0.36;
     cursor: default;
-    background: #3b4652;
+    background: var(--selection-disabled);
     border-color: transparent;
 }
 
@@ -283,27 +283,27 @@
     align-items: center;
     gap: 10px;
     padding: 8px 12px;
-    background: #233041;
-    border-top: 1px solid #33495f;
-    border-left: 3px solid #3b82f6;
+    background: var(--composer-bg);
+    border-top: 1px solid var(--composer-border);
+    border-left: 3px solid var(--accent-light);
 }
 
 .composer-banner[data-kind="edit"] {
-    background: #332b20;
-    border-top-color: #55452c;
-    border-left-color: #e0a33a;
+    background: var(--composer-edit-bg);
+    border-top-color: var(--composer-edit-border);
+    border-left-color: var(--composer-edit-accent);
 }
 
 .composer-banner-icon {
     flex-shrink: 0;
     width: 22px;
-    color: #79b6ff;
+    color: var(--composer-icon);
     font-size: 18px;
     text-align: center;
 }
 
 .composer-banner[data-kind="edit"] .composer-banner-icon {
-    color: #ffc46b;
+    color: var(--composer-edit-accent-soft);
 }
 
 .composer-banner-body {
@@ -320,7 +320,7 @@
 
 .composer-banner-label {
     flex-shrink: 0;
-    color: #6fb1ff;
+    color: var(--composer-label);
     font-size: 11px;
     font-weight: 700;
     letter-spacing: 0.02em;
@@ -328,12 +328,12 @@
 }
 
 .composer-banner[data-kind="edit"] .composer-banner-label {
-    color: #ffc46b;
+    color: var(--composer-edit-accent-soft);
 }
 
 .composer-banner-title {
     min-width: 0;
-    color: #eee;
+    color: var(--text);
     font-size: 13px;
     font-weight: 600;
     white-space: nowrap;
@@ -343,7 +343,7 @@
 
 .composer-banner-preview {
     margin-top: 1px;
-    color: #a9b7c6;
+    color: var(--banner-text);
     font-size: 12px;
     white-space: nowrap;
     overflow: hidden;
@@ -352,7 +352,7 @@
 
 .composer-banner-file {
     margin-top: 2px;
-    color: #ffc46b;
+    color: var(--composer-edit-accent-soft);
     font-size: 12px;
     white-space: nowrap;
     overflow: hidden;
@@ -366,14 +366,14 @@
     padding: 0;
     border-radius: 50%;
     background: transparent;
-    color: #93a5b8;
+    color: var(--banner-cancel);
     font-size: 20px;
     line-height: 1;
 }
 
 .composer-banner-cancel:hover {
-    background: rgba(255, 255, 255, 0.08);
-    color: #fff;
+    background: var(--hover-overlay);
+    color: var(--text-strong);
 }
 
 /* ============================
@@ -392,7 +392,7 @@
 .ma-modal-backdrop {
     position: absolute;
     inset: 0;
-    background: rgba(0, 0, 0, 0.64);
+    background: var(--overlay);
 }
 
 .ma-dialog {
@@ -403,10 +403,10 @@
     display: flex;
     flex-direction: column;
     padding: 18px;
-    background: #252525;
-    border: 1px solid #3a3a3a;
+    background: var(--bg-elevated);
+    border: 1px solid var(--bg-control);
     border-radius: 12px;
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.55);
+    box-shadow: 0 20px 60px var(--overlay);
 }
 
 .ma-dialog-small {
@@ -420,20 +420,20 @@
 
 .ma-dialog-subtitle {
     margin-top: 3px;
-    color: #999;
+    color: var(--text-muted);
     font-size: 12px;
 }
 
 .ma-dialog-text {
     margin-top: 12px;
-    color: #c9c9c9;
+    color: var(--text-soft);
     font-size: 14px;
     line-height: 1.5;
 }
 
 .ma-dialog-error {
     padding: 18px;
-    color: #ff8a99;
+    color: var(--danger-soft);
     font-size: 13px;
     text-align: center;
 }
@@ -443,8 +443,8 @@
     max-height: 42vh;
     margin-top: 12px;
     overflow-y: auto;
-    background: #1f1f1f;
-    border: 1px solid #383838;
+    background: var(--bg-soft);
+    border: 1px solid var(--border);
     border-radius: 8px;
 }
 
@@ -454,7 +454,7 @@
     gap: 10px;
     padding: 10px 12px;
     cursor: pointer;
-    border-bottom: 1px solid #303030;
+    border-bottom: 1px solid var(--border-soft);
 }
 
 .ma-forward-chat:last-child {
@@ -462,14 +462,14 @@
 }
 
 .ma-forward-chat:hover {
-    background: #2c2c2c;
+    background: var(--bg-hover);
 }
 
 .ma-forward-chat input,
 .ma-check input {
     width: auto;
     flex-shrink: 0;
-    accent-color: #2f80ed;
+    accent-color: var(--select);
 }
 
 .ma-forward-chat-text {
@@ -480,7 +480,7 @@
 }
 
 .ma-forward-chat-title {
-    color: #eee;
+    color: var(--text);
     font-size: 14px;
     white-space: nowrap;
     overflow: hidden;
@@ -488,7 +488,7 @@
 }
 
 .ma-forward-chat-type {
-    color: #888;
+    color: var(--text-muted);
     font-size: 11px;
 }
 
@@ -498,7 +498,7 @@
     gap: 8px;
     align-self: flex-start;
     margin-top: 12px;
-    color: #ccc;
+    color: var(--text-soft);
     font-size: 13px;
     cursor: pointer;
 }
@@ -518,13 +518,13 @@
 .ma-btn {
     padding: 9px 14px;
     border-radius: 7px;
-    background: #007bff;
+    background: var(--accent);
     color: #fff;
     font-size: 14px;
 }
 
 .ma-btn:hover {
-    background: #0056b3;
+    background: var(--accent-hover);
 }
 
 .ma-btn:disabled {
@@ -534,20 +534,20 @@
 
 .ma-btn-ghost {
     background: transparent;
-    color: #ccc;
-    border: 1px solid #444;
+    color: var(--text-soft);
+    border: 1px solid var(--border-strong);
 }
 
 .ma-btn-ghost:hover {
-    background: #333;
+    background: var(--bg-active);
 }
 
 .ma-btn-danger {
-    background: #b03a48;
+    background: var(--danger-strong);
 }
 
 .ma-btn-danger:hover {
-    background: #c94757;
+    background: var(--danger-hover);
 }
 
 /* На телефоне пункты меню крупнее: по ним удобно попадать пальцем */

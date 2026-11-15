@@ -2,6 +2,8 @@
 // переписке. Масштаб меняется кнопками, колесом мыши и жестом «щипок»,
 // увеличенное изображение можно перетаскивать, чтобы рассмотреть детали.
 
+import { Preferences } from "./preferences.js";
+
 const MIN_ZOOM = 0.25;
 const MAX_ZOOM = 8;
 const ZOOM_STEP = 1.25;
@@ -63,7 +65,8 @@ function buildViewer() {
 
     toolbar.append(zoomOut, zoomLabel, zoomIn, reset);
     overlay.append(stage, close, toolbar);
-    document.body.appendChild(overlay);
+    // Внутри #app-root просмотр масштабируется вместе с интерфейсом.
+    (document.getElementById("app-root") || document.body).appendChild(overlay);
 
     viewer = { overlay, stage, image, close, zoomLabel };
 
@@ -237,8 +240,11 @@ function handlePointerMove(event) {
     }
 
     if (!drag) return;
-    const dx = event.clientX - drag.startX;
-    const dy = event.clientY - drag.startY;
+    // Экранные пиксели переводим в координаты #app-root: при масштабе 160%
+    // указатель проходит 1.6 экранного пикселя на каждый CSS-пиксель.
+    const factor = Preferences.factor();
+    const dx = (event.clientX - drag.startX) / factor;
+    const dy = (event.clientY - drag.startY) / factor;
 
     if (!drag.moved && Math.hypot(dx, dy) >= 4) {
         drag.moved = true;

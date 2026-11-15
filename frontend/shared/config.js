@@ -8,13 +8,16 @@ export const CONFIG = {
     MOBILE_MAX_WIDTH: 768,
     // Лимит совпадает с проверкой на бэкенде (backend/media.py)
     MAX_IMAGE_BYTES: 5 * 1024 * 1024,
+    MAX_WALLPAPER_BYTES: 10 * 1024 * 1024,
     STORAGE: {
         TOKEN: "messenger_token",
         USER_ID: "messenger_user_id",
         USERNAME: "messenger_username",
         NICKNAME: "messenger_nickname",
         AVATAR: "messenger_avatar",
-        THEME: "messenger_theme"
+        THEME: "messenger_theme",
+        WALLPAPER: "messenger_wallpaper",
+        SCALE: "messenger_scale"
     }
 };
 

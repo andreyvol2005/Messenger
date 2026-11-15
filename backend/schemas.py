@@ -50,6 +50,11 @@ class ProfileUpdate(BaseModel):
     theme: Optional[str] = None
 
 
+class WallpaperResponse(BaseModel):
+    # Обои — клиентская настройка, поэтому сервер возвращает только URL файла.
+    url: str
+
+
 class AccountDeleteRequest(BaseModel):
     """Запрос на безвозвратное удаление аккаунта."""
     password: str

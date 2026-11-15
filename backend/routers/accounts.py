@@ -120,6 +120,28 @@ async def upload_avatar(
     return current_user
 
 
+@router.post("/accounts/wallpaper", response_model=schemas.WallpaperResponse)
+async def upload_wallpaper(
+    file: UploadFile = File(...),
+    current_user: models.User = Depends(auth.get_current_user),
+):
+    """Загружает обои чата. Путь клиент хранит в localStorage, база не меняется."""
+    if file.content_type and not file.content_type.startswith("image/"):
+        raise HTTPException(status_code=400, detail="Можно загружать только изображения")
+
+    data = await file.read(media.MAX_WALLPAPER_SIZE + 1)
+    if len(data) > media.MAX_WALLPAPER_SIZE:
+        raise HTTPException(status_code=413, detail="Файл больше 10 МБ")
+    if not data:
+        raise HTTPException(status_code=400, detail="Пустой файл")
+
+    extension = media.detect_image_extension(data[:16])
+    if extension is None:
+        raise HTTPException(status_code=400, detail="Формат изображения не поддерживается")
+
+    return {"url": media.save_wallpaper(data, extension)}
+
+
 @router.post("/account/delete")
 def delete_account(
     payload: schemas.AccountDeleteRequest,
