@@ -1,0 +1,64 @@
+# ── Ruff ─────────────────────────────────────────────────────────────────────
+[tool.ruff]
+target-version = "py312"
+line-length    = 100
+src            = ["."]
+exclude        = ["venv", ".venv", "migrations"]
+
+[tool.ruff.lint]
+select = [
+    "E",    # pycodestyle errors
+    "W",    # pycodestyle warnings
+    "F",    # pyflakes
+    "I",    # isort
+    "B",    # flake8-bugbear
+    "C4",   # flake8-comprehensions
+    "UP",   # pyupgrade
+    "N",    # pep8-naming
+    "RUF",  # ruff-specific rules
+    "S",    # flake8-bandit (security)
+]
+ignore = [
+    # FastAPI uses Depends() as a default-argument call — expected pattern
+    "B008",
+    # allow `assert` in tests
+    "S101",
+    # env-var defaults like DB_PASSWORD = "pass" are not real secrets
+    "S105",
+    "S106",
+    # exception class names (HTTPException etc.)
+    "N818",
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S101", "S105", "S106"]
+
+[tool.ruff.lint.isort]
+known-first-party = [
+    "auth", "constants", "database", "events", "jobs",
+    "main", "media", "models", "schemas", "services", "validation",
+    "routers",
+]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+line-ending  = "lf"
+
+# ── Mypy ─────────────────────────────────────────────────────────────────────
+[tool.mypy]
+python_version       = "3.12"
+ignore_missing_imports = true        # avoids noise for libraries without stubs
+warn_return_any      = true
+warn_unused_ignores  = true
+disallow_untyped_defs = true
+no_implicit_optional = true
+strict_equality      = true
+exclude              = ["venv", "migrations", "tests"]
+
+# ── Pytest ───────────────────────────────────────────────────────────────────
+[tool.pytest.ini_options]
+asyncio_mode     = "auto"
+testpaths        = ["tests"]
+python_files     = ["test_*.py"]
+python_functions = ["test_*"]
