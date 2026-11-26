@@ -1,5 +1,5 @@
 import json
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 
 from fastapi import APIRouter, HTTPException, WebSocket, WebSocketDisconnect
 
@@ -62,7 +62,7 @@ async def websocket_endpoint(websocket: WebSocket, user_id: int, token: str = ""
         if became_online:
             # Запоминаем активность до рассылки: если процесс упадёт, у
             # собеседников останется корректное «был в …».
-            last_seen = datetime.now(UTC)
+            last_seen = datetime.now(timezone.utc)
             db.query(models.User).filter(models.User.id == user_id).update({models.User.last_seen_at: last_seen})
             db.commit()
             # Первая вкладка пользователя: контакты и собеседники видят зелёную точку
@@ -145,7 +145,7 @@ async def websocket_endpoint(websocket: WebSocket, user_id: int, token: str = ""
                 try:
                     user = active_user(db, user_id)
                     if user:
-                        last_seen = datetime.now(UTC)
+                        last_seen = datetime.now(timezone.utc)
                         user.last_seen_at = last_seen
                         db.commit()
                 except Exception:

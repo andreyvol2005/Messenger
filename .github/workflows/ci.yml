@@ -6,6 +6,7 @@ on:
   push:
     branches: [main]
 
+# Cancel in-flight runs for the same ref on new push; keep deploys sequential.
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
@@ -18,6 +19,7 @@ jobs:
   backend-lint:
     name: "Backend · Ruff (lint + format)"
     runs-on: ubuntu-24.04
+    timeout-minutes: 10
     defaults:
       run:
         working-directory: backend
@@ -40,13 +42,11 @@ jobs:
       - name: Format check
         run: ruff format --check .
 
-  # ── 2. Backend: Type Check (Mypy) — advisory ──────────────────────────────
+  # ── 2. Backend: Type Check (Mypy) ─────────────────────────────────────────
   backend-typecheck:
-    name: "Backend · Mypy (advisory)"
+    name: "Backend · Mypy"
     runs-on: ubuntu-24.04
-    # Non-blocking: existing codebase has many untyped functions.
-    # Remove continue-on-error once type annotations are added incrementally.
-    continue-on-error: true
+    timeout-minutes: 10
     defaults:
       run:
         working-directory: backend
@@ -65,13 +65,30 @@ jobs:
           pip install -r requirements.txt
           pip install "mypy==1.11.0"
 
-      - name: Mypy
-        run: mypy .
+      # Strict check on modules that do not trigger SQLAlchemy 1.x Column[...] false positives
+      - name: Type-check clean modules
+        run: >-
+          mypy --follow-imports=silent
+          auth.py constants.py database.py events.py main.py media.py
+          migrate.py models.py schemas.py validation.py routers/contacts.py tests
 
-  # ── 3. Backend: Tests (Pytest + Postgres) ─────────────────────────────────
+      # Full project report (advisory until models.py migrates to SQLAlchemy 2.0 Mapped[])
+      - name: Full project type-check report (advisory)
+        continue-on-error: true
+        run: |
+          {
+            echo "### Mypy full-project report (advisory)"
+            echo '```'
+            mypy . || true
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          mypy .
+
+  # ── 3. Backend: Tests + Schema + Boot Verification ────────────────────────
   backend-test:
-    name: "Backend · Pytest"
+    name: "Backend · Pytest + Postgres"
     runs-on: ubuntu-24.04
+    timeout-minutes: 10
 
     services:
       postgres:
@@ -109,24 +126,77 @@ jobs:
         working-directory: backend
         run: pip install -r requirements.txt pytest pytest-asyncio httpx anyio
 
-      - name: Apply migrations
-        # Run from repo root so migrate.py can locate migrations/ and init.sql;
-        # PYTHONPATH lets it import backend modules (database.py, models.py …)
-        env:
-          PYTHONPATH: ${{ github.workspace }}/backend
-        run: python backend/migrate.py
+      - name: Initialize schema from init.sql
+        run: |
+          python - <<'PY'
+          import os
+          from pathlib import Path
+          import psycopg2
 
-      - name: Run tests
+          sql = Path("init.sql").read_text(encoding="utf-8")
+          with psycopg2.connect(
+              dbname=os.environ["DB_NAME"],
+              user=os.environ["DB_USER"],
+              password=os.environ["DB_PASSWORD"],
+              host=os.environ["DB_HOST"],
+              port=os.environ["DB_PORT"],
+          ) as conn:
+              with conn.cursor() as cur:
+                  cur.execute(sql)
+                  cur.execute(
+                      "SELECT tablename FROM pg_tables WHERE schemaname = 'public' ORDER BY tablename"
+                  )
+                  tables = [row[0] for row in cur.fetchall()]
+          print("Initialized tables:", tables)
+          expected = {
+              "account_deletion_jobs",
+              "chat_members",
+              "chats",
+              "contacts",
+              "messages",
+              "schema_migrations",
+              "users",
+          }
+          missing = expected - set(tables)
+          assert not missing, f"Missing tables from init.sql: {missing}"
+          PY
+
+      - name: Run unit tests
         working-directory: backend
         run: pytest -v --tb=short
 
-  # ── 4. Backend: Dependency Security Audit — advisory ──────────────────────
+      - name: Boot verification & Postgres integration tests
+        working-directory: backend
+        env:
+          MESSENGER_TEST_RUN_INTEGRATION: "1"
+          MESSENGER_TEST_BASE: "http://127.0.0.1:8000"
+        run: |
+          uvicorn main:app --host 127.0.0.1 --port 8000 &
+          UVICORN_PID=$!
+          trap 'kill "$UVICORN_PID" 2>/dev/null || true' EXIT
+
+          for i in $(seq 1 30); do
+            health=$(curl -sS -o /dev/null -w '%{http_code}' http://127.0.0.1:8000/api/health 2>/dev/null || true)
+            page=$(curl -sS -o /dev/null -w '%{http_code}' http://127.0.0.1:8000/ 2>/dev/null || true)
+            if [ "$health" = "200" ] && [ "$page" = "200" ]; then
+              echo "Server boot verified: /api/health=200, /=200"
+              break
+            fi
+            sleep 1
+          done
+
+          if [ "${health:-}" != "200" ] || [ "${page:-}" != "200" ]; then
+            echo "Server failed to boot (health=${health:-}, page=${page:-})" >&2
+            exit 1
+          fi
+
+          pytest tests/test_account_delete.py -v --tb=short
+
+  # ── 4. Backend: Dependency Security Audit ─────────────────────────────────
   backend-audit:
-    name: "Backend · pip-audit (advisory)"
+    name: "Backend · pip-audit"
     runs-on: ubuntu-24.04
-    # Non-blocking until requirements.txt pins exact versions.
-    # Remove continue-on-error after pinning with `pip freeze`.
-    continue-on-error: true
+    timeout-minutes: 10
     defaults:
       run:
         working-directory: backend
@@ -143,12 +213,18 @@ jobs:
       - name: Run pip-audit
         run: |
           pip install "pip-audit==2.7.3"
-          pip-audit -r requirements.txt
+          # Upstream python-jose (PYSEC-2026-4298) and ecdsa (PYSEC-2026-1325)
+          # currently have no patched release; ignore only these two documented
+          # advisories so any newly introduced CVE still fails CI.
+          pip-audit -r requirements.txt \
+            --ignore-vuln PYSEC-2026-4298 \
+            --ignore-vuln PYSEC-2026-1325
 
   # ── 5. Frontend: Lint (ESLint + Stylelint + HTMLHint) ─────────────────────
   frontend-lint:
     name: "Frontend · ESLint + Stylelint + HTMLHint"
     runs-on: ubuntu-24.04
+    timeout-minutes: 10
     defaults:
       run:
         working-directory: frontend
@@ -158,17 +234,12 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: "20"
-
-      - name: Cache node_modules
-        uses: actions/cache@v4
-        with:
-          path: frontend/node_modules
-          key: node-modules-${{ hashFiles('frontend/package.json') }}
-          restore-keys: node-modules-
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
 
       - name: Install dev deps
-        run: npm install
+        run: npm ci
 
       - name: ESLint
         run: npx eslint .

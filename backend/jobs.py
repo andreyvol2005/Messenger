@@ -157,7 +157,7 @@ async def worker_loop(stop_event: asyncio.Event | None = None) -> None:
                 # Нет работы — спим, чтобы не нагружать БД пустыми запросами.
                 try:
                     await asyncio.wait_for(stop_event.wait(), timeout=POLL_INTERVAL_SEC)
-                except TimeoutError:
+                except asyncio.TimeoutError:
                     pass
         except Exception:  # noqa: BLE001
             logger.exception("Ошибка в цикле воркера удаления")

@@ -1,6 +1,6 @@
 """Бизнес-логика чатов, сообщений и контактов. Роутеры только разбирают HTTP и зовут сюда."""
 
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 
 from fastapi import HTTPException
 from sqlalchemy import and_, func
@@ -59,7 +59,7 @@ def schedule_delete_account(
             raise HTTPException(status_code=401, detail="Неверный код 2FA")
 
     # 4. Транзакция: мягкое удаление + outbox-джоба
-    user.deleted_at = datetime.now(UTC)
+    user.deleted_at = datetime.now(timezone.utc)
     user.deleted_reason = "user_requested"
     # Учётные данные и персональные данные стираем сразу, не дожидаясь
     # фоновой очистки: после ответа их уже нельзя вернуть.
@@ -1090,7 +1090,7 @@ def update_message_receipt(
         .filter(
             models.Message.id == message_id,
             models.Message.chat_id == chat_id,
-            models.Message.is_deleted is False,
+            models.Message.is_deleted == False,
         )
         .first()
     )
