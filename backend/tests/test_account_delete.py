@@ -128,7 +128,7 @@ async def test_websocket_disconnected_on_delete():
         try:
             msg = await asyncio.wait_for(sock.recv(), timeout=5)
             raise AssertionError(f"WS не закрыт после удаления, получено: {msg}")
-        except asyncio.TimeoutError:
+        except TimeoutError:
             raise AssertionError("WS не закрыт после удаления (таймаут)")
         except ConnectionClosed:
             pass

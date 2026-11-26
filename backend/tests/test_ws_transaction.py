@@ -84,9 +84,7 @@ def test_open_socket_leaves_no_active_transaction(client):
     http, sessions = client
     user = register_and_login(http, "idle")
 
-    with http.websocket_connect(
-        f"/ws/{user['user_id']}?token={user['access_token']}"
-    ) as socket:
+    with http.websocket_connect(f"/ws/{user['user_id']}?token={user['access_token']}") as socket:
         # Собственное событие присутствия означает, что подключение прошло.
         assert socket.receive_json()["type"] == "presence"
 
@@ -118,9 +116,7 @@ def test_typing_leaves_no_active_transaction(client):
     assert chat_response.status_code == 200, chat_response.text
     chat = chat_response.json()
 
-    with http.websocket_connect(
-        f"/ws/{alice['user_id']}?token={alice['access_token']}"
-    ) as socket:
+    with http.websocket_connect(f"/ws/{alice['user_id']}?token={alice['access_token']}") as socket:
         assert socket.receive_json()["type"] == "presence"
         wait_for_no_transactions(sessions)
 
@@ -140,9 +136,7 @@ def test_messages_still_work_after_transaction_release(client):
     http, _ = client
     alice = register_and_login(http, "alice")
 
-    with http.websocket_connect(
-        f"/ws/{alice['user_id']}?token={alice['access_token']}"
-    ) as socket:
+    with http.websocket_connect(f"/ws/{alice['user_id']}?token={alice['access_token']}") as socket:
         socket.receive_json()  # собственное присутствие
 
         # Два сообщения подряд: после первого сессия откатывается, и второе
@@ -153,7 +147,5 @@ def test_messages_still_work_after_transaction_release(client):
             assert event["type"] == "message"
             assert event["text"] == text
 
-    messages = http.get(
-        "/api/messages/-1", headers=auth(alice["access_token"])
-    ).json()
+    messages = http.get("/api/messages/-1", headers=auth(alice["access_token"])).json()
     assert [message["text"] for message in messages] == ["первое", "второе"]

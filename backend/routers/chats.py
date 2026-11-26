@@ -23,11 +23,7 @@ def _publish_receipt(
     Каждому получателю отправляем минимум по остальным участникам: в личном
     чате это отметка собеседника, в группе — «доставлено/прочитано всеми».
     """
-    members = (
-        db.query(models.ChatMember)
-        .filter(models.ChatMember.chat_id == chat_id)
-        .all()
-    )
+    members = db.query(models.ChatMember).filter(models.ChatMember.chat_id == chat_id).all()
     for recipient in members:
         if recipient.user_id == user_id:
             continue
@@ -65,9 +61,7 @@ def create_group_chat(
     current_user: models.User = Depends(get_current_user),
 ):
     """Создать групповой чат: название плюс список id участников."""
-    chat = services.create_group_chat(
-        db, current_user, payload.name, payload.user_ids
-    )
+    chat = services.create_group_chat(db, current_user, payload.name, payload.user_ids)
     background_tasks.add_task(
         events.publish,
         services.chat_member_ids(db, chat.id),
@@ -99,9 +93,7 @@ def add_group_member(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user),
 ):
-    member = services.add_group_member(
-        db, current_user, chat_id, payload.user_id
-    )
+    member = services.add_group_member(db, current_user, chat_id, payload.user_id)
     background_tasks.add_task(
         events.publish,
         services.chat_member_ids(db, chat_id),
@@ -156,9 +148,7 @@ async def update_group_chat(
         if not isinstance(payload, dict):
             raise HTTPException(status_code=400, detail="Некорректный JSON")
         name = payload.get("name")
-    elif content_type.startswith("multipart/form-data") or content_type.startswith(
-        "application/x-www-form-urlencoded"
-    ):
+    elif content_type.startswith("multipart/form-data") or content_type.startswith("application/x-www-form-urlencoded"):
         form = await request.form()
         name = form.get("name")
         file = form.get("file") or form.get("avatar")
@@ -218,9 +208,7 @@ def mark_delivered(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user),
 ):
-    member = services.update_message_receipt(
-        db, current_user, chat_id, payload.message_id, mark_read=False
-    )
+    member = services.update_message_receipt(db, current_user, chat_id, payload.message_id, mark_read=False)
     _publish_receipt(background_tasks, db, chat_id, current_user.id)
     return member
 
@@ -233,8 +221,6 @@ def mark_read(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user),
 ):
-    member = services.update_message_receipt(
-        db, current_user, chat_id, payload.message_id, mark_read=True
-    )
+    member = services.update_message_receipt(db, current_user, chat_id, payload.message_id, mark_read=True)
     _publish_receipt(background_tasks, db, chat_id, current_user.id)
     return member

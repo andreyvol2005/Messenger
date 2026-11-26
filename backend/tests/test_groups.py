@@ -5,6 +5,7 @@
 
 Как и остальные тесты, поднимают SQLite в памяти и не требуют PostgreSQL.
 """
+
 from __future__ import annotations
 
 import sys
@@ -466,14 +467,10 @@ def test_group_typing_event_contains_sender_nickname(client):
     assert created.status_code == 200, created.text
     chat_id = created.json()["id"]
 
-    with client.websocket_connect(
-        f"/ws/{bob['user_id']}?token={bob['access_token']}"
-    ) as bob_socket:
+    with client.websocket_connect(f"/ws/{bob['user_id']}?token={bob['access_token']}") as bob_socket:
         bob_socket.receive_json()  # собственное online-событие
 
-        with client.websocket_connect(
-            f"/ws/{alice['user_id']}?token={alice['access_token']}"
-        ) as alice_socket:
+        with client.websocket_connect(f"/ws/{alice['user_id']}?token={alice['access_token']}") as alice_socket:
             assert bob_socket.receive_json()["user_id"] == alice["user_id"]
 
             # Alice печатает в группе: Боб должен получить её ник, чтобы

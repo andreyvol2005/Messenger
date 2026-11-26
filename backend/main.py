@@ -1,13 +1,13 @@
-import os
 import asyncio
+import os
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
-from routers import accounts, chats, contacts, messages, presence, ws
-from jobs import worker_loop
 import media
+from jobs import worker_loop
+from routers import accounts, chats, contacts, messages, presence, ws
 
 # Схема создаётся через init.sql — он же единственный источник правды
 

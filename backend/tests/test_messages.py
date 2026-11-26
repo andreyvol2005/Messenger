@@ -5,6 +5,7 @@
 
 Как и остальные тесты, поднимают SQLite в памяти и не требуют PostgreSQL.
 """
+
 from __future__ import annotations
 
 import sys
@@ -157,9 +158,7 @@ def test_reply_saves_quote_snapshot_and_allows_deleted_target(client):
     existing_reply = next(row for row in rows if row["id"] == reply["id"])
     assert existing_reply["reply_to_text"] == "Сообщение удалено"
 
-    reply_to_tombstone = send(
-        client, alice, chat_id, "Ответ на удалённое", original["id"]
-    )
+    reply_to_tombstone = send(client, alice, chat_id, "Ответ на удалённое", original["id"])
     assert reply_to_tombstone["reply_to_text"] == "Сообщение удалено"
     assert reply_to_tombstone["reply_to_nickname"] == bob["nickname"]
 
@@ -417,14 +416,8 @@ def test_forward_creates_n_times_m_copies_and_can_keep_reply(client):
     assert sum(item["chat_id"] == FAVORITES_CHAT_ID for item in copies) == 2
     assert all(item["sender_id"] == alice["user_id"] for item in copies)
 
-    bob_copy = next(
-        item for item in copies if item["text"] == "От Боба" and item["chat_id"] == chat_ab
-    )
-    reply_copy = next(
-        item
-        for item in copies
-        if item["text"] == "Ответ Алисы" and item["chat_id"] == chat_ab
-    )
+    bob_copy = next(item for item in copies if item["text"] == "От Боба" and item["chat_id"] == chat_ab)
+    reply_copy = next(item for item in copies if item["text"] == "Ответ Алисы" and item["chat_id"] == chat_ab)
     # Подпись — немедленный отправитель оригинала, а не первый автор
     assert bob_copy["forwarded_from_nickname"] == bob["nickname"]
     assert reply_copy["forwarded_from_nickname"] == alice["nickname"]
@@ -439,11 +432,7 @@ def test_forward_creates_n_times_m_copies_and_can_keep_reply(client):
         json={"text": "Подмена пересланного"},
     )
     assert denied_edit.status_code == 400
-    unchanged = next(
-        row
-        for row in history(client, alice, chat_ab)
-        if row["id"] == bob_copy["id"]
-    )
+    unchanged = next(row for row in history(client, alice, chat_ab) if row["id"] == bob_copy["id"])
     assert unchanged["text"] == "От Боба"
     assert unchanged["edited_at"] is None
 
@@ -500,9 +489,7 @@ def test_chat_list_preview_tracks_last_message(client):
     def chat_preview(user: dict) -> dict:
         response = client.get("/api/chats", headers=auth(user["access_token"]))
         assert response.status_code == 200, response.text
-        return next(
-            row for row in response.json()["chats"] if row["id"] == chat_id
-        )
+        return next(row for row in response.json()["chats"] if row["id"] == chat_id)
 
     assert chat_preview(alice)["last_message"] is None
 

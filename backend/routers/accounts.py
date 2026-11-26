@@ -1,8 +1,9 @@
+from datetime import date
+
 from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, UploadFile
 from sqlalchemy import or_
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
-from datetime import date
 
 import auth
 import events
@@ -47,11 +48,7 @@ def register(user: schemas.UserCreate, db: Session = Depends(get_db)):
 @router.post("/login")
 def login(credentials: schemas.UserLogin, db: Session = Depends(get_db)):
     username = validation.normalize_username(credentials.username)
-    user = (
-        db.query(models.User)
-        .filter(models.User.username == username, models.User.deleted_at.is_(None))
-        .first()
-    )
+    user = db.query(models.User).filter(models.User.username == username, models.User.deleted_at.is_(None)).first()
     if not user or not auth.verify_password(credentials.password, user.password_hash):
         # Одинаковая ошибка для несуществующего, удалённого и неверного пароля —
         # не даём возможность перечислять аккаунты.
@@ -205,11 +202,7 @@ def get_user(
 ):
     # Информация о любом активном пользователе по id — для панели профиля собеседника.
     # Дата рождения, био и аватарка доступны любому собеседнику в чате.
-    user = (
-        db.query(models.User)
-        .filter(models.User.id == user_id, models.User.deleted_at.is_(None))
-        .first()
-    )
+    user = db.query(models.User).filter(models.User.id == user_id, models.User.deleted_at.is_(None)).first()
     if not user:
         raise HTTPException(status_code=404, detail="Пользователь с таким id не найден")
     return user

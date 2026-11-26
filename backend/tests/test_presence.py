@@ -133,20 +133,14 @@ def test_presence_event_and_snapshot(client):
     chats = client.get("/api/chats", headers=auth(bob["access_token"])).json()["chats"]
     assert any(item["peer_id"] == alice["user_id"] for item in chats)
 
-    with client.websocket_connect(
-        f"/ws/{bob['user_id']}?token={bob['access_token']}"
-    ) as bob_socket:
+    with client.websocket_connect(f"/ws/{bob['user_id']}?token={bob['access_token']}") as bob_socket:
         # Своё подключение тоже приходит событием
         assert_presence(bob_socket.receive_json(), bob["user_id"], True)
 
-        with client.websocket_connect(
-            f"/ws/{alice['user_id']}?token={alice['access_token']}"
-        ):
+        with client.websocket_connect(f"/ws/{alice['user_id']}?token={alice['access_token']}"):
             assert_presence(bob_socket.receive_json(), alice["user_id"], True)
 
-            snapshot = client.get(
-                "/api/presence", headers=auth(bob["access_token"])
-            )
+            snapshot = client.get("/api/presence", headers=auth(bob["access_token"]))
             assert snapshot.status_code == 200
             data = snapshot.json()
             assert set(data["online"]) == {alice["user_id"], bob["user_id"]}
@@ -159,9 +153,7 @@ def test_presence_event_and_snapshot(client):
         # Сокет Алисы закрылся — Боб получает офлайн и время последней активности
         assert_presence(bob_socket.receive_json(), alice["user_id"], False)
 
-        snapshot = client.get(
-            "/api/presence", headers=auth(bob["access_token"])
-        ).json()
+        snapshot = client.get("/api/presence", headers=auth(bob["access_token"])).json()
         assert alice["user_id"] not in snapshot["online"]
         assert str(alice["user_id"]) in snapshot["last_seen"]
 
@@ -183,22 +175,20 @@ def test_typing_only_for_chat_members(client):
         headers=auth(bob["access_token"]),
     ).json()
 
-    with client.websocket_connect(
-        f"/ws/{bob['user_id']}?token={bob['access_token']}"
-    ) as bob_socket:
+    with client.websocket_connect(f"/ws/{bob['user_id']}?token={bob['access_token']}") as bob_socket:
         bob_socket.receive_json()  # собственное online-событие
 
-        with client.websocket_connect(
-            f"/ws/{alice['user_id']}?token={alice['access_token']}"
-        ) as alice_socket:
+        with client.websocket_connect(f"/ws/{alice['user_id']}?token={alice['access_token']}") as alice_socket:
             assert bob_socket.receive_json()["user_id"] == alice["user_id"]
 
             # Сначала чужой чат — событие должно быть проигнорировано,
             # иначе следующим Боб получил бы typing с чужим chat_id.
-            alice_socket.send_json({
-                "type": "typing",
-                "chat_id": foreign_chat["id"],
-            })
+            alice_socket.send_json(
+                {
+                    "type": "typing",
+                    "chat_id": foreign_chat["id"],
+                }
+            )
             alice_socket.send_json({"type": "typing", "chat_id": chat["id"]})
             # Обычное сообщение заставляет TestClient отдать Бобу уже
             # поставленные в очередь события; порядок при этом сохраняется.
@@ -225,23 +215,15 @@ def test_presence_snapshot_uses_own_contacts(client):
     )
     assert response.status_code == 201, response.text
 
-    with client.websocket_connect(
-        f"/ws/{bob['user_id']}?token={bob['access_token']}"
-    ) as bob_socket:
+    with client.websocket_connect(f"/ws/{bob['user_id']}?token={bob['access_token']}") as bob_socket:
         bob_socket.receive_json()  # собственное online-событие
 
-        alice_snapshot = client.get(
-            "/api/presence", headers=auth(alice["access_token"])
-        ).json()["online"]
+        alice_snapshot = client.get("/api/presence", headers=auth(alice["access_token"])).json()["online"]
         assert bob["user_id"] in alice_snapshot
 
         # Боб не сохранял Алису и общего чата нет — её статус ему не виден
-        with client.websocket_connect(
-            f"/ws/{alice['user_id']}?token={alice['access_token']}"
-        ):
-            bob_snapshot = client.get(
-                "/api/presence", headers=auth(bob["access_token"])
-            ).json()["online"]
+        with client.websocket_connect(f"/ws/{alice['user_id']}?token={alice['access_token']}"):
+            bob_snapshot = client.get("/api/presence", headers=auth(bob["access_token"])).json()["online"]
             assert alice["user_id"] not in bob_snapshot
 
 
@@ -256,23 +238,15 @@ def test_presence_only_for_related_users(client):
         headers=auth(alice["access_token"]),
     ).json()
 
-    with client.websocket_connect(
-        f"/ws/{bob['user_id']}?token={bob['access_token']}"
-    ) as bob_socket:
+    with client.websocket_connect(f"/ws/{bob['user_id']}?token={bob['access_token']}") as bob_socket:
         bob_socket.receive_json()  # собственное online-событие
 
-        with client.websocket_connect(
-            f"/ws/{alice['user_id']}?token={alice['access_token']}"
-        ) as alice_socket:
+        with client.websocket_connect(f"/ws/{alice['user_id']}?token={alice['access_token']}"):
             assert bob_socket.receive_json()["user_id"] == alice["user_id"]
 
-            with client.websocket_connect(
-                f"/ws/{stranger['user_id']}?token={stranger['access_token']}"
-            ):
+            with client.websocket_connect(f"/ws/{stranger['user_id']}?token={stranger['access_token']}"):
                 # Чужой пользователь не появился в снимке
-                snapshot = client.get(
-                    "/api/presence", headers=auth(bob["access_token"])
-                ).json()["online"]
+                snapshot = client.get("/api/presence", headers=auth(bob["access_token"])).json()["online"]
                 assert stranger["user_id"] not in snapshot
                 assert set(snapshot) == {alice["user_id"], bob["user_id"]}
 

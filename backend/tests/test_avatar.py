@@ -5,6 +5,7 @@
 
 Тесты самодостаточны: поднимают SQLite в памяти и не требуют PostgreSQL/сервера.
 """
+
 from __future__ import annotations
 
 import sys

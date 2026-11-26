@@ -1,13 +1,14 @@
 import os
+from datetime import datetime, timedelta
+
 import bcrypt
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt
 from sqlalchemy.orm import Session
-from datetime import datetime, timedelta
 
-from database import get_db
 import models
+from database import get_db
 
 SECRET_KEY = os.getenv("SECRET_KEY", "dev-secret-key-change-me")
 ALGORITHM = "HS256"
@@ -16,19 +17,16 @@ ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     try:
-        return bcrypt.checkpw(
-            plain_password.encode('utf-8'),
-            hashed_password.encode('utf-8')
-        )
+        return bcrypt.checkpw(plain_password.encode("utf-8"), hashed_password.encode("utf-8"))
     except Exception:
         return False
 
 
 def get_password_hash(password: str) -> str:
     # bcrypt работает только с первыми 72 байтами пароля
-    password_bytes = password.encode('utf-8')[:72]
+    password_bytes = password.encode("utf-8")[:72]
     salt = bcrypt.gensalt()
-    return bcrypt.hashpw(password_bytes, salt).decode('utf-8')
+    return bcrypt.hashpw(password_bytes, salt).decode("utf-8")
 
 
 def create_access_token(data: dict) -> str:
@@ -57,10 +55,14 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    user = db.query(models.User).filter(
-        models.User.id == payload.get("user_id"),
-        models.User.deleted_at.is_(None),   # удалённые не могут войти
-    ).first()
+    user = (
+        db.query(models.User)
+        .filter(
+            models.User.id == payload.get("user_id"),
+            models.User.deleted_at.is_(None),  # удалённые не могут войти
+        )
+        .first()
+    )
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
