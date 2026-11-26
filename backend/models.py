@@ -1,7 +1,10 @@
-from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey, Boolean, Date
-from sqlalchemy.orm import relationship
 from datetime import datetime
+
+from sqlalchemy import Boolean, Column, Date, DateTime, ForeignKey, Integer, String, Text
+from sqlalchemy.orm import relationship
+
 from database import Base
+
 
 class User(Base):
     __tablename__ = "users"
@@ -32,6 +35,7 @@ class User(Base):
 class AccountDeletionJob(Base):
     """Outbox/Saga: гарантирует, что асинхронная очистка (S3, Redis, поиск, push)
     не потеряется при падении воркера. Принцип at-least-once + идемпотентность."""
+
     __tablename__ = "account_deletion_jobs"
 
     id = Column(Integer, primary_key=True, index=True)
@@ -59,6 +63,7 @@ class Chat(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     last_message_id = Column(Integer, ForeignKey("messages.id", ondelete="SET NULL"), nullable=True)
 
+
 class ChatMember(Base):
     __tablename__ = "chat_members"
     chat_id = Column(Integer, ForeignKey("chats.id", ondelete="CASCADE"), primary_key=True)
@@ -67,6 +72,7 @@ class ChatMember(Base):
     # Статус своего сообщения отправитель считает по этим отметкам остальных.
     last_delivered_message_id = Column(Integer, nullable=True)
     last_read_message_id = Column(Integer, nullable=True)
+
 
 class Message(Base):
     __tablename__ = "messages"
@@ -87,6 +93,7 @@ class Message(Base):
     # Немедленный отправитель оригинала при пересылке (не первый автор).
     forwarded_from_nickname = Column(String(30), nullable=True)
     is_deleted = Column(Boolean, default=False)
+
 
 class Contact(Base):
     __tablename__ = "contacts"

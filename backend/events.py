@@ -4,9 +4,9 @@
 и с самого сокета. Событие должно уйти подписчикам в обоих случаях, поэтому
 рассылка живёт здесь, а не внутри ws-обработчика.
 """
+
 import json
 from datetime import datetime
-from typing import Dict, List
 
 from fastapi import WebSocket
 from sqlalchemy.orm import Session
@@ -17,7 +17,7 @@ import services
 
 class ConnectionManager:
     def __init__(self):
-        self.active: Dict[int, List[WebSocket]] = {}  # user_id -> список сокетов
+        self.active: dict[int, list[WebSocket]] = {}  # user_id -> список сокетов
 
     async def connect(self, ws: WebSocket, user_id: int) -> bool:
         """Подключает сокет и сообщает, был ли пользователь до этого офлайн.
@@ -61,7 +61,7 @@ class ConnectionManager:
                 pass
         return bool(sockets)
 
-    async def send_to_users(self, user_ids: List[int], message: dict):
+    async def send_to_users(self, user_ids: list[int], message: dict):
         payload = json.dumps(message, default=str)
         for user_id in user_ids:
             for ws in list(self.active.get(user_id, [])):
@@ -77,7 +77,7 @@ class ConnectionManager:
 manager = ConnectionManager()
 
 
-def recipients_for(db: Session, msg, chat_id: int) -> List[int]:
+def recipients_for(db: Session, msg, chat_id: int) -> list[int]:
     # В избранное сообщение видно только автору, в обычном чате — всем участникам
     if services.is_favorites(chat_id):
         return [msg.sender_id]
@@ -143,9 +143,7 @@ def build_delete_event(item) -> dict:
     return event
 
 
-def build_receipt_event(
-    chat_id: int, user_id: int, delivered_to: int, read_by: int
-) -> dict:
+def build_receipt_event(chat_id: int, user_id: int, delivered_to: int, read_by: int) -> dict:
     """Событие о том, что участник получил/прочитал сообщения в чате.
 
     delivered_to и read_by — уже агрегированные отметки: для получателя это
@@ -163,9 +161,7 @@ def build_receipt_event(
 
 def chat_peer_ids(db: Session, user_id: int) -> set[int]:
     """Пользователи, с которыми у данного есть общий чат."""
-    chat_ids = db.query(models.ChatMember.chat_id).filter(
-        models.ChatMember.user_id == user_id
-    )
+    chat_ids = db.query(models.ChatMember.chat_id).filter(models.ChatMember.user_id == user_id)
     return {
         row.user_id
         for row in (
@@ -179,7 +175,7 @@ def chat_peer_ids(db: Session, user_id: int) -> set[int]:
     }
 
 
-def related_user_ids(db: Session, user_id: int) -> List[int]:
+def related_user_ids(db: Session, user_id: int) -> list[int]:
     """Кому показать изменения профиля и присутствия этого пользователя.
 
     Это люди, у которых он есть в контактах (они сохранили его), и собеседники
@@ -188,18 +184,14 @@ def related_user_ids(db: Session, user_id: int) -> List[int]:
     """
     recipients = {user_id}
 
-    for row in (
-        db.query(models.Contact.user_id)
-        .filter(models.Contact.contact_user_id == user_id)
-        .all()
-    ):
+    for row in db.query(models.Contact.user_id).filter(models.Contact.contact_user_id == user_id).all():
         recipients.add(row.user_id)
 
     recipients.update(chat_peer_ids(db, user_id))
     return list(recipients)
 
 
-def visible_user_ids(db: Session, user_id: int) -> List[int]:
+def visible_user_ids(db: Session, user_id: int) -> list[int]:
     """Кого видит сам пользователь: свои контакты и собеседники по чатам.
 
     Для начального снимка присутствия направление контактов обратное
@@ -207,28 +199,24 @@ def visible_user_ids(db: Session, user_id: int) -> List[int]:
     """
     recipients = {user_id}
 
-    for row in (
-        db.query(models.Contact.contact_user_id)
-        .filter(models.Contact.user_id == user_id)
-        .all()
-    ):
+    for row in db.query(models.Contact.contact_user_id).filter(models.Contact.user_id == user_id).all():
         recipients.add(row.contact_user_id)
 
     recipients.update(chat_peer_ids(db, user_id))
     return list(recipients)
 
 
-def avatar_recipients(db: Session, user_id: int) -> List[int]:
+def avatar_recipients(db: Session, user_id: int) -> list[int]:
     """Кому показать смену аватарки: сам пользователь, его контакты и собеседники."""
     return related_user_ids(db, user_id)
 
 
-def online_related_ids(db: Session, user_id: int) -> List[int]:
+def online_related_ids(db: Session, user_id: int) -> list[int]:
     """Кто из видимых пользователей сейчас на связи."""
     return [uid for uid in visible_user_ids(db, user_id) if manager.is_online(uid)]
 
 
-def visible_last_seen(db: Session, user_id: int) -> Dict[int, datetime]:
+def visible_last_seen(db: Session, user_id: int) -> dict[int, datetime]:
     """Когда в последний раз были в сети видимые пользователи.
 
     Нужно для начального снимка: WebSocket сообщает только об изменениях,
@@ -246,9 +234,7 @@ def visible_last_seen(db: Session, user_id: int) -> Dict[int, datetime]:
     return {row.id: row.last_seen_at for row in rows}
 
 
-def build_presence_event(
-    user_id: int, online: bool, last_seen_at: datetime | None = None
-) -> dict:
+def build_presence_event(user_id: int, online: bool, last_seen_at: datetime | None = None) -> dict:
     return {
         "type": "presence",
         "user_id": user_id,
@@ -272,9 +258,7 @@ async def publish_presence(
     )
 
 
-def build_typing_event(
-    chat_id: int, user_id: int, nickname: str | None = None
-) -> dict:
+def build_typing_event(chat_id: int, user_id: int, nickname: str | None = None) -> dict:
     return {
         "type": "typing",
         "chat_id": chat_id,
@@ -299,20 +283,12 @@ async def publish_typing(
     if services.is_favorites(chat_id):
         return
 
-    recipients = [
-        member_id
-        for member_id in services.chat_member_ids(db, chat_id)
-        if member_id != user_id
-    ]
+    recipients = [member_id for member_id in services.chat_member_ids(db, chat_id) if member_id != user_id]
     if not recipients:
         return
 
     if nickname is None:
-        row = (
-            db.query(models.User.nickname)
-            .filter(models.User.id == user_id)
-            .first()
-        )
+        row = db.query(models.User.nickname).filter(models.User.id == user_id).first()
         nickname = row.nickname if row else None
 
     await publish(recipients, build_typing_event(chat_id, user_id, nickname))
@@ -363,7 +339,7 @@ def build_chat_event(chat_id: int) -> dict:
     }
 
 
-async def publish(recipients: List[int], event: dict):
+async def publish(recipients: list[int], event: dict):
     await manager.send_to_users(recipients, event)
 
 

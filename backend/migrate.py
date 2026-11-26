@@ -8,6 +8,7 @@
 
 Скрипт использует те же переменные окружения, что и backend/database.py.
 """
+
 from __future__ import annotations
 
 import os

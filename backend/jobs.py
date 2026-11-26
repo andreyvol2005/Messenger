@@ -13,11 +13,12 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from typing import Awaitable, Callable
+from collections.abc import Awaitable, Callable
 
 from sqlalchemy import select, text
-from database import SessionLocal, engine
+
 import models
+from database import SessionLocal
 
 logger = logging.getLogger("jobs")
 
@@ -28,6 +29,7 @@ POLL_INTERVAL_SEC = 5
 # Заглушки внешних систем. Заменить на реальные клиенты при подключении S3,
 # Redis, поискового индекса, push-сервиса.
 # ---------------------------------------------------------------------------
+
 
 async def _delete_s3_media(user_id: int) -> None:
     """Удаляет медиафайлы пользователя из S3 / локального хранилища."""
@@ -69,16 +71,13 @@ _CLEANUP_STEPS: list[Callable[[int], Awaitable[None]]] = [
 
 # Экспоненциальный бэкофф между попытками: 0, 5, 15, 35 и 75 секунд.
 # Считаем от updated_at, чтобы не добавлять отдельную колонку в схему.
-_RETRY_READY = text(
-    "updated_at + make_interval("
-    "secs => LEAST(300, 5 * (power(2, attempts) - 1))"
-    ") <= now()"
-)
+_RETRY_READY = text("updated_at + make_interval(" "secs => LEAST(300, 5 * (power(2, attempts) - 1))" ") <= now()")
 
 
 # ---------------------------------------------------------------------------
 # Работа с джобами
 # ---------------------------------------------------------------------------
+
 
 async def claim_pending_job(db) -> models.AccountDeletionJob | None:
     """Забрать одну готовую к обработке джобу (FOR UPDATE SKIP LOCKED).
@@ -120,13 +119,18 @@ async def process_job_once(db) -> bool:
             job.status = "failed"  # dead-letter — требует ручного разбора
             logger.error(
                 "Джоба удаления пользователя %d перешла в failed после %d попыток: %s",
-                job.user_id, job.attempts, job.last_error,
+                job.user_id,
+                job.attempts,
+                job.last_error,
             )
         else:
             job.status = "pending"  # повторим после бэкоффа
             logger.warning(
                 "Джоба удаления пользователя %d упала, попытка %d/%d: %s",
-                job.user_id, job.attempts, max_attempts, job.last_error,
+                job.user_id,
+                job.attempts,
+                max_attempts,
+                job.last_error,
             )
 
     db.add(job)

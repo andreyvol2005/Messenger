@@ -1,6 +1,6 @@
 """Бизнес-логика чатов, сообщений и контактов. Роутеры только разбирают HTTP и зовут сюда."""
+
 from datetime import datetime, timezone
-from typing import List
 
 from fastapi import HTTPException
 from sqlalchemy import and_, func
@@ -14,7 +14,6 @@ import schemas
 import validation
 from constants import FAVORITES_CHAT_ID, FAVORITES_TITLE
 
-
 # ==========================================
 # Константы удаления аккаунта
 # ==========================================
@@ -26,6 +25,7 @@ DELETED_DISPLAY_NAME = "Удалённый пользователь"
 # ==========================================
 # Удаление аккаунта
 # ==========================================
+
 
 def schedule_delete_account(
     db: Session,
@@ -87,6 +87,7 @@ def _verify_two_fa(user_id: int, token: str) -> bool:
 # Общие помощники
 # ==========================================
 
+
 def is_favorites(chat_id: int) -> bool:
     return chat_id == FAVORITES_CHAT_ID
 
@@ -105,18 +106,16 @@ def can_access_chat(db: Session, user: models.User, chat_id: int) -> bool:
     return member is not None
 
 
-def chat_member_ids(db: Session, chat_id: int) -> List[int]:
-    return [
-        row.user_id
-        for row in db.query(models.ChatMember).filter(models.ChatMember.chat_id == chat_id).all()
-    ]
+def chat_member_ids(db: Session, chat_id: int) -> list[int]:
+    return [row.user_id for row in db.query(models.ChatMember).filter(models.ChatMember.chat_id == chat_id).all()]
 
 
 # ==========================================
 # Контакты
 # ==========================================
 
-def list_contacts(db: Session, user: models.User) -> List[models.User]:
+
+def list_contacts(db: Session, user: models.User) -> list[models.User]:
     # Удалённые пользователи не видны в контактах.
     return (
         db.query(models.User)
@@ -133,9 +132,7 @@ def list_contacts(db: Session, user: models.User) -> List[models.User]:
 def add_contact(db: Session, user: models.User, username: str) -> models.User:
     stored_username = validation.normalize_username(username)
     contact_user = (
-        db.query(models.User)
-        .filter(models.User.username == stored_username, models.User.deleted_at.is_(None))
-        .first()
+        db.query(models.User).filter(models.User.username == stored_username, models.User.deleted_at.is_(None)).first()
     )
     if not contact_user:
         raise HTTPException(
@@ -176,6 +173,7 @@ def add_contact(db: Session, user: models.User, username: str) -> models.User:
 # Чаты
 # ==========================================
 
+
 def _unread_counts(db: Session, user_id: int) -> dict[int, int]:
     """Сколько входящих сообщений пользователь ещё не прочитал в каждом чате.
 
@@ -195,13 +193,12 @@ def _unread_counts(db: Session, user_id: int) -> dict[int, int]:
         .filter(
             models.Message.sender_id != user_id,
             models.Message.is_deleted.isnot(True),
-            models.Message.id
-            > func.coalesce(models.ChatMember.last_read_message_id, 0),
+            models.Message.id > func.coalesce(models.ChatMember.last_read_message_id, 0),
         )
         .group_by(models.Message.chat_id)
         .all()
     )
-    return {chat_id: count for chat_id, count in rows}
+    return dict(rows)
 
 
 def list_chats(db: Session, user: models.User) -> schemas.ChatListResponse:
@@ -235,9 +232,7 @@ def list_chats(db: Session, user: models.User) -> schemas.ChatListResponse:
 
     contact_ids = {
         row.contact_user_id
-        for row in db.query(models.Contact.contact_user_id)
-        .filter(models.Contact.user_id == user.id)
-        .all()
+        for row in db.query(models.Contact.contact_user_id).filter(models.Contact.user_id == user.id).all()
     }
     unread_by_chat = _unread_counts(db, user.id)
 
@@ -293,18 +288,14 @@ def list_chats(db: Session, user: models.User) -> schemas.ChatListResponse:
                 is_contact=is_contact,
                 unread_count=unread_by_chat.get(chat.id, 0),
                 chat_type=chat.type,
-                members_count=(
-                    group_counts.get(chat.id)
-                    if chat.type == "group"
-                    else None
-                ),
+                members_count=(group_counts.get(chat.id) if chat.type == "group" else None),
             )
         )
 
     return schemas.ChatListResponse(chats=chats)
 
 
-def _group_member_counts(db: Session, chat_ids: List[int]) -> dict[int, int]:
+def _group_member_counts(db: Session, chat_ids: list[int]) -> dict[int, int]:
     """Число участников для каждого группового чата одним запросом."""
     if not chat_ids:
         return {}
@@ -314,12 +305,10 @@ def _group_member_counts(db: Session, chat_ids: List[int]) -> dict[int, int]:
         .group_by(models.ChatMember.chat_id)
         .all()
     )
-    return {chat_id: count for chat_id, count in rows}
+    return dict(rows)
 
 
-def _message_preview(
-    text: str | None, media_url: str | None, is_deleted: bool = False
-) -> str | None:
+def _message_preview(text: str | None, media_url: str | None, is_deleted: bool = False) -> str | None:
     """Превью для списка чатов: у сообщения только с картинкой текста нет."""
     if is_deleted:
         return "Сообщение удалено"
@@ -346,9 +335,7 @@ def create_or_get_chat(db: Session, user: models.User, username: str) -> schemas
     # Нельзя создать чат с удалённым пользователем.
     stored_username = validation.normalize_username(username)
     other = (
-        db.query(models.User)
-        .filter(models.User.username == stored_username, models.User.deleted_at.is_(None))
-        .first()
+        db.query(models.User).filter(models.User.username == stored_username, models.User.deleted_at.is_(None)).first()
     )
     if not other:
         raise HTTPException(status_code=404, detail="Пользователь с таким username не найден")
@@ -390,10 +377,12 @@ def _insert_private_chat(db: Session, pair_key: str, first_id: int, second_id: i
     db.add(chat)
     try:
         db.flush()
-        db.add_all([
-            models.ChatMember(chat_id=chat.id, user_id=first_id),
-            models.ChatMember(chat_id=chat.id, user_id=second_id),
-        ])
+        db.add_all(
+            [
+                models.ChatMember(chat_id=chat.id, user_id=first_id),
+                models.ChatMember(chat_id=chat.id, user_id=second_id),
+            ]
+        )
         db.commit()
     except IntegrityError:
         # Гонка: параллельный запрос успел создать тот же чат раньше
@@ -410,6 +399,7 @@ def _insert_private_chat(db: Session, pair_key: str, first_id: int, second_id: i
 # Групповые чаты
 # ==========================================
 
+
 def _get_chat(db: Session, chat_id: int) -> models.Chat:
     chat = db.query(models.Chat).filter(models.Chat.id == chat_id).first()
     if not chat:
@@ -417,9 +407,7 @@ def _get_chat(db: Session, chat_id: int) -> models.Chat:
     return chat
 
 
-def _require_group_member(
-    db: Session, user: models.User, chat_id: int
-) -> models.Chat:
+def _require_group_member(db: Session, user: models.User, chat_id: int) -> models.Chat:
     """Групповой чат, в котором текущий пользователь состоит участником.
 
     Ролей нет: любого участника достаточно и для смены названия/аватара,
@@ -434,11 +422,7 @@ def _require_group_member(
 
 
 def _group_chat_response(db: Session, chat: models.Chat) -> schemas.ChatResponse:
-    count = (
-        db.query(func.count(models.ChatMember.user_id))
-        .filter(models.ChatMember.chat_id == chat.id)
-        .scalar()
-    ) or 0
+    count = (db.query(func.count(models.ChatMember.user_id)).filter(models.ChatMember.chat_id == chat.id).scalar()) or 0
     return schemas.ChatResponse(
         id=chat.id,
         title=chat.name or "Группа",
@@ -457,9 +441,7 @@ def _serialize_member(user: models.User) -> schemas.ChatMemberResponse:
     )
 
 
-def create_group_chat(
-    db: Session, user: models.User, name: str, user_ids: List[int]
-) -> schemas.ChatResponse:
+def create_group_chat(db: Session, user: models.User, name: str, user_ids: list[int]) -> schemas.ChatResponse:
     """Создаёт группу, добавляя в неё автора и выбранных пользователей."""
     title = validation.validate_chat_name(name)
 
@@ -490,10 +472,9 @@ def create_group_chat(
     db.add(chat)
     try:
         db.flush()
-        db.add_all([
-            models.ChatMember(chat_id=chat.id, user_id=member_id)
-            for member_id in sorted(member_ids | {user.id})
-        ])
+        db.add_all(
+            [models.ChatMember(chat_id=chat.id, user_id=member_id) for member_id in sorted(member_ids | {user.id})]
+        )
         db.commit()
     except Exception:
         db.rollback()
@@ -503,9 +484,7 @@ def create_group_chat(
     return _group_chat_response(db, chat)
 
 
-def list_group_members(
-    db: Session, user: models.User, chat_id: int
-) -> List[schemas.ChatMemberResponse]:
+def list_group_members(db: Session, user: models.User, chat_id: int) -> list[schemas.ChatMemberResponse]:
     _require_group_member(db, user, chat_id)
     members = (
         db.query(models.User)
@@ -517,9 +496,7 @@ def list_group_members(
     return [_serialize_member(member) for member in members]
 
 
-def add_group_member(
-    db: Session, user: models.User, chat_id: int, user_id: int
-) -> schemas.ChatMemberResponse:
+def add_group_member(db: Session, user: models.User, chat_id: int, user_id: int) -> schemas.ChatMemberResponse:
     _require_group_member(db, user, chat_id)
 
     target = (
@@ -561,9 +538,7 @@ def add_group_member(
     return _serialize_member(target)
 
 
-def remove_group_member(
-    db: Session, user: models.User, chat_id: int, user_id: int
-) -> None:
+def remove_group_member(db: Session, user: models.User, chat_id: int, user_id: int) -> None:
     _require_group_member(db, user, chat_id)
 
     member = (
@@ -625,6 +600,7 @@ def update_group_chat(
 # Сообщения
 # ==========================================
 
+
 def _receipt_bounds(db: Session, chat_id: int, user_id: int) -> tuple[int, int]:
     """До какого сообщения дошли остальные участники чата.
 
@@ -649,9 +625,7 @@ def _receipt_bounds(db: Session, chat_id: int, user_id: int) -> tuple[int, int]:
     return delivered, read
 
 
-def _message_status(
-    msg: models.Message, user_id: int, delivered_to: int, read_by: int
-) -> str:
+def _message_status(msg: models.Message, user_id: int, delivered_to: int, read_by: int) -> str:
     # Галочки есть только у своих сообщений, но статус считаем для всех:
     # так ответ API одинаково понятен и на случай будущих групповых чатов.
     if msg.sender_id != user_id:
@@ -695,11 +669,7 @@ def serialize_message(
 
 
 def _message_sender_nickname(db: Session, msg: models.Message) -> str | None:
-    row = (
-        db.query(models.User.nickname)
-        .filter(models.User.id == msg.sender_id)
-        .first()
-    )
+    row = db.query(models.User.nickname).filter(models.User.id == msg.sender_id).first()
     return row[0] if row else None
 
 
@@ -710,11 +680,7 @@ def _serialize_for_user(
     view_chat_id: int | None = None,
 ) -> schemas.MessageResponse:
     """Сериализация действия пользователя: ник, чат и актуальные галочки."""
-    nickname = (
-        user.nickname
-        if msg.sender_id == user.id
-        else _message_sender_nickname(db, msg)
-    )
+    nickname = user.nickname if msg.sender_id == user.id else _message_sender_nickname(db, msg)
     chat_id = view_chat_id if view_chat_id is not None else msg.chat_id
     status = "sent"
     if chat_id not in (None, FAVORITES_CHAT_ID):
@@ -723,15 +689,11 @@ def _serialize_for_user(
     return serialize_message(msg, nickname, status, view_chat_id=chat_id)
 
 
-def list_messages(
-    db: Session, user: models.User, chat_id: int, limit: int = 50
-) -> List[schemas.MessageResponse]:
+def list_messages(db: Session, user: models.User, chat_id: int, limit: int = 50) -> list[schemas.MessageResponse]:
     if not can_access_chat(db, user, chat_id):
         raise HTTPException(status_code=403, detail="No access to this chat")
 
-    query = db.query(models.Message, models.User.nickname).join(
-        models.User, models.User.id == models.Message.sender_id
-    )
+    query = db.query(models.Message, models.User.nickname).join(models.User, models.User.id == models.Message.sender_id)
     if is_favorites(chat_id):
         # «Избранное» приватно: заметки и копии принадлежат только владельцу
         query = query.filter(
@@ -742,9 +704,7 @@ def list_messages(
         # Удалённые сообщения остаются в ленте заглушками
         query = query.filter(models.Message.chat_id == chat_id)
 
-    rows = query.order_by(
-        models.Message.created_at.desc(), models.Message.id.desc()
-    ).limit(limit).all()
+    rows = query.order_by(models.Message.created_at.desc(), models.Message.id.desc()).limit(limit).all()
     rows.reverse()  # в чате сообщения идут снизу вверх
 
     delivered_to, read_by = (0, 0)
@@ -906,9 +866,7 @@ def _get_message(db: Session, message_id: int) -> models.Message:
     return msg
 
 
-def _require_own_message(
-    db: Session, user: models.User, msg: models.Message
-) -> None:
+def _require_own_message(db: Session, user: models.User, msg: models.Message) -> None:
     if msg.sender_id != user.id:
         raise HTTPException(
             status_code=403,
@@ -952,11 +910,9 @@ def edit_message(
     return _serialize_for_user(db, user, msg)
 
 
-def delete_messages(
-    db: Session, user: models.User, message_ids: List[int]
-) -> List[schemas.MessageRemovedResponse]:
+def delete_messages(db: Session, user: models.User, message_ids: list[int]) -> list[schemas.MessageRemovedResponse]:
     """Удаляет свои сообщения: заглушка в чате или копия из «Избранного»."""
-    ids: List[int] = []
+    ids: list[int] = []
     for raw_id in message_ids:
         message_id = int(raw_id)
         if message_id not in ids:
@@ -964,11 +920,7 @@ def delete_messages(
     if not ids:
         raise HTTPException(status_code=400, detail="Не выбрано ни одного сообщения")
 
-    rows = (
-        db.query(models.Message)
-        .filter(models.Message.id.in_(ids))
-        .all()
-    )
+    rows = db.query(models.Message).filter(models.Message.id.in_(ids)).all()
     by_id = {msg.id: msg for msg in rows}
     if len(by_id) != len(ids):
         raise HTTPException(status_code=404, detail="Сообщение не найдено")
@@ -982,12 +934,10 @@ def delete_messages(
                 detail="Сообщение уже удалено",
             )
 
-    results: List[schemas.MessageRemovedResponse] = []
+    results: list[schemas.MessageRemovedResponse] = []
     for msg in ordered:
         # Все ответы на удалённый оригинал должны показать заглушку в цитате.
-        db.query(models.Message).filter(
-            models.Message.reply_to_id == msg.id
-        ).update(
+        db.query(models.Message).filter(models.Message.reply_to_id == msg.id).update(
             {models.Message.reply_to_text: "Сообщение удалено"},
             synchronize_session=False,
         )
@@ -995,9 +945,7 @@ def delete_messages(
         if msg.chat_id is None:
             # В «Избранном» копия исчезает без заглушки. Ссылку на неё
             # обнуляем вручную: SQLite в тестах не применяет ON DELETE SET NULL.
-            db.query(models.Message).filter(
-                models.Message.reply_to_id == msg.id
-            ).update(
+            db.query(models.Message).filter(models.Message.reply_to_id == msg.id).update(
                 {models.Message.reply_to_id: None},
                 synchronize_session=False,
             )
@@ -1029,8 +977,8 @@ def delete_messages(
     return results
 
 
-def _unique_positive_ids(values: List[int], label: str) -> List[int]:
-    result: List[int] = []
+def _unique_positive_ids(values: list[int], label: str) -> list[int]:
+    result: list[int] = []
     for raw in values:
         value = int(raw)
         if value not in result:
@@ -1043,10 +991,10 @@ def _unique_positive_ids(values: List[int], label: str) -> List[int]:
 def forward_messages(
     db: Session,
     user: models.User,
-    message_ids: List[int],
-    chat_ids: List[int],
+    message_ids: list[int],
+    chat_ids: list[int],
     keep_reply: bool = False,
-) -> List[schemas.MessageResponse]:
+) -> list[schemas.MessageResponse]:
     """Пересылает каждое сообщение в каждый выбранный чат (N × M копий)."""
     ids = _unique_positive_ids(message_ids, "сообщения")
     targets = _unique_positive_ids(chat_ids, "чаты")
@@ -1078,7 +1026,7 @@ def forward_messages(
         elif not can_access_chat(db, user, source.chat_id):
             raise HTTPException(status_code=403, detail="Нет доступа к сообщению")
 
-    created: List[tuple[models.Message, int]] = []
+    created: list[tuple[models.Message, int]] = []
     for target in targets:
         for source, nickname in ordered:
             # forwarded_from_nickname — немедленный отправитель оригинала,
@@ -1151,9 +1099,7 @@ def update_message_receipt(
 
     # GREATEST в самом UPDATE защищает от гонки двух вкладок: меньшая отметка
     # никогда не перезапишет большую.
-    delivered = func.greatest(
-        func.coalesce(models.ChatMember.last_delivered_message_id, 0), message_id
-    )
+    delivered = func.greatest(func.coalesce(models.ChatMember.last_delivered_message_id, 0), message_id)
     values = {models.ChatMember.last_delivered_message_id: delivered}
     if mark_read:
         values[models.ChatMember.last_read_message_id] = func.greatest(

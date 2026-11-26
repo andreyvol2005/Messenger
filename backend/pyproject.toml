@@ -1,0 +1,69 @@
+# ── Ruff ─────────────────────────────────────────────────────────────────────
+[tool.ruff]
+target-version = "py310"
+line-length    = 120           # was 100; raised to avoid E501 on existing long lines
+src            = ["."]
+exclude        = ["venv", ".venv", "migrations"]
+
+[tool.ruff.lint]
+select = [
+    "E",    # pycodestyle errors
+    "W",    # pycodestyle warnings
+    "F",    # pyflakes
+    "I",    # isort
+    "B",    # flake8-bugbear
+    "C4",   # flake8-comprehensions
+    "UP",   # pyupgrade
+    "N",    # pep8-naming
+]
+ignore = [
+    # Russian-language comments / docstrings / strings are intentional — do not flag
+    "RUF001",  # ambiguous unicode in string literals
+    "RUF002",  # ambiguous unicode in docstrings
+    "RUF003",  # ambiguous unicode in comments
+    # SQLAlchemy column filters require `== False` / `== True`, never `is False`
+    "E712",
+    # FastAPI Depends() as default-argument call — expected pattern
+    "B008",
+    # try-except-pass in async WebSocket handlers — intentional defensive pattern
+    "S110",
+    # raise without chaining — gradual adoption
+    "B904",
+    # exception class names
+    "N818",
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S101", "S105", "S106", "S107", "S310", "B011"]
+
+[tool.ruff.lint.isort]
+known-first-party = [
+    "auth", "constants", "database", "events", "jobs",
+    "main", "media", "models", "schemas", "services", "validation",
+    "routers",
+]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+line-ending  = "lf"
+
+# ── Mypy ─────────────────────────────────────────────────────────────────────
+[tool.mypy]
+python_version        = "3.12"
+ignore_missing_imports = true
+# Non-strict mode: existing code is largely unannotated.
+# Tighten these gradually as type hints are added.
+check_untyped_defs    = false   # don't analyse bodies of unannotated functions
+disallow_untyped_defs = false   # don't require annotations on all functions
+warn_return_any       = false
+warn_unused_ignores   = false
+no_implicit_optional  = false
+exclude               = ["venv", ".venv", "migrations"]
+
+# ── Pytest ───────────────────────────────────────────────────────────────────
+[tool.pytest.ini_options]
+asyncio_mode     = "auto"
+testpaths        = ["tests"]
+python_files     = ["test_*.py"]
+python_functions = ["test_*"]

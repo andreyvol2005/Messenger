@@ -39,9 +39,7 @@ async def _read_image_upload(file: UploadFile) -> tuple[bytes, str]:
     return data, extension
 
 
-def _action_recipients(
-    db: Session, user: models.User, chat_id: int
-) -> list[int]:
+def _action_recipients(db: Session, user: models.User, chat_id: int) -> list[int]:
     if chat_id == FAVORITES_CHAT_ID:
         return [user.id]
     return services.chat_member_ids(db, chat_id)
@@ -64,9 +62,7 @@ def send_message(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user),
 ):
-    result = services.create_message(
-        db, current_user, payload.chat_id, payload.text, payload.reply_to_id
-    )
+    result = services.create_message(db, current_user, payload.chat_id, payload.text, payload.reply_to_id)
 
     # Рассылка идёт после ответа, иначе WebSocket-событие обгоняет HTTP-ответ:
     # клиент получил бы событие раньше, чем узнал id своего сообщения, и показал
@@ -93,9 +89,7 @@ async def upload_image(
     data, extension = await _read_image_upload(file)
     media_url = media.save_image(data, extension)
     try:
-        result = services.create_image_message(
-            db, current_user, chat_id, media_url, caption, reply_to_id
-        )
+        result = services.create_image_message(db, current_user, chat_id, media_url, caption, reply_to_id)
     except Exception:
         # Сообщение не сохранилось — файл-сирота на диске не нужен
         media.delete_image(media_url)
@@ -174,9 +168,7 @@ async def edit_message(
         text = payload.get("text")
         if text is not None and not isinstance(text, str):
             raise HTTPException(status_code=422, detail="Текст должен быть строкой")
-    elif content_type.startswith("multipart/form-data") or content_type.startswith(
-        "application/x-www-form-urlencoded"
-    ):
+    elif content_type.startswith("multipart/form-data") or content_type.startswith("application/x-www-form-urlencoded"):
         form = await request.form()
         text = form.get("text")
         file = form.get("file")

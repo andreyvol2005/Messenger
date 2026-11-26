@@ -63,9 +63,7 @@ async def websocket_endpoint(websocket: WebSocket, user_id: int, token: str = ""
             # Запоминаем активность до рассылки: если процесс упадёт, у
             # собеседников останется корректное «был в …».
             last_seen = datetime.now(timezone.utc)
-            db.query(models.User).filter(models.User.id == user_id).update(
-                {models.User.last_seen_at: last_seen}
-            )
+            db.query(models.User).filter(models.User.id == user_id).update({models.User.last_seen_at: last_seen})
             db.commit()
             # Первая вкладка пользователя: контакты и собеседники видят зелёную точку
             try:
@@ -100,9 +98,7 @@ async def websocket_endpoint(websocket: WebSocket, user_id: int, token: str = ""
 
                     try:
                         if services.can_access_chat(db, user, chat_id):
-                            await events.publish_typing(
-                                db, user_id, chat_id, user.nickname
-                            )
+                            await events.publish_typing(db, user_id, chat_id, user.nickname)
                     finally:
                         # Проверка доступа и получатели — обычные чтения.
                         release_read_transaction(db)
@@ -126,9 +122,7 @@ async def websocket_endpoint(websocket: WebSocket, user_id: int, token: str = ""
                     return
 
                 try:
-                    result = services.create_message(
-                        db, user, chat_id, text, data.get("reply_to_id")
-                    )
+                    result = services.create_message(db, user, chat_id, text, data.get("reply_to_id"))
                 except HTTPException as exc:
                     # Чтение доступа к чату могло открыть транзакцию
                     release_read_transaction(db)
