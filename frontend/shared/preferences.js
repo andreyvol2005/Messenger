@@ -1,8 +1,9 @@
-// Клиентские настройки интерфейса: тема, обои чата и масштаб.
+// Клиентские настройки интерфейса: тема, дизайн, обои чата и масштаб.
 // Всё хранится в localStorage — база данных и серверные настройки не меняются.
 
 import { CONFIG } from "./config.js";
 import { Session } from "./session.js";
+import { Design } from "./designs.js";
 import { Theme } from "./theme.js";
 
 const MIN_SCALE = 100;
@@ -76,6 +77,9 @@ export const Preferences = {
     // Применяет все сохранённые настройки при загрузке страницы.
     applyAll() {
         Theme.apply(Session.theme());
+        // Дизайн применяется после темы: он может зафиксировать светлую
+        // или тёмную основу поверх выбора пользователя.
+        Design.apply();
         this.applyScale(this.scale(), false);
         this.applyWallpaper(this.wallpaper(), false);
     }

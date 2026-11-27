@@ -1,0 +1,1192 @@
+/* Дизайны интерфейса. Дизайн включается атрибутом data-design на <body>
+   (shared/designs.js) и переопределяет цветовые токены base.css, шрифты
+   и форму основных элементов. Параметры дизайна приходят CSS-переменными
+   --ds-* и атрибутами data-ds-*. «Классика» ничего не переопределяет.
+
+   Порядок важен: файл подключается последним, поэтому при одинаковой
+   специфичности его правила побеждают body[data-theme="light"]. */
+
+/* ---------- Общее для всех дизайнов ---------- */
+
+/* Базовые стили красят входящий пузырь в --bg-input; в дизайнах у него
+   свой токен --bubble-in. Текст и время в своих пузырях — свой контраст. */
+body[data-design] .message-bubble,
+body[data-design] .m-bubble {
+    background: var(--bubble-in);
+}
+
+body[data-design] .message.mine .message-bubble,
+body[data-design] .m-message.mine .m-bubble {
+    background: var(--bubble-out);
+    color: var(--ds-on-out, inherit);
+}
+
+/* Удалённое сообщение — заглушка своего цвета */
+body[data-design] .message-bubble.is-deleted,
+body[data-design] .m-bubble.is-deleted {
+    background: var(--bubble-deleted);
+}
+
+/* Тени пузырей у дизайнов свои, поэтому выделение рисуем рамкой */
+body[data-design] .message.selected > .message-bubble,
+body[data-design] .m-message.selected > .m-bubble {
+    outline: 2px solid var(--select);
+    outline-offset: 2px;
+}
+
+/* В дизайнах с отступами между панелями ручка ширины сайдбара прозрачная */
+body[data-design="glass"] .resizer,
+body[data-design="brutal"] .resizer,
+body[data-design="retro"] .resizer,
+body[data-design="air"] .resizer {
+    background: transparent;
+}
+
+body[data-design="glass"] .resizer:hover,
+body[data-design="brutal"] .resizer:hover,
+body[data-design="retro"] .resizer:hover,
+body[data-design="air"] .resizer:hover {
+    background: var(--accent);
+}
+
+body[data-design] .message.mine .message-time,
+body[data-design] .m-message.mine .m-message-time {
+    color: var(--ds-on-out-muted, var(--text-muted));
+}
+
+/* ======================================================
+   Midnight
+   ====================================================== */
+
+body[data-design="midnight"] {
+    --suggestion-bg: #151a24;
+    --suggestion-border: #232834;
+    --suggestion-text: #c3c9d4;
+    --suggestion-muted: #8b93a3;
+    --bg: #0e1117;
+    --bg-rail: #0b0d12;
+    --bg-panel: #11141a;
+    --bg-elevated: #11141a;
+    --bg-input: #171b23;
+    --bg-soft: #141820;
+    --bg-hover: #1b2029;
+    --bg-active: #1e2430;
+    --bg-control: #1e2430;
+    --bg-control-strong: #252b37;
+    --bg-control-hover: #2c3340;
+    --border: #232834;
+    --border-soft: #1a1e27;
+    --border-strong: #2c3340;
+    --border-hover: #3a4252;
+    --text: #edeff3;
+    --text-strong: #fff;
+    --text-soft: #c3c9d4;
+    --text-muted: #8b93a3;
+    --text-dim: #6b7383;
+    --accent: var(--ds-accent);
+    --accent-hover: color-mix(in srgb, var(--ds-accent) 85%, #000);
+    --accent-active: color-mix(in srgb, var(--ds-accent) 70%, #000);
+    --accent-light: #8fb0ff;
+    --accent-soft: #8fb0ff;
+    --select: var(--ds-accent);
+    --bubble-in: #1c212b;
+    --bubble-out: var(--ds-accent);
+    --bubble-deleted: #161a21;
+    --sender: #8fb0ff;
+    --quote-name: #8fb0ff;
+    --quote-border: #8fb0ff;
+    --status-read: #cfe0ff;
+    --composer-bg: #171b23;
+    --composer-border: #2c3340;
+    --selection-bg: #1b2232;
+    --selection-border: #2c3340;
+    --ds-on-out: #fff;
+    --ds-on-out-muted: rgba(255, 255, 255, 0.78);
+
+    font-family: Manrope, system-ui, sans-serif;
+}
+
+body[data-design="midnight"] .chat-sidebar,
+body[data-design="midnight"] .app-rail {
+    border-right-color: var(--border-soft);
+}
+
+body[data-design="midnight"] .chat-item {
+    margin: 2px 8px;
+    border-bottom: none;
+    border-radius: 14px;
+}
+
+body[data-design="midnight"] .chat-header {
+    background: var(--bg-panel);
+    border-bottom-color: var(--border-soft);
+}
+
+body[data-design="midnight"] .message-bubble,
+body[data-design="midnight"] .m-bubble {
+    padding: 10px 14px 8px;
+    border-radius: 18px 18px 18px 6px;
+}
+
+body[data-design="midnight"] .message.mine .message-bubble,
+body[data-design="midnight"] .m-message.mine .m-bubble {
+    border-radius: 18px 18px 6px 18px;
+}
+
+body[data-design="midnight"] .message-form textarea,
+body[data-design="midnight"] .m-composer textarea {
+    border-radius: 16px;
+    background: var(--bg-input);
+    border: 1px solid var(--border);
+}
+
+body[data-design="midnight"] .message-form button,
+body[data-design="midnight"] .m-send-btn {
+    border-radius: 16px;
+}
+
+body[data-design="midnight"][data-ds-dots="on"]:not(.has-wallpaper) .messages,
+body[data-design="midnight"][data-ds-dots="on"]:not(.has-wallpaper) .m-messages {
+    background-image: radial-gradient(rgba(255, 255, 255, 0.045) 1px, transparent 1px);
+    background-size: 22px 22px;
+}
+
+/* ======================================================
+   Liquid Glass
+   ====================================================== */
+
+body[data-design="glass"] {
+    --bg: var(--ds-g-base);
+    --bg-rail: transparent;
+    --bg-panel: rgba(28, 20, 62, 0.92);
+    --bg-elevated: rgba(28, 20, 62, 0.92);
+    --bg-input: rgba(255, 255, 255, 0.12);
+    --bg-soft: rgba(255, 255, 255, 0.08);
+    --bg-hover: rgba(255, 255, 255, 0.1);
+    --bg-active: rgba(255, 255, 255, 0.18);
+    --bg-control: rgba(255, 255, 255, 0.14);
+    --bg-control-strong: rgba(255, 255, 255, 0.2);
+    --bg-control-hover: rgba(255, 255, 255, 0.26);
+    --border: rgba(255, 255, 255, 0.2);
+    --border-soft: rgba(255, 255, 255, 0.14);
+    --border-strong: rgba(255, 255, 255, 0.3);
+    --border-hover: rgba(255, 255, 255, 0.42);
+    --text: #fff;
+    --text-strong: #fff;
+    --text-soft: rgba(255, 255, 255, 0.88);
+    --text-muted: rgba(255, 255, 255, 0.74);
+    --text-dim: rgba(255, 255, 255, 0.58);
+    --accent: var(--ds-accent);
+    --accent-hover: color-mix(in srgb, var(--ds-accent) 85%, #000);
+    --accent-active: color-mix(in srgb, var(--ds-accent) 70%, #000);
+    --accent-light: #cfe0ff;
+    --accent-soft: #cfe0ff;
+    --select: var(--ds-accent);
+    --bubble-in: rgba(255, 255, 255, 0.16);
+    --bubble-out: var(--ds-accent);
+    --bubble-deleted: rgba(255, 255, 255, 0.08);
+    --sender: #fff;
+    --quote-name: #fff;
+    --quote-text: rgba(255, 255, 255, 0.8);
+    --quote-border: #fff;
+    --quote-bg: rgba(255, 255, 255, 0.12);
+    --status-sent: rgba(255, 255, 255, 0.7);
+    --status-delivered: rgba(255, 255, 255, 0.85);
+    --status-read: #fff;
+    --composer-bg: rgba(255, 255, 255, 0.12);
+    --composer-border: rgba(255, 255, 255, 0.24);
+    --selection-bg: rgba(255, 255, 255, 0.14);
+    --selection-border: rgba(255, 255, 255, 0.22);
+    --suggestion-bg: rgba(255, 255, 255, 0.12);
+    --suggestion-border: rgba(255, 255, 255, 0.22);
+    --suggestion-text: #fff;
+    --overlay: rgba(10, 6, 30, 0.45);
+    --ds-on-out: #fff;
+    --ds-on-out-muted: rgba(255, 255, 255, 0.85);
+    --ds-glass:
+        linear-gradient(140deg, rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0.04)),
+        rgba(16, 10, 40, var(--ds-glass-tint));
+
+    font-family: Inter, system-ui, sans-serif;
+    letter-spacing: -0.01em;
+}
+
+/* Градиент живёт в псевдоэлементе #app-root: его можно поворачивать
+   и анимировать, не трогая сами панели. */
+body[data-design="glass"] #app-root {
+    isolation: isolate;
+    background: var(--ds-g-base);
+}
+
+body[data-design="glass"] #app-root::before {
+    content: "";
+    position: absolute;
+    inset: -50%;
+    z-index: -1;
+    pointer-events: none;
+    background:
+        radial-gradient(22% 26% at 30% 34%, var(--ds-g1) 0, transparent 100%),
+        radial-gradient(20% 24% at 70% 30%, var(--ds-g2) 0, transparent 100%),
+        radial-gradient(26% 30% at 64% 70%, var(--ds-g3) 0, transparent 100%),
+        radial-gradient(22% 26% at 34% 72%, var(--ds-g4) 0, transparent 100%);
+    opacity: 0.85;
+    transform: rotate(var(--ds-g-angle, 0deg));
+}
+
+body[data-design="glass"][data-ds-animate="on"] #app-root::before {
+    animation: ds-glass-drift 60s linear infinite;
+}
+
+@keyframes ds-glass-drift {
+    from { transform: rotate(var(--ds-g-angle, 0deg)); }
+    to { transform: rotate(calc(var(--ds-g-angle, 0deg) + 360deg)); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    body[data-design="glass"][data-ds-animate="on"] #app-root::before {
+        animation: none;
+    }
+}
+
+body[data-design="glass"] .chat-layout,
+body[data-design="glass"] .chat-main,
+body[data-design="glass"] .chat-window,
+body[data-design="glass"] .m-page,
+body[data-design="glass"] .m-chat-list,
+body[data-design="glass"]:not(.has-wallpaper) .messages,
+body[data-design="glass"]:not(.has-wallpaper) .m-messages {
+    background-color: transparent;
+}
+
+body[data-design="glass"] .chat-layout {
+    gap: 12px;
+    padding: 12px;
+}
+
+/* Стеклянный материал: панели, шапки, меню и диалоги */
+body[data-design="glass"] .app-rail,
+body[data-design="glass"] .chat-sidebar,
+body[data-design="glass"] .chat-header,
+body[data-design="glass"] .message-form,
+body[data-design="glass"] .side-menu,
+body[data-design="glass"] .settings-dialog,
+body[data-design="glass"] .profile-dialog,
+body[data-design="glass"] .contacts-dialog,
+body[data-design="glass"] .group-create-dialog,
+body[data-design="glass"] .peer-info,
+body[data-design="glass"] .ma-menu,
+body[data-design="glass"] .ma-dialog,
+body[data-design="glass"] .m-header,
+body[data-design="glass"] .m-composer,
+body[data-design="glass"] .m-drawer,
+body[data-design="glass"] .m-modal-dialog,
+body[data-design="glass"] .m-peer-info-content {
+    background: var(--ds-glass);
+    -webkit-backdrop-filter: blur(var(--ds-glass-blur)) saturate(180%);
+    backdrop-filter: blur(var(--ds-glass-blur)) saturate(180%);
+    border-color: rgba(255, 255, 255, 0.24);
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.45),
+        inset 0 -1px 1px rgba(255, 255, 255, 0.08),
+        0 20px 50px rgba(8, 4, 36, 0.3);
+}
+
+body[data-design="glass"] .app-rail,
+body[data-design="glass"] .chat-sidebar {
+    border: 1px solid rgba(255, 255, 255, 0.24);
+    border-radius: 26px;
+}
+
+body[data-design="glass"] .chat-main {
+    border-radius: 26px;
+}
+
+body[data-design="glass"] .chat-header {
+    margin: 0 0 8px;
+    border: 1px solid rgba(255, 255, 255, 0.24);
+    border-radius: 999px;
+}
+
+body[data-design="glass"] .message-form {
+    margin-top: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.24);
+    border-radius: 32px;
+}
+
+body[data-design="glass"] .message-form textarea,
+body[data-design="glass"] .m-composer textarea {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: transparent;
+    color: #fff;
+}
+
+body[data-design="glass"] .chat-item {
+    margin: 2px 8px;
+    border-bottom: none;
+    border-radius: 18px;
+}
+
+body[data-design="glass"] .chat-item.active {
+    background: linear-gradient(140deg, rgba(255, 255, 255, 0.3), rgba(255, 255, 255, 0.12));
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6);
+}
+
+body[data-design="glass"] .message-bubble,
+body[data-design="glass"] .m-bubble {
+    padding: 10px 14px 8px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 20px 20px 20px 7px;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.3);
+}
+
+body[data-design="glass"] .message.mine .message-bubble,
+body[data-design="glass"] .m-message.mine .m-bubble {
+    border-color: transparent;
+    border-radius: 20px 20px 7px 20px;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.4), 0 8px 22px rgba(8, 4, 36, 0.25);
+}
+
+body[data-design="glass"] .m-header {
+    margin: 8px 10px 0;
+    border: 1px solid rgba(255, 255, 255, 0.24);
+    border-radius: 28px;
+}
+
+body[data-design="glass"] .m-composer {
+    margin: 0 10px 10px;
+    border: 1px solid rgba(255, 255, 255, 0.24);
+    border-radius: 30px;
+}
+
+/* ======================================================
+   Бумага
+   ====================================================== */
+
+body[data-design="paper"] {
+    --suggestion-bg: #fff;
+    --suggestion-border: #dcd9d2;
+    --suggestion-text: #151515;
+    --suggestion-muted: #5e5b55;
+    --bg: #f3f1ec;
+    --bg-rail: #f3f1ec;
+    --bg-panel: #faf9f6;
+    --bg-elevated: #faf9f6;
+    --bg-input: #fff;
+    --bg-soft: #f7f5f0;
+    --bg-hover: #eae7e0;
+    --bg-active: #e2ded5;
+    --bg-control: #eae7e0;
+    --bg-control-strong: #dcd8cf;
+    --bg-control-hover: #d2cdc2;
+    --border: #dcd9d2;
+    --border-soft: #e6e3dc;
+    --border-strong: #151515;
+    --border-hover: #151515;
+    --text: #151515;
+    --text-strong: #000;
+    --text-soft: #2e2c29;
+    --text-muted: #5e5b55;
+    --text-dim: #7d7970;
+    --accent: #151515;
+    --accent-hover: #333;
+    --accent-active: #000;
+    --accent-light: var(--ds-accent);
+    --accent-soft: var(--ds-accent);
+    --select: var(--ds-accent);
+    --bubble-in: #fff;
+    --bubble-out: #151515;
+    --bubble-deleted: #efece6;
+    --sender: #151515;
+    --quote-name: #151515;
+    --quote-border: var(--ds-accent);
+    --status-read: var(--ds-accent);
+    --composer-bg: #fff;
+    --composer-border: #151515;
+    --ds-on-out: #faf9f6;
+    --ds-on-out-muted: #cfcac0;
+
+    font-family: "Golos Text", system-ui, sans-serif;
+}
+
+body[data-design="paper"] .message-time,
+body[data-design="paper"] .m-message-time,
+body[data-design="paper"] .chat-status,
+body[data-design="paper"] .m-chat-status {
+    font-family: "JetBrains Mono", ui-monospace, monospace;
+    letter-spacing: 0.02em;
+}
+
+:where(body[data-design="paper"]) button,
+:where(body[data-design="paper"]) input,
+:where(body[data-design="paper"]) textarea,
+body[data-design="paper"] .message-form textarea,
+body[data-design="paper"] .m-composer textarea,
+body[data-design="paper"] .message-form button,
+body[data-design="paper"] .m-send-btn {
+    border-radius: 0;
+}
+
+body[data-design="paper"] .chat-sidebar,
+body[data-design="paper"] .app-rail {
+    border-right: 1.5px solid #151515;
+}
+
+body[data-design="paper"] .chat-header,
+body[data-design="paper"] .m-header {
+    border-bottom: 1.5px solid #151515;
+    background: var(--bg-panel);
+}
+
+body[data-design="paper"] .chat-header h3,
+body[data-design="paper"] .m-title {
+    font-size: 26px;
+    font-weight: 800;
+    letter-spacing: -0.03em;
+}
+
+body[data-design="paper"] .chat-item.active {
+    background: #151515;
+    color: #faf9f6;
+}
+
+body[data-design="paper"] .chat-item.active .chat-item-preview {
+    color: #cfcac0;
+}
+
+body[data-design="paper"] .chat-item-unread,
+body[data-design="paper"] .m-chat-unread {
+    background: var(--ds-accent);
+    border-radius: 0;
+}
+
+body[data-design="paper"] .message-form,
+body[data-design="paper"] .m-composer {
+    border-top: 1.5px solid #151515;
+    background: var(--bg-panel);
+}
+
+body[data-design="paper"] .messages,
+body[data-design="paper"] .m-messages {
+    background-color: var(--bg-panel);
+}
+
+body[data-design="paper"] .message-bubble,
+body[data-design="paper"] .m-bubble {
+    border: 1px solid var(--border);
+    border-radius: 0;
+}
+
+body[data-design="paper"] .message.mine .message-bubble,
+body[data-design="paper"] .m-message.mine .m-bubble {
+    border-color: #151515;
+    border-radius: 0;
+}
+
+/* Режим «лента»: сообщения идут строками во всю ширину, без пузырей */
+body[data-design="paper"][data-ds-feed="on"] .messages,
+body[data-design="paper"][data-ds-feed="on"] .m-messages {
+    gap: 0;
+}
+
+body[data-design="paper"][data-ds-feed="on"] .message,
+body[data-design="paper"][data-ds-feed="on"] .m-message,
+body[data-design="paper"][data-ds-feed="on"] .message.mine,
+body[data-design="paper"][data-ds-feed="on"] .m-message.mine {
+    width: 100%;
+    max-width: 100%;
+    margin-left: 0;
+    flex-direction: row;
+}
+
+body[data-design="paper"][data-ds-feed="on"] .message-bubble,
+body[data-design="paper"][data-ds-feed="on"] .m-bubble,
+body[data-design="paper"][data-ds-feed="on"] .message.mine .message-bubble,
+body[data-design="paper"][data-ds-feed="on"] .m-message.mine .m-bubble {
+    flex: 1;
+    padding: 12px 0;
+    background: transparent;
+    color: var(--text);
+    border: none;
+    border-bottom: 1px solid var(--border-soft);
+}
+
+body[data-design="paper"][data-ds-feed="on"] .message.mine .message-time,
+body[data-design="paper"][data-ds-feed="on"] .m-message.mine .m-message-time {
+    color: var(--text-muted);
+}
+
+body[data-design="paper"][data-ds-feed="on"] .message-time,
+body[data-design="paper"][data-ds-feed="on"] .m-message-time {
+    text-align: left;
+}
+
+body[data-design="paper"][data-ds-feed="on"] .message-text,
+body[data-design="paper"][data-ds-feed="on"] .m-message-text {
+    font-size: 16px;
+    line-height: 1.5;
+}
+
+body[data-design="paper"][data-ds-feed="on"] .message.mine .message-bubble::before,
+body[data-design="paper"][data-ds-feed="on"] .m-message.mine .m-bubble::before {
+    content: "■ Вы";
+    display: block;
+    margin-bottom: 3px;
+    color: var(--ds-accent);
+    font-size: 12px;
+    font-weight: 700;
+}
+
+/* ======================================================
+   Брутализм
+   ====================================================== */
+
+body[data-design="brutal"] {
+    --suggestion-bg: #fff;
+    --suggestion-border: #111;
+    --suggestion-text: #111;
+    --suggestion-muted: #3a3a3a;
+    --bg: var(--ds-backdrop);
+    --bg-rail: var(--ds-backdrop);
+    --bg-panel: #fff;
+    --bg-elevated: #fff;
+    --bg-input: #fff;
+    --bg-soft: #fffdf5;
+    --bg-hover: #f4f0ff;
+    --bg-active: var(--ds-backdrop);
+    --bg-control: #fff;
+    --bg-control-strong: #f1f1f1;
+    --bg-control-hover: #e9e9e9;
+    --border: #111;
+    --border-soft: #111;
+    --border-strong: #111;
+    --border-hover: #111;
+    --text: #111;
+    --text-strong: #000;
+    --text-soft: #222;
+    --text-muted: #3a3a3a;
+    --text-dim: #555;
+    --accent: #111;
+    --accent-hover: #333;
+    --accent-active: #000;
+    --accent-light: #111;
+    --accent-soft: #111;
+    --select: #111;
+    --bubble-in: #fff;
+    --bubble-out: var(--ds-accent);
+    --bubble-deleted: #f1f1f1;
+    --sender: #111;
+    --quote-name: #111;
+    --quote-border: #111;
+    --quote-bg: #ffe9a6;
+    --status-read: #111;
+    --status-delivered: #111;
+    --composer-bg: #fff;
+    --composer-border: #111;
+    --ds-on-out: #111;
+    --ds-on-out-muted: #222;
+    --ds-line: 2.5px solid #111;
+    --ds-hard: var(--ds-shadow) var(--ds-shadow) 0 #111;
+
+    font-family: Rubik, system-ui, sans-serif;
+    font-weight: 500;
+}
+
+body[data-design="brutal"] .chat-layout {
+    gap: 16px;
+    padding: 16px calc(16px + var(--ds-shadow)) calc(16px + var(--ds-shadow)) 16px;
+}
+
+body[data-design="brutal"] .app-rail,
+body[data-design="brutal"] .chat-sidebar,
+body[data-design="brutal"] .chat-main,
+body[data-design="brutal"] .settings-dialog,
+body[data-design="brutal"] .profile-dialog,
+body[data-design="brutal"] .contacts-dialog,
+body[data-design="brutal"] .group-create-dialog,
+body[data-design="brutal"] .ma-menu,
+body[data-design="brutal"] .ma-dialog,
+body[data-design="brutal"] .m-modal-dialog {
+    border: var(--ds-line);
+    border-radius: 18px;
+    box-shadow: var(--ds-hard);
+}
+
+body[data-design="brutal"] .chat-main {
+    background: #fffdf5;
+}
+
+body[data-design="brutal"] .chat-header,
+body[data-design="brutal"] .m-header {
+    border-bottom: var(--ds-line);
+    background: #fff;
+}
+
+body[data-design="brutal"] .sidebar-header {
+    border-bottom: var(--ds-line);
+    background: var(--ds-accent);
+}
+
+body[data-design="brutal"] .chat-item {
+    margin: 6px 10px;
+    border: 2.5px solid transparent;
+    border-radius: 14px;
+}
+
+body[data-design="brutal"] .chat-item.active {
+    border-color: #111;
+    background: var(--ds-backdrop);
+    box-shadow: 3px 3px 0 #111;
+}
+
+body[data-design="brutal"] .avatar,
+body[data-design="brutal"] .chat-item-avatar,
+body[data-design="brutal"] .m-avatar {
+    border: 2.5px solid #111;
+    border-radius: 14px;
+}
+
+body[data-design="brutal"] .message-bubble,
+body[data-design="brutal"] .m-bubble {
+    padding: 10px 14px 8px;
+    border: var(--ds-line);
+    border-radius: 18px 18px 18px 4px;
+    box-shadow: var(--ds-hard);
+}
+
+body[data-design="brutal"] .message.mine .message-bubble,
+body[data-design="brutal"] .m-message.mine .m-bubble {
+    border-radius: 18px 18px 4px 18px;
+}
+
+body[data-design="brutal"] .messages,
+body[data-design="brutal"] .m-messages {
+    gap: 14px;
+}
+
+body[data-design="brutal"] .message-form,
+body[data-design="brutal"] .m-composer {
+    border-top: var(--ds-line);
+    background: #fff;
+}
+
+body[data-design="brutal"] .message-form textarea,
+body[data-design="brutal"] .m-composer textarea,
+body[data-design="brutal"] .sidebar-search,
+body[data-design="brutal"] .m-search-field {
+    border: var(--ds-line);
+    border-radius: 14px;
+    background: #fff;
+}
+
+body[data-design="brutal"] .message-form button,
+body[data-design="brutal"] .m-send-btn,
+body[data-design="brutal"] .settings-btn-primary {
+    border: var(--ds-line);
+    border-radius: 14px;
+    background: var(--ds-accent);
+    color: #111;
+    box-shadow: 3px 3px 0 #111;
+}
+
+body[data-design="brutal"] .message-form button:active,
+body[data-design="brutal"] .m-send-btn:active,
+body[data-design="brutal"] .settings-btn-primary:active {
+    transform: translate(3px, 3px);
+    box-shadow: none;
+}
+
+body[data-design="brutal"] .message-form .attach-btn,
+body[data-design="brutal"] .m-attach-btn {
+    background: #9ee6c4;
+}
+
+body[data-design="brutal"] .chat-item-unread,
+body[data-design="brutal"] .m-chat-unread {
+    background: #111;
+    color: #fff;
+}
+
+/* ======================================================
+   Терминал
+   ====================================================== */
+
+body[data-design="terminal"] {
+    --suggestion-bg: var(--ds-term-bg);
+    --suggestion-border: var(--ds-line);
+    --suggestion-text: var(--ds-fg);
+    --suggestion-muted: var(--ds-dim);
+    --bg: var(--ds-term-bg);
+    --bg-rail: var(--ds-term-bg);
+    --bg-panel: var(--ds-term-bg);
+    --bg-elevated: var(--ds-term-bg);
+    --bg-input: var(--ds-term-bg);
+    --bg-soft: var(--ds-term-bg);
+    --bg-hover: color-mix(in srgb, var(--ds-fg) 14%, var(--ds-term-bg));
+    --bg-active: color-mix(in srgb, var(--ds-fg) 22%, var(--ds-term-bg));
+    --bg-control: color-mix(in srgb, var(--ds-fg) 14%, var(--ds-term-bg));
+    --bg-control-strong: color-mix(in srgb, var(--ds-fg) 22%, var(--ds-term-bg));
+    --bg-control-hover: color-mix(in srgb, var(--ds-fg) 30%, var(--ds-term-bg));
+    --border: var(--ds-line);
+    --border-soft: var(--ds-line);
+    --border-strong: var(--ds-dim);
+    --border-hover: var(--ds-fg);
+    --text: var(--ds-fg);
+    --text-strong: var(--ds-fg);
+    --text-soft: var(--ds-fg);
+    --text-muted: var(--ds-dim);
+    --text-dim: var(--ds-dim);
+    --accent: var(--ds-fg);
+    --accent-hover: var(--ds-dim);
+    --accent-active: var(--ds-dim);
+    --accent-light: var(--ds-fg);
+    --accent-soft: var(--ds-fg);
+    --select: var(--ds-fg);
+    --bubble-in: transparent;
+    --bubble-out: transparent;
+    --bubble-deleted: transparent;
+    --sender: var(--ds-fg);
+    --quote-name: var(--ds-alt);
+    --quote-text: var(--ds-dim);
+    --quote-border: var(--ds-dim);
+    --quote-bg: transparent;
+    --status-sent: var(--ds-dim);
+    --status-delivered: var(--ds-dim);
+    --status-read: var(--ds-fg);
+    --online: var(--ds-fg);
+    --presence: var(--ds-fg);
+    --composer-bg: var(--ds-term-bg);
+    --composer-border: var(--ds-line);
+    --selection-bg: var(--ds-term-bg);
+    --selection-border: var(--ds-line);
+    --selection-text: var(--ds-fg);
+    --ds-on-out: var(--ds-alt);
+    --ds-on-out-muted: var(--ds-dim);
+}
+
+body[data-design="terminal"],
+body[data-design="terminal"] #app-root,
+body[data-design="terminal"] button,
+body[data-design="terminal"] input,
+body[data-design="terminal"] textarea {
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+}
+
+:where(body[data-design="terminal"]) * {
+    border-radius: 0 !important;
+}
+
+/* Кнопки с заливкой люминофором — тёмный текст */
+:where(body[data-design="terminal"]) button {
+    color: var(--ds-term-bg);
+}
+
+body[data-design="terminal"][data-ds-glow="on"] #app-root {
+    text-shadow: 0 0 6px color-mix(in srgb, var(--ds-fg) 45%, transparent);
+}
+
+body[data-design="terminal"][data-ds-scanlines="on"] #app-root::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 3000;
+    pointer-events: none;
+    background: repeating-linear-gradient(
+        0deg,
+        rgba(0, 0, 0, 0.18) 0,
+        rgba(0, 0, 0, 0.18) 1px,
+        transparent 1px,
+        transparent 3px
+    );
+}
+
+body[data-design="terminal"] .chat-sidebar,
+body[data-design="terminal"] .app-rail {
+    border-right: 3px double var(--ds-line);
+}
+
+body[data-design="terminal"] .chat-header,
+body[data-design="terminal"] .m-header {
+    border-bottom: 3px double var(--ds-line);
+}
+
+body[data-design="terminal"] .chat-item {
+    border-bottom: 1px dashed var(--ds-line);
+}
+
+body[data-design="terminal"] .chat-item.active {
+    background: var(--ds-fg);
+    color: var(--ds-term-bg);
+    text-shadow: none;
+}
+
+body[data-design="terminal"] .chat-item.active .chat-item-preview {
+    color: var(--ds-term-bg);
+}
+
+body[data-design="terminal"] .chat-item-avatar,
+body[data-design="terminal"] .avatar,
+body[data-design="terminal"] .m-avatar {
+    border: 1px solid currentcolor;
+    background: transparent;
+    color: inherit;
+}
+
+body[data-design="terminal"] .message,
+body[data-design="terminal"] .m-message {
+    max-width: 100%;
+}
+
+body[data-design="terminal"] .message-bubble,
+body[data-design="terminal"] .m-bubble {
+    padding: 2px 0;
+}
+
+body[data-design="terminal"] .message-text::before,
+body[data-design="terminal"] .m-message-text::before {
+    content: "> ";
+    color: var(--ds-dim);
+}
+
+body[data-design="terminal"] .message-time,
+body[data-design="terminal"] .m-message-time {
+    text-align: left;
+}
+
+body[data-design="terminal"] .message-form,
+body[data-design="terminal"] .m-composer {
+    border-top: 3px double var(--ds-line);
+}
+
+body[data-design="terminal"] .message-form textarea,
+body[data-design="terminal"] .m-composer textarea {
+    border: 1px solid var(--ds-line);
+    background: transparent;
+    color: var(--ds-alt);
+    caret-color: var(--ds-alt);
+}
+
+body[data-design="terminal"] .message-form .attach-btn,
+body[data-design="terminal"] .m-attach-btn {
+    border: 1px solid var(--ds-line);
+    background: transparent;
+    color: var(--ds-fg);
+}
+
+/* ======================================================
+   Ретро-98
+   ====================================================== */
+
+body[data-design="retro"] {
+    --suggestion-bg: #ffffe1;
+    --suggestion-border: #000;
+    --suggestion-text: #000;
+    --suggestion-muted: #404040;
+    --bg: #c0c0c0;
+    --bg-rail: var(--ds-desktop);
+    --bg-panel: #c0c0c0;
+    --bg-elevated: #c0c0c0;
+    --bg-input: #fff;
+    --bg-soft: #d4d0c8;
+    --bg-hover: #d4d0c8;
+    --bg-active: var(--ds-accent);
+    --bg-control: #c0c0c0;
+    --bg-control-strong: #b5b5b5;
+    --bg-control-hover: #d4d0c8;
+    --border: #808080;
+    --border-soft: #a0a0a0;
+    --border-strong: #404040;
+    --border-hover: #000;
+    --text: #000;
+    --text-strong: #000;
+    --text-soft: #202020;
+    --text-muted: #404040;
+    --text-dim: #505050;
+    --accent: var(--ds-accent);
+    --accent-hover: color-mix(in srgb, var(--ds-accent) 80%, #fff);
+    --accent-active: var(--ds-accent);
+    --accent-light: var(--ds-accent);
+    --accent-soft: var(--ds-accent);
+    --select: var(--ds-accent);
+    --bubble-in: #fff;
+    --bubble-out: #ffffe1;
+    --bubble-deleted: #e0e0e0;
+    --sender: #0000c0;
+    --quote-name: #0000c0;
+    --quote-text: #404040;
+    --quote-border: #000;
+    --quote-bg: #ffffe1;
+    --status-read: #000080;
+    --online: #00a000;
+    --presence: #00c000;
+    --composer-bg: #ffffe1;
+    --composer-border: #000;
+    --ds-on-out: #000;
+    --ds-on-out-muted: #404040;
+    --ds-raised: inset 1px 1px 0 #dfdfdf, inset -1px -1px 0 #808080;
+    --ds-sunken: inset 1px 1px 0 #404040, inset -1px -1px 0 #dfdfdf;
+
+    font-family: Tahoma, Verdana, "Segoe UI", sans-serif;
+    font-size: 13px;
+}
+
+:where(body[data-design="retro"]) * {
+    border-radius: 0 !important;
+}
+
+:where(body[data-design="retro"]) button {
+    background: #c0c0c0;
+    color: #000;
+    border: 2px solid;
+    border-color: #fff #404040 #404040 #fff;
+    box-shadow: var(--ds-raised);
+}
+
+:where(body[data-design="retro"]) button:active {
+    border-color: #404040 #fff #fff #404040;
+    box-shadow: inset 1px 1px 0 #808080;
+}
+
+:where(body[data-design="retro"]) input,
+:where(body[data-design="retro"]) textarea {
+    background: #fff;
+    color: #000;
+    border: 2px solid;
+    border-color: #808080 #fff #fff #808080;
+    box-shadow: var(--ds-sunken);
+}
+
+body[data-design="retro"] .chat-layout {
+    gap: 10px;
+    padding: 10px;
+    background: var(--ds-desktop);
+}
+
+body[data-design="retro"] .app-rail,
+body[data-design="retro"] .chat-sidebar,
+body[data-design="retro"] .chat-main,
+body[data-design="retro"] .settings-dialog,
+body[data-design="retro"] .profile-dialog,
+body[data-design="retro"] .contacts-dialog,
+body[data-design="retro"] .group-create-dialog,
+body[data-design="retro"] .ma-menu,
+body[data-design="retro"] .ma-dialog,
+body[data-design="retro"] .m-modal-dialog {
+    background: #c0c0c0;
+    border: 2px solid;
+    border-color: #fff #404040 #404040 #fff;
+    box-shadow: var(--ds-raised);
+}
+
+/* Шапка чата — заголовок окна */
+body[data-design="retro"] .chat-header,
+body[data-design="retro"] .m-header,
+body[data-design="retro"] .settings-header {
+    padding: 6px 10px;
+    background: linear-gradient(90deg, var(--ds-accent), #1084d0);
+    color: #fff;
+    border-bottom: none;
+}
+
+body[data-design="retro"] .chat-header h3,
+body[data-design="retro"] .m-title,
+body[data-design="retro"] .settings-title {
+    color: #fff;
+    font-size: 14px;
+    font-weight: 700;
+}
+
+body[data-design="retro"] .chat-status,
+body[data-design="retro"] .m-chat-status {
+    color: rgba(255, 255, 255, 0.9);
+}
+
+body[data-design="retro"] .messages,
+body[data-design="retro"] .m-messages {
+    margin: 4px;
+    background-color: #fff;
+    border: 2px solid;
+    border-color: #808080 #fff #fff #808080;
+    box-shadow: var(--ds-sunken);
+}
+
+body[data-design="retro"] .chat-item {
+    padding: 6px 10px;
+    border-bottom: none;
+}
+
+body[data-design="retro"] .chat-item.active {
+    background: var(--ds-accent);
+    color: #fff;
+}
+
+body[data-design="retro"] .chat-item.active .chat-item-preview {
+    color: #e0e0e0;
+}
+
+body[data-design="retro"] .chat-item-unread,
+body[data-design="retro"] .m-chat-unread {
+    background: #f00;
+    color: #fff;
+}
+
+body[data-design="retro"] .message-bubble,
+body[data-design="retro"] .m-bubble {
+    border: 1px solid #808080;
+}
+
+body[data-design="retro"] .message-form button,
+body[data-design="retro"] .m-send-btn {
+    background: #c0c0c0;
+    color: #000;
+    border: 2px solid;
+    border-color: #fff #404040 #404040 #fff;
+    box-shadow: var(--ds-raised);
+}
+
+body[data-design="retro"] .message-form button svg,
+body[data-design="retro"] .m-send-btn svg {
+    stroke: #000;
+}
+
+/* ======================================================
+   Воздух
+   ====================================================== */
+
+body[data-design="air"] {
+    --suggestion-bg: #f0f5f2;
+    --suggestion-border: #d6e3db;
+    --suggestion-text: #1d2321;
+    --suggestion-muted: #66706b;
+    --bg: #f2f3f0;
+    --bg-rail: #f2f3f0;
+    --bg-panel: #fff;
+    --bg-elevated: #fff;
+    --bg-input: #fff;
+    --bg-soft: #f7f8f6;
+    --bg-hover: #e8eae6;
+    --bg-active: #fff;
+    --bg-control: #eef0ec;
+    --bg-control-strong: #e4e7e2;
+    --bg-control-hover: #dcdfd9;
+    --border: #e2e5e0;
+    --border-soft: #eceee9;
+    --border-strong: #cfd4cd;
+    --border-hover: #b8beb6;
+    --text: #1d2321;
+    --text-strong: #0f1412;
+    --text-soft: #353d3a;
+    --text-muted: #66706b;
+    --text-dim: #808a85;
+    --accent: var(--ds-accent);
+    --accent-hover: color-mix(in srgb, var(--ds-accent) 85%, #000);
+    --accent-active: color-mix(in srgb, var(--ds-accent) 70%, #000);
+    --accent-light: var(--ds-accent);
+    --accent-soft: var(--ds-accent);
+    --select: var(--ds-accent);
+    --bubble-in: #f0f2ef;
+    --bubble-out: var(--ds-accent);
+    --bubble-deleted: #f4f5f3;
+    --sender: var(--ds-accent);
+    --quote-name: var(--ds-accent);
+    --quote-border: var(--ds-accent);
+    --status-read: #fff;
+    --composer-bg: #f0f5f2;
+    --composer-border: #d6e3db;
+    --shadow: rgba(29, 35, 33, 0.12);
+    --ds-on-out: #fff;
+    --ds-on-out-muted: rgba(255, 255, 255, 0.82);
+    --ds-soft-shadow: 0 0 0 1px rgba(29, 35, 33, 0.06), 0 10px 30px rgba(29, 35, 33, 0.05);
+
+    font-family: Onest, system-ui, sans-serif;
+}
+
+body[data-design="air"] .chat-layout {
+    gap: 12px;
+    padding: 12px;
+}
+
+body[data-design="air"] .app-rail,
+body[data-design="air"] .chat-sidebar {
+    background: transparent;
+    border-right: none;
+}
+
+body[data-design="air"] .chat-main {
+    background: #fff;
+    border-radius: 20px;
+    box-shadow: var(--ds-soft-shadow);
+}
+
+body[data-design="air"] .messages {
+    background-color: #fff;
+}
+
+body[data-design="air"] .chat-header {
+    border-bottom-color: var(--border-soft);
+}
+
+body[data-design="air"] .chat-item {
+    margin: 2px 6px;
+    border-bottom: none;
+    border-radius: 12px;
+}
+
+body[data-design="air"] .chat-item.active {
+    background: #fff;
+    box-shadow: var(--ds-soft-shadow);
+}
+
+body[data-design="air"] .sidebar-search,
+body[data-design="air"] .m-search-field {
+    background: #fff;
+    border-color: transparent;
+    box-shadow: 0 0 0 1px rgba(29, 35, 33, 0.08);
+}
+
+body[data-design="air"] .message-bubble,
+body[data-design="air"] .m-bubble {
+    padding: 10px 14px;
+    border-radius: 18px 18px 18px 6px;
+}
+
+body[data-design="air"] .message.mine .message-bubble,
+body[data-design="air"] .m-message.mine .m-bubble {
+    border-radius: 18px 18px 6px 18px;
+}
+
+body[data-design="air"] .message-form textarea,
+body[data-design="air"] .m-composer textarea {
+    border: none;
+    border-radius: 16px;
+    box-shadow: 0 0 0 1px rgba(29, 35, 33, 0.12), 0 4px 14px rgba(29, 35, 33, 0.05);
+}
+
+body[data-design="air"] .settings-dialog,
+body[data-design="air"] .profile-dialog,
+body[data-design="air"] .contacts-dialog,
+body[data-design="air"] .group-create-dialog {
+    border-color: transparent;
+    border-radius: 20px;
+}
+
+/* ======================================================
+   Кнопки с заливкой акцентом: контрастный текст
+   ====================================================== */
+
+body[data-design="terminal"] .settings-btn-primary,
+body[data-design="terminal"] .settings-segmented button.active,
+body[data-design="terminal"] .contact-suggestion-add,
+body[data-design="terminal"] .chat-item-unread,
+body[data-design="terminal"] .m-chat-unread {
+    color: var(--ds-term-bg);
+    text-shadow: none;
+}
+
+body[data-design="terminal"] .message-form button:not(.attach-btn) svg,
+body[data-design="terminal"] .m-send-btn svg {
+    stroke: var(--ds-term-bg);
+}
+
+body[data-design="glass"] .settings-scale-value {
+    color: #fff;
+}

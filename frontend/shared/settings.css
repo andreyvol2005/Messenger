@@ -493,6 +493,218 @@
     margin: 10px 0 12px;
 }
 
+/* ---------- Дизайн ---------- */
+
+.design-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(132px, 1fr));
+    gap: 10px;
+    margin-bottom: 14px;
+}
+
+.design-option {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 8px;
+    background: var(--bg-soft);
+    color: var(--text);
+    border: 1px solid var(--border-soft);
+    border-radius: 12px;
+    text-align: left;
+}
+
+.design-option:hover {
+    background: var(--bg-hover);
+    border-color: var(--border-hover);
+}
+
+.design-option.active {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 1px var(--accent);
+}
+
+.design-option-name {
+    padding: 0 2px 2px;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+/* Мини-превью: сайдбар и три пузыря в цветах дизайна */
+.design-preview {
+    height: 70px;
+    display: flex;
+    gap: 4px;
+    padding: 5px;
+    overflow: hidden;
+    background: var(--p-bg);
+    border-radius: 8px;
+}
+
+.design-preview-side {
+    width: 28%;
+    background: var(--p-panel);
+    border-radius: 4px;
+}
+
+.design-preview-chat {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    gap: 4px;
+}
+
+.design-preview-in,
+.design-preview-out {
+    width: 70%;
+    height: 12px;
+    background: var(--p-in);
+    border-radius: 6px;
+}
+
+.design-preview-out {
+    align-self: flex-end;
+    background: var(--p-out);
+}
+
+.design-preview-in.short {
+    width: 45%;
+}
+
+.design-options {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.design-field {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.design-field .settings-range {
+    margin: 0;
+}
+
+.design-field-inline {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.design-option-label {
+    font-size: 13px;
+    color: var(--text-soft);
+}
+
+.design-swatches {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.design-swatch {
+    width: 34px;
+    height: 34px;
+    padding: 0;
+    background: var(--swatch);
+    border: 2px solid var(--border);
+    border-radius: 50%;
+}
+
+.design-swatch:hover {
+    border-color: var(--border-hover);
+}
+
+.design-swatch.active {
+    border-color: var(--bg-elevated);
+    box-shadow: 0 0 0 2px var(--accent);
+}
+
+.design-choices {
+    flex-wrap: wrap;
+}
+
+.design-choices button {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 12px;
+}
+
+.design-choice-swatch {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.4);
+}
+
+.design-color {
+    width: 48px;
+    height: 32px;
+    padding: 2px;
+    background: var(--bg-input);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    cursor: pointer;
+}
+
+.design-toggle {
+    flex-direction: row;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+}
+
+.design-toggle input {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.design-toggle-track {
+    position: relative;
+    flex-shrink: 0;
+    width: 38px;
+    height: 22px;
+    background: var(--bg-control-strong);
+    border-radius: 999px;
+    transition: background 0.15s ease;
+}
+
+.design-toggle-track::after {
+    content: "";
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 16px;
+    height: 16px;
+    background: #fff;
+    border-radius: 50%;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+    transition: transform 0.15s ease;
+}
+
+.design-toggle input:checked + .design-toggle-track {
+    background: var(--accent);
+}
+
+.design-toggle input:checked + .design-toggle-track::after {
+    transform: translateX(16px);
+}
+
+.design-toggle input:focus-visible + .design-toggle-track {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+}
+
+.settings-segmented button:disabled {
+    opacity: 0.45;
+    cursor: default;
+}
+
 /* ---------- Мобильная раскладка ---------- */
 
 @media (max-width: 768px) {

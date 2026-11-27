@@ -17,7 +17,9 @@ export const CONFIG = {
         AVATAR: "messenger_avatar",
         THEME: "messenger_theme",
         WALLPAPER: "messenger_wallpaper",
-        SCALE: "messenger_scale"
+        SCALE: "messenger_scale",
+        DESIGN: "messenger_design",
+        DESIGN_OPTIONS: "messenger_design_options"
     }
 };
 

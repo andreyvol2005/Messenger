@@ -1,6 +1,7 @@
 // Экран входа и регистрации.
 
 import { API } from "../shared/api.js";
+import { Design } from "../shared/designs.js";
 import { Session } from "../shared/session.js";
 import { Theme } from "../shared/theme.js";
 import { UI } from "../shared/ui.js";
@@ -13,6 +14,7 @@ const LoginPage = {
         // Вход оформлен в той же теме, что и остальной интерфейс. Масштаб
         // сюда не применяем: страница входа должна оставаться компактной.
         Theme.apply(Session.theme());
+        Design.apply();
 
         document.getElementById("tab-login").onclick = () => this.setMode("login");
         document.getElementById("tab-register").onclick = () => this.setMode("register");

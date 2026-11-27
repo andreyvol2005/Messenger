@@ -1,9 +1,10 @@
-// Экран настроек: профиль, тема/обои чата и масштаб интерфейса.
+// Экран настроек: профиль, дизайн, тема/обои чата и масштаб интерфейса.
 // Модуль сам создаёт разметку, поэтому одинаково работает на десктопе и
 // мобильных страницах — достаточно вызвать Settings.init().
 
 import { API } from "./api.js";
 import { CONFIG } from "./config.js";
+import { Design } from "./designs.js";
 import { Preferences } from "./preferences.js";
 import { Session } from "./session.js";
 import { Theme } from "./theme.js";
@@ -93,6 +94,17 @@ const TEMPLATE = `
                         <span>Профиль</span>
                     </button>
                     <button type="button" class="settings-nav-item"
+                            data-settings-tab="design" role="tab"
+                            aria-selected="false" aria-controls="settings-panel-design">
+                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                            <path d="M12 3a9 9 0 1 0 0 18c1.1 0 1.8-.8 1.8-1.7 0-.5-.2-.9-.5-1.2-.3-.3-.5-.8-.5-1.2 0-1 .8-1.7 1.8-1.7H17a4 4 0 0 0 4-4C21 6.6 17 3 12 3z"></path>
+                            <circle cx="7.5" cy="11" r="1.2"></circle>
+                            <circle cx="10.5" cy="7" r="1.2"></circle>
+                            <circle cx="15" cy="7.5" r="1.2"></circle>
+                        </svg>
+                        <span>Дизайн</span>
+                    </button>
+                    <button type="button" class="settings-nav-item"
                             data-settings-tab="chats" role="tab"
                             aria-selected="false" aria-controls="settings-panel-chats">
                         <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -139,6 +151,28 @@ const TEMPLATE = `
                         </div>
                     </section>
 
+                    <section id="settings-panel-design" class="settings-panel hidden"
+                             data-settings-panel="design" role="tabpanel"
+                             aria-labelledby="settings-tab-design">
+                        <h3 class="settings-panel-title">Дизайн</h3>
+
+                        <div id="settings-design-list" class="design-list" role="radiogroup"
+                             aria-label="Дизайн интерфейса"></div>
+
+                        <div class="settings-card">
+                            <div class="settings-card-head">
+                                <div>
+                                    <div id="settings-design-name" class="settings-card-title"></div>
+                                    <p id="settings-design-hint" class="settings-card-hint"></p>
+                                </div>
+                                <button type="button" id="settings-design-reset" class="settings-btn-ghost">
+                                    Сбросить
+                                </button>
+                            </div>
+                            <div id="settings-design-options" class="design-options"></div>
+                        </div>
+                    </section>
+
                     <section id="settings-panel-chats" class="settings-panel hidden"
                              data-settings-panel="chats" role="tabpanel"
                              aria-labelledby="settings-tab-chats">
@@ -148,7 +182,7 @@ const TEMPLATE = `
                             <div class="settings-card-head">
                                 <div>
                                     <div class="settings-card-title">Тема интерфейса</div>
-                                    <p class="settings-card-hint">Применяется сразу ко всем экранам.</p>
+                                    <p id="settings-theme-hint" class="settings-card-hint">Применяется сразу ко всем экранам.</p>
                                 </div>
                             </div>
                             <div class="settings-segmented" role="group" aria-label="Тема интерфейса">
@@ -256,6 +290,21 @@ export const Settings = {
             });
         });
 
+        this.designList = document.getElementById("settings-design-list");
+        this.designOptions = document.getElementById("settings-design-options");
+        this.designList.addEventListener("click", (event) => {
+            const button = event.target.closest("[data-design-id]");
+            if (!button) return;
+            Design.select(button.dataset.designId);
+            this.renderDesign();
+            this.renderChatSettings();
+        });
+        document.getElementById("settings-design-reset").onclick = () => {
+            Design.resetOptions();
+            this.renderDesign();
+        };
+        this.bindDesignOptions();
+
         document.getElementById("settings-wallpaper-upload").onclick = () => this.wallpaperInput.click();
         this.wallpaperInput.onchange = (event) => this.uploadWallpaper(event.target);
         document.getElementById("settings-wallpaper-remove").onclick = () => this.removeWallpaper();
@@ -288,6 +337,7 @@ export const Settings = {
         this.modal.classList.add("open");
         this.modal.setAttribute("aria-hidden", "false");
         this.showTab(tab);
+        this.renderDesign();
         this.renderChatSettings();
         this.renderScale();
         this.closeEditors();
@@ -520,11 +570,155 @@ export const Settings = {
         }));
     },
 
+    renderDesign() {
+        const currentId = Design.current();
+        const designs = Design.list();
+
+        this.designList.innerHTML = designs.map((design) => {
+            const p = design.preview;
+            const active = design.id === currentId;
+            return `
+                <button type="button" class="design-option${active ? " active" : ""}"
+                        data-design-id="${design.id}" role="radio" aria-checked="${active}">
+                    <span class="design-preview" aria-hidden="true"
+                          style="--p-bg: ${p.bg}; --p-panel: ${p.panel}; --p-in: ${p.in}; --p-out: ${p.out}">
+                        <span class="design-preview-side"></span>
+                        <span class="design-preview-chat">
+                            <span class="design-preview-in"></span>
+                            <span class="design-preview-out"></span>
+                            <span class="design-preview-in short"></span>
+                        </span>
+                    </span>
+                    <span class="design-option-name">${design.name}</span>
+                </button>`;
+        }).join("");
+
+        const current = designs.find((design) => design.id === currentId);
+        document.getElementById("settings-design-name").textContent = current.name;
+        document.getElementById("settings-design-hint").textContent = current.hint;
+        document.getElementById("settings-design-reset").classList.toggle(
+            "hidden", Object.keys(current.options).length === 0
+        );
+        this.renderDesignOptions();
+    },
+
+    renderDesignOptions() {
+        const id = Design.current();
+        const def = Design.list().find((design) => design.id === id);
+        const values = Design.options(id);
+        const entries = Object.entries(def.options).filter(([, option]) => {
+            if (!option.showIf) return true;
+            return Object.entries(option.showIf).every(([key, value]) => values[key] === value);
+        });
+
+        if (!entries.length) {
+            this.designOptions.innerHTML =
+                '<p class="settings-card-hint">У этого дизайна нет своих параметров.</p>';
+            return;
+        }
+
+        this.designOptions.innerHTML = entries.map(([key, option]) => {
+            const value = values[key];
+            const label = `<span class="design-option-label">${option.label}</span>`;
+
+            if (option.type === "swatch") {
+                return `<div class="design-field">${label}
+                    <div class="design-swatches" role="radiogroup" aria-label="${option.label}">
+                        ${option.values.map((color) => `
+                            <button type="button" class="design-swatch${color === value ? " active" : ""}"
+                                    data-design-option="${key}" data-value="${color}"
+                                    role="radio" aria-checked="${color === value}"
+                                    aria-label="${option.label}: ${color}"
+                                    style="--swatch: ${color}"></button>`).join("")}
+                    </div></div>`;
+            }
+
+            if (option.type === "choice") {
+                return `<div class="design-field">${label}
+                    <div class="settings-segmented design-choices" role="radiogroup" aria-label="${option.label}">
+                        ${option.values.map((item) => `
+                            <button type="button" class="${item.id === value ? "active" : ""}"
+                                    data-design-option="${key}" data-value="${item.id}"
+                                    role="radio" aria-checked="${item.id === value}">
+                                ${item.swatch ? `<span class="design-choice-swatch" style="background: ${item.swatch}"></span>` : ""}
+                                ${item.label}
+                            </button>`).join("")}
+                    </div></div>`;
+            }
+
+            if (option.type === "color") {
+                return `<label class="design-field design-field-inline">${label}
+                    <input type="color" class="design-color" data-design-option="${key}" value="${value}">
+                </label>`;
+            }
+
+            if (option.type === "range") {
+                return `<div class="design-field">
+                    <div class="settings-scale-head">${label}
+                        <output class="settings-scale-value" data-design-output="${key}">${value}${option.unit || ""}</output>
+                    </div>
+                    <input type="range" class="settings-range" data-design-option="${key}"
+                           min="${option.min}" max="${option.max}" step="${option.step}" value="${value}"
+                           aria-label="${option.label}">
+                </div>`;
+            }
+
+            return `<label class="design-field design-toggle">
+                <input type="checkbox" data-design-option="${key}" ${value ? "checked" : ""}>
+                <span class="design-toggle-track" aria-hidden="true"></span>
+                ${label}
+            </label>`;
+        }).join("");
+    },
+
+    bindDesignOptions() {
+        const box = this.designOptions;
+
+        box.addEventListener("click", (event) => {
+            const button = event.target.closest("button[data-design-option]");
+            if (!button) return;
+            Design.setOption(button.dataset.designOption, button.dataset.value);
+            this.renderDesignOptions();
+        });
+
+        // Ползунки и палитра применяются на лету, без перерисовки панели:
+        // иначе перетаскивание прерывалось бы на каждом шаге.
+        box.addEventListener("input", (event) => {
+            const input = event.target;
+            const key = input.dataset.designOption;
+            if (!key) return;
+            if (input.type === "range") {
+                const option = Design.list().find((d) => d.id === Design.current()).options[key];
+                Design.setOption(key, Number(input.value));
+                const output = box.querySelector(`[data-design-output="${key}"]`);
+                if (output) output.textContent = `${input.value}${option.unit || ""}`;
+            } else if (input.type === "color") {
+                Design.setOption(key, input.value);
+            }
+        });
+
+        box.addEventListener("change", (event) => {
+            const input = event.target;
+            if (input.type !== "checkbox" || !input.dataset.designOption) return;
+            Design.setOption(input.dataset.designOption, input.checked);
+        });
+    },
+
     renderChatSettings() {
         const current = Theme.current();
+        // Большинство дизайнов задают свою основу: светлую или тёмную.
+        // Тогда переключатель темы недоступен, а подсказка объясняет почему.
+        const forced = Design.forcedMode();
         this.modal.querySelectorAll("[data-settings-theme]").forEach((button) => {
             button.classList.toggle("active", button.dataset.settingsTheme === current);
+            button.disabled = Boolean(forced);
         });
+        const themeHint = document.getElementById("settings-theme-hint");
+        if (themeHint) {
+            themeHint.textContent = forced
+                ? `Дизайн «${Design.list().find((d) => d.id === Design.current()).name}» использует свою тему. Тема выбирается в «Классике».`
+                : "Применяется сразу ко всем экранам.";
+        }
 
         const preview = document.getElementById("settings-wallpaper-preview");
         const removeButton = document.getElementById("settings-wallpaper-remove");
