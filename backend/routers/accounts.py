@@ -4,6 +4,7 @@ from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, Up
 from sqlalchemy import or_
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
+from starlette.concurrency import run_in_threadpool
 
 import auth
 import events
@@ -90,24 +91,27 @@ async def upload_avatar(
     if extension is None:
         raise HTTPException(status_code=400, detail="Файл не является изображением")
 
-    avatar_url = media.save_avatar(data, extension)
-    old_avatar_url = current_user.avatar_url
-    current_user.avatar_url = avatar_url
-    try:
-        db.commit()
-    except Exception:
-        # Запись в БД не удалась — только что сохранённый файл не нужен
-        db.rollback()
-        media.delete_avatar(avatar_url)
-        raise
+    # Диск и база синхронные: в пуле потоков они не останавливают event loop.
+    def save() -> list[int]:
+        avatar_url = media.save_avatar(data, extension)
+        old_avatar_url = current_user.avatar_url
+        current_user.avatar_url = avatar_url
+        try:
+            db.commit()
+        except Exception:
+            # Запись в БД не удалась — только что сохранённый файл не нужен
+            db.rollback()
+            media.delete_avatar(avatar_url)
+            raise
 
-    db.refresh(current_user)
-    # Старую картинку удаляем только после успешного коммита: если что-то
-    # пойдёт не так, у пользователя останется прежний аватар.
-    media.delete_avatar(old_avatar_url)
+        db.refresh(current_user)
+        # Старую картинку удаляем только после успешного коммита: если что-то
+        # пойдёт не так, у пользователя останется прежний аватар.
+        media.delete_avatar(old_avatar_url)
+        return events.avatar_recipients(db, current_user.id)
 
     # Открытые клиенты обновят картинку без перезагрузки страницы
-    recipients = events.avatar_recipients(db, current_user.id)
+    recipients = await run_in_threadpool(save)
     background_tasks.add_task(
         events.publish,
         recipients,
@@ -136,7 +140,7 @@ async def upload_wallpaper(
     if extension is None:
         raise HTTPException(status_code=400, detail="Формат изображения не поддерживается")
 
-    return {"url": media.save_wallpaper(data, extension)}
+    return {"url": await run_in_threadpool(media.save_wallpaper, data, extension)}
 
 
 @router.post("/account/delete")

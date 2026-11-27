@@ -108,6 +108,8 @@ class ChatResponse(BaseModel):
     chat_type: str = "private"
     # Число участников — только у группового чата
     members_count: int | None = None
+    # Владелец группы: интерфейс показывает кнопку «Удалить» только ему
+    owner_id: int | None = None
 
 
 class ChatListResponse(BaseModel):

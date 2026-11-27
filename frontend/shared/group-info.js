@@ -10,6 +10,7 @@ import { UI } from "./ui.js";
 export const GroupInfo = {
     chatId: null,
     members: [],
+    ownerId: null,
     contacts: [],
     candidates: [],
     searchSeq: 0,
@@ -94,6 +95,8 @@ export const GroupInfo = {
     },
 
     updateHeader(chat = {}) {
+        // Удалять других участников может только владелец группы
+        if (chat.owner_id !== undefined) this.ownerId = chat.owner_id;
         const title = chat.title || "Группа";
         this.nameEl.textContent = title;
         UI.setAvatar(this.avatar, title, chat.avatar_url || null);
@@ -172,6 +175,14 @@ export const GroupInfo = {
             item.appendChild(text);
 
             const isSelf = member.id === Session.userId();
+            if (member.id === this.ownerId) {
+                text.appendChild(UI.el("div", "group-member-owner", "владелец"));
+            }
+            // Себя может убрать любой (выход), других — только владелец
+            if (!isSelf && this.ownerId !== Session.userId()) {
+                this.membersList.appendChild(item);
+                continue;
+            }
             const remove = UI.el(
                 "button",
                 "group-member-remove",

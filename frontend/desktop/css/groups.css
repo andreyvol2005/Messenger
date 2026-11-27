@@ -285,3 +285,9 @@
     padding: 9px 16px;
     font-size: 13px;
 }
+
+.group-member-owner {
+    margin-top: 1px;
+    font-size: 11px;
+    color: var(--accent);
+}

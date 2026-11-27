@@ -60,6 +60,8 @@ class Chat(Base):
     avatar_url = Column(Text, nullable=True)
     # Личный чат: "min_id:max_id" участников, защищает от дублей. NULL у групповых
     pair_key = Column(String(32), unique=True, nullable=True)
+    # Владелец группы: только он удаляет других участников. У личных чатов NULL
+    owner_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     last_message_id = Column(Integer, ForeignKey("messages.id", ondelete="SET NULL"), nullable=True)
 

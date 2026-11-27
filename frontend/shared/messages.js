@@ -341,12 +341,80 @@ export function removeMessageRow(box, messageId) {
     return true;
 }
 
+const HISTORY_PAGE_SIZE = 50;
+// За сколько пикселей до верха ленты начинать подгружать старые сообщения.
+const HISTORY_PRELOAD_PX = 200;
+
+// Состояние подгрузки для каждой ленты. Лента одна на страницу, но чат в ней
+// меняется, поэтому состояние пересоздаётся при каждом открытии чата.
+const historyState = new WeakMap();
+
+function oldestMessageId(box) {
+    for (const row of box.querySelectorAll("[data-msg-id]")) {
+        const id = Number(row.dataset.msgId);
+        if (Number.isFinite(id)) return id;
+    }
+    return null;
+}
+
+// Подгружает страницу сообщений старше самого верхнего в ленте и вставляет их
+// сверху, не сдвигая то, что пользователь сейчас видит.
+async function loadOlderMessages(box) {
+    const state = historyState.get(box);
+    if (!state || state.loading || !state.hasMore) return;
+
+    const beforeId = oldestMessageId(box);
+    if (beforeId === null) return;
+
+    state.loading = true;
+    const chatId = state.chatId;
+    try {
+        const items = await API.getMessages(chatId, {
+            limit: HISTORY_PAGE_SIZE,
+            beforeId
+        });
+        // Пока ждали ответ, пользователь мог открыть другой чат.
+        if (historyState.get(box) !== state) return;
+
+        state.hasMore = items.length === HISTORY_PAGE_SIZE;
+        if (!items.length) return;
+
+        const fragment = document.createDocumentFragment();
+        for (const msg of items) {
+            if (box.querySelector(`[data-msg-id="${msg.id}"]`)) continue;
+            fragment.appendChild(renderMessage(msg, state.options));
+        }
+        const previousHeight = box.scrollHeight;
+        box.insertBefore(fragment, box.firstChild);
+        // Компенсируем выросшую высоту: видимая часть ленты остаётся на месте.
+        box.scrollTop += box.scrollHeight - previousHeight;
+    } catch (err) {
+        // Не получилось — попробуем снова при следующей прокрутке.
+        console.warn("Не удалось загрузить старые сообщения", err);
+    } finally {
+        state.loading = false;
+    }
+}
+
+function watchHistoryScroll(box) {
+    if (box.dataset.historyScroll) return;
+    box.dataset.historyScroll = "1";
+    box.addEventListener("scroll", () => {
+        if (box.scrollTop < HISTORY_PRELOAD_PX) loadOlderMessages(box);
+    }, { passive: true });
+}
+
 export async function loadMessageHistory(box, chatId, options) {
+    const state = { chatId, options, hasMore: false, loading: false };
+    historyState.set(box, state);
+    watchHistoryScroll(box);
+
     box.innerHTML = "";
     box.appendChild(UI.el("div", "loading", "Загрузка…"));
 
     try {
-        const items = await API.getMessages(chatId);
+        const items = await API.getMessages(chatId, { limit: HISTORY_PAGE_SIZE });
+        if (historyState.get(box) !== state) return items;
         box.innerHTML = "";
         if (!items.length) {
             box.appendChild(UI.el("div", "empty-hint", "Сообщений пока нет"));
@@ -354,9 +422,12 @@ export async function loadMessageHistory(box, chatId, options) {
         for (const msg of items) {
             box.appendChild(renderMessage(msg, options));
         }
+        // Полная страница — значит, выше могут быть ещё сообщения.
+        state.hasMore = items.length === HISTORY_PAGE_SIZE;
         UI.scrollToBottom(box);
         return items;
     } catch (err) {
+        if (historyState.get(box) !== state) return [];
         box.innerHTML = "";
         box.appendChild(UI.el("div", "empty-hint", err.message));
         return [];

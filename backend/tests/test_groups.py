@@ -157,7 +157,7 @@ def test_create_group_validates_name_and_members(client):
     assert too_long.status_code == 400
 
 
-def test_any_member_can_add_and_remove_members(client):
+def test_any_member_adds_but_only_owner_removes(client):
     alice = register_and_login(client, "group_add_alice")
     bob = register_and_login(client, "group_add_bob")
     carol = register_and_login(client, "group_add_carol")
@@ -197,10 +197,20 @@ def test_any_member_can_add_and_remove_members(client):
     assert members.status_code == 200
     assert len(members.json()) == 3
 
-    # Удалить участника тоже может любой участник
-    removed = client.delete(
+    # Создатель — владелец группы
+    assert find_chat(client, bob, chat_id)["owner_id"] == alice["user_id"]
+
+    # Обычный участник не может удалить другого
+    forbidden_remove = client.delete(
         f"/api/chats/{chat_id}/members/{carol['user_id']}",
         headers=auth(bob["access_token"]),
+    )
+    assert forbidden_remove.status_code == 403
+
+    # Владелец — может
+    removed = client.delete(
+        f"/api/chats/{chat_id}/members/{carol['user_id']}",
+        headers=auth(alice["access_token"]),
     )
     assert removed.status_code == 204
     assert find_chat(client, carol, chat_id) is None
@@ -526,3 +536,30 @@ def test_private_chat_still_works_after_group_changes(client):
         headers=auth(alice["access_token"]),
     )
     assert members.status_code == 400
+
+
+def test_owner_leaving_passes_group_to_another_member(client):
+    alice = register_and_login(client, "group_owner_alice")
+    bob = register_and_login(client, "group_owner_bob")
+    carol = register_and_login(client, "group_owner_carol")
+
+    created = create_group(client, alice, "Наследство", [bob["user_id"], carol["user_id"]])
+    assert created.status_code == 200, created.text
+    chat_id = created.json()["id"]
+    assert created.json()["owner_id"] == alice["user_id"]
+
+    left = client.delete(
+        f"/api/chats/{chat_id}/members/{alice['user_id']}",
+        headers=auth(alice["access_token"]),
+    )
+    assert left.status_code == 204
+
+    new_owner = find_chat(client, bob, chat_id)["owner_id"]
+    assert new_owner in {bob["user_id"], carol["user_id"]}
+
+    owner, other = (bob, carol) if new_owner == bob["user_id"] else (carol, bob)
+    removed = client.delete(
+        f"/api/chats/{chat_id}/members/{other['user_id']}",
+        headers=auth(owner["access_token"]),
+    )
+    assert removed.status_code == 204

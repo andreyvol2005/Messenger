@@ -1,5 +1,6 @@
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, Response
 from sqlalchemy.orm import Session
+from starlette.concurrency import run_in_threadpool
 
 import events
 import media
@@ -184,17 +185,22 @@ async def update_group_chat(
                 detail="Файл не является изображением",
             )
 
-    chat = services.update_group_chat(
-        db,
-        current_user,
-        chat_id,
-        name=name,
-        avatar_data=avatar_data,
-        avatar_extension=avatar_extension,
-    )
+    # Диск и база синхронные: в пуле потоков они не останавливают event loop.
+    def save():
+        chat = services.update_group_chat(
+            db,
+            current_user,
+            chat_id,
+            name=name,
+            avatar_data=avatar_data,
+            avatar_extension=avatar_extension,
+        )
+        return chat, services.chat_member_ids(db, chat_id)
+
+    chat, recipients = await run_in_threadpool(save)
     background_tasks.add_task(
         events.publish,
-        services.chat_member_ids(db, chat_id),
+        recipients,
         events.build_chat_event(chat_id),
     )
     return chat

@@ -5,11 +5,13 @@
 рассылка живёт здесь, а не внутри ws-обработчика.
 """
 
+import asyncio
 import json
 from datetime import datetime
 
 from fastapi import WebSocket
 from sqlalchemy.orm import Session
+from starlette.concurrency import run_in_threadpool
 
 import models
 import services
@@ -18,6 +20,10 @@ import services
 class ConnectionManager:
     def __init__(self):
         self.active: dict[int, list[WebSocket]] = {}  # user_id -> список сокетов
+        # Event loop, в котором принят каждый сокет (ключ — id(ws)). В обычном
+        # запуске loop один, но тестовый клиент Starlette держит каждый сокет
+        # в своём loop, и отправка из чужого loop не будит получателя.
+        self._loops: dict[int, asyncio.AbstractEventLoop] = {}
 
     async def connect(self, ws: WebSocket, user_id: int) -> bool:
         """Подключает сокет и сообщает, был ли пользователь до этого офлайн.
@@ -26,6 +32,7 @@ class ConnectionManager:
         «вошёл в сеть»: событие шлём только на переходе 0 → 1 сокет.
         """
         await ws.accept()
+        self._loops[id(ws)] = asyncio.get_running_loop()
         was_online = bool(self.active.get(user_id))
         self.active.setdefault(user_id, []).append(ws)
         return not was_online
@@ -44,6 +51,7 @@ class ConnectionManager:
             return False
         if ws in sockets:
             sockets.remove(ws)
+            self._loops.pop(id(ws), None)
         if sockets:
             return False
         self.active.pop(user_id, None)
@@ -53,6 +61,7 @@ class ConnectionManager:
         """Разрывает все сокеты пользователя. True — если он был в сети."""
         sockets = self.active.pop(user_id, [])
         for ws in list(sockets):
+            self._loops.pop(id(ws), None)
             try:
                 # WebSocket.close в Starlette — корутина: без await сокет
                 # останется открытым, а клиент продолжит получать события.
@@ -63,12 +72,22 @@ class ConnectionManager:
 
     async def send_to_users(self, user_ids: list[int], message: dict):
         payload = json.dumps(message, default=str)
-        for user_id in user_ids:
-            for ws in list(self.active.get(user_id, [])):
-                try:
+
+        async def send(user_id: int, ws: WebSocket):
+            try:
+                loop = self._loops.get(id(ws))
+                if loop is None or loop is asyncio.get_running_loop():
                     await ws.send_text(payload)
-                except Exception:
-                    self.disconnect(user_id, ws)
+                else:
+                    future = asyncio.run_coroutine_threadsafe(ws.send_text(payload), loop)
+                    await asyncio.wrap_future(future)
+            except Exception:
+                self.disconnect(user_id, ws)
+
+        # Отправляем всем сразу: медленный клиент не задерживает остальных.
+        targets = [(user_id, ws) for user_id in user_ids for ws in list(self.active.get(user_id, []))]
+        if targets:
+            await asyncio.gather(*(send(user_id, ws) for user_id, ws in targets))
 
     async def send_error(self, ws: WebSocket, detail: str):
         await ws.send_text(json.dumps({"error": detail}))
@@ -269,6 +288,13 @@ def build_typing_event(chat_id: int, user_id: int, nickname: str | None = None) 
     }
 
 
+def typing_recipients(db: Session, user_id: int, chat_id: int) -> list[int]:
+    """Кому показать «печатает…»: остальным участникам чата (не «Избранному»)."""
+    if services.is_favorites(chat_id):
+        return []
+    return [member_id for member_id in services.chat_member_ids(db, chat_id) if member_id != user_id]
+
+
 async def publish_typing(
     db: Session,
     user_id: int,
@@ -280,10 +306,7 @@ async def publish_typing(
     Состояние не хранится ни в базе, ни в памяти сервера: клиент присылает
     событие, пока набирает текст, а получатель гасит индикатор по таймауту.
     """
-    if services.is_favorites(chat_id):
-        return
-
-    recipients = [member_id for member_id in services.chat_member_ids(db, chat_id) if member_id != user_id]
+    recipients = typing_recipients(db, user_id, chat_id)
     if not recipients:
         return
 
@@ -306,14 +329,20 @@ async def disconnect_user_everywhere(user_id: int):
     # Сессия запроса к этому моменту уже закрыта, поэтому открываем свою.
     from database import SessionLocal
 
-    db = SessionLocal()
+    def load_recipients() -> list[int]:
+        db = SessionLocal()
+        try:
+            return related_user_ids(db, user_id)
+        finally:
+            db.close()
+
     try:
-        await publish_presence(db, user_id, False)
+        # Запросы к базе — в пуле потоков, чтобы не останавливать event loop.
+        recipients = await run_in_threadpool(load_recipients)
+        await publish(recipients, build_presence_event(user_id, False))
     except Exception:
         # Пользователя уже удаляют; сбой рассылки не должен ломать очистку.
         pass
-    finally:
-        db.close()
 
 
 def build_avatar_event(user: models.User) -> dict:

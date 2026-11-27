@@ -1286,3 +1286,9 @@
     padding: 6px 10px;
     font-size: 11px;
 }
+
+#group-info .group-member-owner {
+    margin-top: 1px;
+    font-size: 11px;
+    color: var(--accent);
+}

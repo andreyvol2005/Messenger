@@ -71,6 +71,8 @@ CREATE TABLE chats (
     -- У личных чатов NULL — показывается аватар собеседника.
     avatar_url TEXT DEFAULT NULL,
     pair_key VARCHAR(32) UNIQUE DEFAULT NULL,
+    -- Владелец группы: только он удаляет других участников. У личных чатов NULL.
+    owner_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -128,6 +130,8 @@ CREATE TABLE contacts (
 -- Индексы
 -- ====================================================
 CREATE INDEX idx_messages_chat_created ON messages(chat_id, created_at DESC);
+-- История грузится страницами по id (before_id).
+CREATE INDEX idx_messages_chat_id_desc ON messages(chat_id, id DESC);
 CREATE INDEX idx_messages_sender ON messages(sender_id);
 CREATE INDEX idx_chat_members_user ON chat_members(user_id);
 CREATE INDEX idx_contacts_user ON contacts(user_id);

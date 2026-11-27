@@ -139,8 +139,13 @@ export const API = {
         });
     },
 
-    getMessages(chatId, limit = 50) {
-        return this.request(`/api/messages/${chatId}?limit=${limit}`);
+    // История постранично: без beforeId — последние сообщения, с ним — более старые.
+    getMessages(chatId, { limit = 50, beforeId = null } = {}) {
+        const params = new URLSearchParams({ limit: String(limit) });
+        if (beforeId !== null && beforeId !== undefined) {
+            params.set("before_id", String(beforeId));
+        }
+        return this.request(`/api/messages/${chatId}?${params}`);
     },
 
     markDelivered(chatId, messageId) {

@@ -5,10 +5,12 @@ from fastapi import (
     File,
     Form,
     HTTPException,
+    Query,
     Request,
     UploadFile,
 )
 from sqlalchemy.orm import Session
+from starlette.concurrency import run_in_threadpool
 
 import events
 import media
@@ -48,11 +50,14 @@ def _action_recipients(db: Session, user: models.User, chat_id: int) -> list[int
 @router.get("/{chat_id}", response_model=list[schemas.MessageResponse])
 def get_messages(
     chat_id: int,
-    limit: int = 50,
+    # Верхняя граница не даёт одним запросом выгрузить весь чат.
+    limit: int = Query(50, ge=1, le=100),
+    before_id: int | None = Query(None, ge=1),
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user),
 ):
-    return services.list_messages(db, current_user, chat_id, limit)
+    """История чата постранично: без before_id — последние сообщения, с ним — более старые."""
+    return services.list_messages(db, current_user, chat_id, limit, before_id)
 
 
 @router.post("", response_model=schemas.MessageResponse)
@@ -87,15 +92,19 @@ async def upload_image(
 ):
     """Загрузка изображения: файл на диск, в messages — только относительный путь."""
     data, extension = await _read_image_upload(file)
-    media_url = media.save_image(data, extension)
-    try:
-        result = services.create_image_message(db, current_user, chat_id, media_url, caption, reply_to_id)
-    except Exception:
-        # Сообщение не сохранилось — файл-сирота на диске не нужен
-        media.delete_image(media_url)
-        raise
 
-    recipients = events.recipients_for(db, result, chat_id)
+    # Диск и база синхронные: в пуле потоков они не останавливают event loop.
+    def save():
+        media_url = media.save_image(data, extension)
+        try:
+            result = services.create_image_message(db, current_user, chat_id, media_url, caption, reply_to_id)
+        except Exception:
+            # Сообщение не сохранилось — файл-сирота на диске не нужен
+            media.delete_image(media_url)
+            raise
+        return result, events.recipients_for(db, result, chat_id)
+
+    result, recipients = await run_in_threadpool(save)
     event = events.build_event(result, chat_id, current_user.nickname)
     background_tasks.add_task(events.publish, recipients, event)
 
@@ -183,27 +192,29 @@ async def edit_message(
             detail="Ожидается JSON или multipart/form-data",
         )
 
-    new_media_url = None
-    if file is not None:
-        data, extension = await _read_image_upload(file)
-        new_media_url = media.save_image(data, extension)
+    upload = await _read_image_upload(file) if file is not None else None
 
-    try:
-        result = services.edit_message(
-            db,
-            current_user,
-            message_id,
-            text,
-            new_media_url=new_media_url,
-        )
-    except Exception:
-        if new_media_url:
-            media.delete_image(new_media_url)
-        raise
+    # Диск и база синхронные: в пуле потоков они не останавливают event loop.
+    def save():
+        new_media_url = media.save_image(*upload) if upload else None
+        try:
+            result = services.edit_message(
+                db,
+                current_user,
+                message_id,
+                text,
+                new_media_url=new_media_url,
+            )
+        except Exception:
+            if new_media_url:
+                media.delete_image(new_media_url)
+            raise
+        return result, _action_recipients(db, current_user, result.chat_id)
 
+    result, recipients = await run_in_threadpool(save)
     background_tasks.add_task(
         events.publish,
-        _action_recipients(db, current_user, result.chat_id),
+        recipients,
         events.build_response_event("message_edited", result),
     )
     return result

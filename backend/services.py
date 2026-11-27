@@ -253,6 +253,8 @@ def list_chats(db: Session, user: models.User) -> schemas.ChatListResponse:
     )
     group_ids = [chat.id for chat, *_ in rows if chat.type == "group"]
     group_counts = _group_member_counts(db, group_ids)
+    private_ids = [chat.id for chat, *_ in rows if chat.type == "private"]
+    peers = _private_peers(db, private_ids, user.id)
 
     for chat, last_text, last_media, last_at, last_deleted in rows:
         title = chat.name
@@ -261,7 +263,7 @@ def list_chats(db: Session, user: models.User) -> schemas.ChatListResponse:
         avatar_url = None
         is_contact = False
         if chat.type == "private":
-            peer = _other_user(db, chat.id, user.id)
+            peer = peers.get(chat.id)
             if peer:
                 # Удалённый собеседник отображается как «Удалённый пользователь»
                 title = peer.nickname
@@ -289,6 +291,7 @@ def list_chats(db: Session, user: models.User) -> schemas.ChatListResponse:
                 unread_count=unread_by_chat.get(chat.id, 0),
                 chat_type=chat.type,
                 members_count=(group_counts.get(chat.id) if chat.type == "group" else None),
+                owner_id=chat.owner_id,
             )
         )
 
@@ -308,6 +311,19 @@ def _group_member_counts(db: Session, chat_ids: list[int]) -> dict[int, int]:
     return dict(rows)
 
 
+def _private_peers(db: Session, chat_ids: list[int], user_id: int) -> dict[int, models.User]:
+    """Собеседник в каждом личном чате одним запросом, а не запросом на чат."""
+    if not chat_ids:
+        return {}
+    rows = (
+        db.query(models.ChatMember.chat_id, models.User)
+        .join(models.User, models.User.id == models.ChatMember.user_id)
+        .filter(models.ChatMember.chat_id.in_(chat_ids), models.User.id != user_id)
+        .all()
+    )
+    return dict(rows)
+
+
 def _message_preview(text: str | None, media_url: str | None, is_deleted: bool = False) -> str | None:
     """Превью для списка чатов: у сообщения только с картинкой текста нет."""
     if is_deleted:
@@ -317,17 +333,6 @@ def _message_preview(text: str | None, media_url: str | None, is_deleted: bool =
     if media_url:
         return "📷 Изображение"
     return None
-
-
-def _other_user(db: Session, chat_id: int, user_id: int) -> models.User | None:
-    """Собеседник в личном чате (у группы вернёт None). Удалённые возвращаются тоже —
-    их nickname уже заменён на «Удалённый пользователь» при удалении."""
-    return (
-        db.query(models.User)
-        .join(models.ChatMember, models.ChatMember.user_id == models.User.id)
-        .filter(models.ChatMember.chat_id == chat_id, models.User.id != user_id)
-        .first()
-    )
 
 
 def create_or_get_chat(db: Session, user: models.User, username: str) -> schemas.ChatResponse:
@@ -410,8 +415,8 @@ def _get_chat(db: Session, chat_id: int) -> models.Chat:
 def _require_group_member(db: Session, user: models.User, chat_id: int) -> models.Chat:
     """Групповой чат, в котором текущий пользователь состоит участником.
 
-    Ролей нет: любого участника достаточно и для смены названия/аватара,
-    и для добавления или удаления других участников.
+    Любого участника достаточно для смены названия/аватара и добавления
+    людей. Удалять других может только владелец (см. remove_group_member).
     """
     chat = _get_chat(db, chat_id)
     if chat.type != "group":
@@ -429,6 +434,7 @@ def _group_chat_response(db: Session, chat: models.Chat) -> schemas.ChatResponse
         avatar_url=chat.avatar_url,
         chat_type="group",
         members_count=count,
+        owner_id=chat.owner_id,
     )
 
 
@@ -468,7 +474,7 @@ def create_group_chat(db: Session, user: models.User, name: str, user_ids: list[
             detail="Один из выбранных пользователей не найден",
         )
 
-    chat = models.Chat(type="group", name=title)
+    chat = models.Chat(type="group", name=title, owner_id=user.id)
     db.add(chat)
     try:
         db.flush()
@@ -538,8 +544,29 @@ def add_group_member(db: Session, user: models.User, chat_id: int, user_id: int)
     return _serialize_member(target)
 
 
+def _ensure_group_owner(db: Session, chat: models.Chat) -> int | None:
+    """Владелец группы; если его нет или он больше не активный участник,
+    группа переходит к активному участнику с наименьшим id."""
+    active_members = (
+        db.query(models.ChatMember.user_id)
+        .join(models.User, models.User.id == models.ChatMember.user_id)
+        .filter(models.ChatMember.chat_id == chat.id, models.User.deleted_at.is_(None))
+    )
+    if chat.owner_id is not None and active_members.filter(models.ChatMember.user_id == chat.owner_id).first():
+        return chat.owner_id
+    successor = active_members.order_by(models.ChatMember.user_id).first()
+    chat.owner_id = successor[0] if successor else None
+    return chat.owner_id
+
+
 def remove_group_member(db: Session, user: models.User, chat_id: int, user_id: int) -> None:
-    _require_group_member(db, user, chat_id)
+    """Выйти из группы может любой участник, удалить другого — только владелец."""
+    chat = _require_group_member(db, user, chat_id)
+    if user_id != user.id and _ensure_group_owner(db, chat) != user.id:
+        raise HTTPException(
+            status_code=403,
+            detail="Удалять участников может только владелец группы",
+        )
 
     member = (
         db.query(models.ChatMember)
@@ -553,6 +580,11 @@ def remove_group_member(db: Session, user: models.User, chat_id: int, user_id: i
         raise HTTPException(status_code=404, detail="Участник не найден")
 
     db.delete(member)
+    if chat.owner_id == user_id:
+        # Владелец вышел — группа не должна остаться без управления.
+        db.flush()
+        chat.owner_id = None
+        _ensure_group_owner(db, chat)
     db.commit()
 
 
@@ -689,7 +721,14 @@ def _serialize_for_user(
     return serialize_message(msg, nickname, status, view_chat_id=chat_id)
 
 
-def list_messages(db: Session, user: models.User, chat_id: int, limit: int = 50) -> list[schemas.MessageResponse]:
+def list_messages(
+    db: Session,
+    user: models.User,
+    chat_id: int,
+    limit: int = 50,
+    before_id: int | None = None,
+) -> list[schemas.MessageResponse]:
+    """Страница истории: последние `limit` сообщений, а с `before_id` — те, что старше него."""
     if not can_access_chat(db, user, chat_id):
         raise HTTPException(status_code=403, detail="No access to this chat")
 
@@ -704,7 +743,12 @@ def list_messages(db: Session, user: models.User, chat_id: int, limit: int = 50)
         # Удалённые сообщения остаются в ленте заглушками
         query = query.filter(models.Message.chat_id == chat_id)
 
-    rows = query.order_by(models.Message.created_at.desc(), models.Message.id.desc()).limit(limit).all()
+    if before_id is not None:
+        query = query.filter(models.Message.id < before_id)
+
+    # id растёт вместе со временем отправки, поэтому курсор по id даёт
+    # стабильные страницы даже при одинаковом created_at.
+    rows = query.order_by(models.Message.id.desc()).limit(limit).all()
     rows.reverse()  # в чате сообщения идут снизу вверх
 
     delivered_to, read_by = (0, 0)

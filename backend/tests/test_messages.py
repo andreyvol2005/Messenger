@@ -519,3 +519,40 @@ def test_chat_list_preview_tracks_last_message(client):
         headers=auth(alice["access_token"]),
     )
     assert chat_preview(alice)["last_message"] == "Сообщение удалено"
+
+
+def test_history_is_paginated_by_before_id(client):
+    alice = register_and_login(client, "msg_page_alice")
+    bob = register_and_login(client, "msg_page_bob")
+    chat_id = create_chat(client, alice, bob)
+    sent = [send(client, alice, chat_id, f"Сообщение {i}")["id"] for i in range(7)]
+    headers = auth(bob["access_token"])
+
+    latest = client.get(f"/api/messages/{chat_id}?limit=3", headers=headers)
+    assert latest.status_code == 200, latest.text
+    assert [row["id"] for row in latest.json()] == sent[-3:]
+
+    older = client.get(
+        f"/api/messages/{chat_id}?limit=3&before_id={sent[-3]}",
+        headers=headers,
+    )
+    assert [row["id"] for row in older.json()] == sent[1:4]
+
+    oldest = client.get(
+        f"/api/messages/{chat_id}?limit=3&before_id={sent[1]}",
+        headers=headers,
+    )
+    assert [row["id"] for row in oldest.json()] == sent[:1]
+
+    # Одним запросом нельзя выгрузить весь чат
+    too_many = client.get(f"/api/messages/{chat_id}?limit=100000", headers=headers)
+    assert too_many.status_code == 422
+
+
+def test_long_password_can_log_in(client):
+    # bcrypt учитывает 72 байта; пароль длиннее раньше не проходил вход на bcrypt 5
+    password = "длинный-пароль-" * 10
+    response = client.post("/api/register", json={"username": "long_pw_user", "password": password})
+    assert response.status_code == 200, response.text
+    response = client.post("/api/login", json={"username": "long_pw_user", "password": password})
+    assert response.status_code == 200, response.text
