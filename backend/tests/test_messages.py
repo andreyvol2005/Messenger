@@ -556,3 +556,20 @@ def test_long_password_can_log_in(client):
     assert response.status_code == 200, response.text
     response = client.post("/api/login", json={"username": "long_pw_user", "password": password})
     assert response.status_code == 200, response.text
+
+
+def test_responses_carry_server_timing_and_health_reports_loop_lag(client):
+    response = client.get("/api/health")
+    assert response.status_code == 200
+    assert response.headers["server-timing"].startswith("app;dur=")
+    assert "max_ms" in response.json()["loop_lag_ms"]
+
+
+def test_message_time_is_sent_with_utc_offset(client):
+    alice = register_and_login(client, "msg_tz_alice")
+    bob = register_and_login(client, "msg_tz_bob")
+    chat_id = create_chat(client, alice, bob)
+    sent = send(client, alice, chat_id, "Который час?")
+    # Без пояса браузер принял бы UTC за местное время
+    assert sent["created_at"].endswith(("Z", "+00:00"))
+    assert history(client, bob, chat_id)[-1]["created_at"].endswith(("Z", "+00:00"))

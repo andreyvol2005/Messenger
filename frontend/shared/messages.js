@@ -29,6 +29,7 @@ export const MESSAGE_CLASSES = {
 };
 
 const STATUS_LABELS = {
+    pending: "Отправляется",
     sent: "Отправлено",
     delivered: "Доставлено",
     read: "Прочитано"
@@ -50,6 +51,15 @@ function createStatusIcon(status) {
     svg.setAttribute("viewBox", "0 0 16 12");
     svg.setAttribute("aria-hidden", "true");
 
+    // Ещё не подтверждено сервером — часики вместо галочки
+    if (normalized === "pending") {
+        const clock = document.createElementNS("http://www.w3.org/2000/svg", "path");
+        clock.setAttribute("d", "M8,1.5 A4.5,4.5 0 1,0 8,10.5 A4.5,4.5 0 1,0 8,1.5 M8,3.5 L8,6 L9.8,7.2");
+        svg.appendChild(clock);
+        icon.appendChild(svg);
+        return icon;
+    }
+
     const addCheck = (pathData) => {
         const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
         path.setAttribute("d", pathData);
@@ -64,7 +74,7 @@ function createStatusIcon(status) {
     return icon;
 }
 
-const STATUS_RANK = { sent: 0, delivered: 1, read: 2 };
+const STATUS_RANK = { pending: -1, sent: 0, delivered: 1, read: 2 };
 
 function applyStatusToRow(row, lastDeliveredId, lastReadId) {
     if (!row.classList.contains("mine")) return;
@@ -311,8 +321,88 @@ export function renderMessage(msg, options) {
 // первым — неизвестно, поэтому сверяемся по id и второй раз не добавляем.
 export function appendMessage(box, msg, options) {
     if (box.querySelector(`[data-msg-id="${msg.id}"]`)) return false;
+    // Своё сообщение могло прийти по сокету раньше ответа на отправку:
+    // тогда занимаем место его черновика, а не добавляем второй пузырь.
+    const pending = findPendingRow(box, msg);
+    if (pending) {
+        pending.replaceWith(renderMessage(msg, options));
+        return true;
+    }
     box.appendChild(renderMessage(msg, options));
     return true;
+}
+
+// ==========================================
+// Мгновенная отправка
+// ==========================================
+// Сообщение появляется в ленте сразу после Enter, с часиками вместо галочки,
+// и не ждёт ответа сервера. У черновика нет настоящего id, поэтому вместо
+// data-msg-id у него data-pending-id: меню, выбор, галочки и подгрузка истории
+// работают только с подтверждёнными сообщениями и черновик не трогают.
+
+let pendingSeq = 0;
+
+function findPendingRow(box, msg) {
+    if (msg.sender_id !== Session.userId() || msg.media_url) return null;
+    for (const row of box.querySelectorAll("[data-pending-id]")) {
+        if (row.dataset.pendingText === msg.text) return row;
+    }
+    return null;
+}
+
+function replySnapshotText(reply) {
+    if (!reply) return null;
+    if (reply.is_deleted) return "Сообщение удалено";
+    return reply.text || (reply.media_url ? "📷 Изображение" : "Сообщение");
+}
+
+// draft: { chatId, text, replyTo } — replyTo это сообщение, на которое отвечаем.
+// send() отправляет на сервер и возвращает сохранённое сообщение.
+export async function sendWithPreview(box, draft, options, send) {
+    const reply = draft.replyTo || null;
+    const preview = {
+        id: `pending-${++pendingSeq}`,
+        chat_id: draft.chatId,
+        sender_id: Session.userId(),
+        sender_nickname: Session.nickname(),
+        text: draft.text,
+        media_url: null,
+        created_at: new Date().toISOString(),
+        reply_to_id: reply ? reply.id : null,
+        reply_to_nickname: reply ? reply.sender_nickname || null : null,
+        reply_to_text: replySnapshotText(reply),
+        edited_at: null,
+        forwarded_from_nickname: null,
+        is_deleted: false,
+        status: "pending"
+    };
+
+    const hint = box.querySelector(".empty-hint");
+    if (hint) hint.remove();
+    const row = renderMessage(preview, { ...options, onToggleSelect: null });
+    delete row.dataset.msgId;
+    row.dataset.pendingId = preview.id;
+    row.dataset.pendingText = draft.text;
+    row.classList.add("pending");
+    box.appendChild(row);
+    UI.scrollToBottom(box);
+
+    try {
+        const msg = await send();
+        // Черновик мог уже замениться событием из сокета, а пользователь —
+        // уйти в другой чат. Тогда в ленте ничего делать не нужно.
+        if (row.isConnected) {
+            if (box.querySelector(`[data-msg-id="${msg.id}"]`)) {
+                row.remove();
+            } else {
+                row.replaceWith(renderMessage(msg, options));
+            }
+        }
+        return msg;
+    } catch (err) {
+        row.remove();
+        throw err;
+    }
 }
 
 // Убирает заглушку, добавляет сообщение и держит ленту внизу, если пользователь

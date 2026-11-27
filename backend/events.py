@@ -14,6 +14,7 @@ from sqlalchemy.orm import Session
 from starlette.concurrency import run_in_threadpool
 
 import models
+import schemas
 import services
 
 
@@ -116,11 +117,11 @@ def build_event(msg, chat_id: int, sender_nickname: str | None) -> dict:
         "media_url": msg.media_url,
         # Именно isoformat, а не str: браузер не понимает "2026-10-13 10:16:18"
         # через пробел и показал бы Invalid Date. Формат совпадает с REST.
-        "created_at": msg.created_at.isoformat(),
+        "created_at": schemas.as_utc(msg.created_at).isoformat(),
         "reply_to_id": msg.reply_to_id,
         "reply_to_nickname": msg.reply_to_nickname,
         "reply_to_text": msg.reply_to_text,
-        "edited_at": msg.edited_at.isoformat() if msg.edited_at else None,
+        "edited_at": schemas.as_utc(msg.edited_at).isoformat() if msg.edited_at else None,
         "forwarded_from_nickname": msg.forwarded_from_nickname,
         "is_deleted": bool(msg.is_deleted),
     }
@@ -136,11 +137,11 @@ def build_response_event(event_type: str, msg) -> dict:
         "sender_nickname": msg.sender_nickname,
         "text": msg.text,
         "media_url": msg.media_url,
-        "created_at": msg.created_at.isoformat(),
+        "created_at": schemas.as_utc(msg.created_at).isoformat(),
         "reply_to_id": msg.reply_to_id,
         "reply_to_nickname": msg.reply_to_nickname,
         "reply_to_text": msg.reply_to_text,
-        "edited_at": msg.edited_at.isoformat() if msg.edited_at else None,
+        "edited_at": schemas.as_utc(msg.edited_at).isoformat() if msg.edited_at else None,
         "forwarded_from_nickname": msg.forwarded_from_nickname,
         "is_deleted": bool(msg.is_deleted),
         "status": getattr(msg, "status", "sent"),

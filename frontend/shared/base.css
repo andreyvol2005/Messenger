@@ -570,9 +570,15 @@ textarea:-webkit-autofill:active {
     stroke-linejoin: round;
 }
 
+.message-status.pending { color: var(--status-sent); }
 .message-status.sent { color: var(--status-sent); }
 .message-status.delivered { color: var(--status-delivered); }
 .message-status.read { color: var(--status-read); }
+
+/* Черновик мгновенной отправки: ждёт подтверждения сервера */
+.pending .message-status.pending svg {
+    stroke-width: 1.4;
+}
 
 @media (max-width: 768px) {
     .auth-container {

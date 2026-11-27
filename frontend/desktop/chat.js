@@ -11,6 +11,7 @@ import {
     appendIncoming,
     appendMessage,
     loadMessageHistory,
+    sendWithPreview,
     MESSAGE_CLASSES,
     Receipts,
     updateMessageStatuses
@@ -523,27 +524,32 @@ export const Chat = {
         const text = input.value.trim();
         if (!text || this.currentChatId === null) return;
 
+        const chatId = this.currentChatId;
+        const replyTo = MessageActions.reply;
         const replyToId = MessageActions.replyToId();
+        // Поле и цитата очищаются сразу: сообщение уже видно в ленте,
+        // сервер подтвердит его в фоне.
         input.value = "";
-        this.clearDraft(this.currentChatId);
+        this.clearDraft(chatId);
         this.resizeInput(input);
+        MessageActions.clearReply();
         try {
-            const msg = await API.sendMessage(
-                this.currentChatId,
-                text,
-                replyToId
+            await sendWithPreview(
+                document.getElementById("messages"),
+                { chatId, text, replyTo },
+                this.messageOptions(),
+                () => API.sendMessage(chatId, text, replyToId)
             );
-            MessageActions.clearReply();
-            const box = document.getElementById("messages");
-            const hint = box.querySelector(".empty-hint");
-            if (hint) hint.remove();
-            appendMessage(box, msg, this.messageOptions());
-            this.applyCachedStatuses(this.currentChatId);
-            UI.scrollToBottom(box);
-            await this.loadChats();
+            if (this.currentChatId === chatId) this.applyCachedStatuses(chatId);
+            // Превью в списке чатов обновится в фоне, отправку это не задерживает
+            this.refreshList();
         } catch (err) {
-            input.value = text;
-            this.resizeInput(input);
+            // Не отправилось — возвращаем текст и цитату, чтобы ничего не потерять
+            if (this.currentChatId === chatId && !input.value) {
+                input.value = text;
+                this.resizeInput(input);
+                if (replyTo) MessageActions.beginReply(replyTo);
+            }
             alert(err.message);
         }
     },

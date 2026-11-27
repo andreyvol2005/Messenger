@@ -6,6 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
 import media
+import perf
 from jobs import worker_loop
 from routers import accounts, chats, contacts, messages, presence, ws
 
@@ -15,6 +16,9 @@ from routers import accounts, chats, contacts, messages, presence, ws
 media.ensure_upload_dirs()
 
 app = FastAPI(title="Messenger API")
+
+# Заголовок Server-Timing и лог медленных запросов (см. perf.py)
+app.add_middleware(perf.TimingMiddleware)
 
 app.add_middleware(
     CORSMiddleware,
@@ -32,29 +36,37 @@ app.include_router(presence.router)
 app.include_router(ws.router)
 
 # Фоновый воркер очистки данных удалённых аккаунтов (S3, Redis, индекс, push).
-_worker_task: asyncio.Task | None = None
+# Рядом с ним — монитор задержек event loop.
+_background_tasks: list[asyncio.Task] = []
 
 
 @app.on_event("startup")
 async def _startup():
-    global _worker_task
-    _worker_task = asyncio.create_task(worker_loop())
+    _background_tasks.append(asyncio.create_task(worker_loop()))
+    _background_tasks.append(asyncio.create_task(perf.monitor_event_loop()))
 
 
 @app.on_event("shutdown")
 async def _shutdown():
-    global _worker_task
-    if _worker_task:
-        _worker_task.cancel()
+    for task in _background_tasks:
+        task.cancel()
+    for task in _background_tasks:
         try:
-            await _worker_task
+            await task
         except asyncio.CancelledError:
             pass
+    _background_tasks.clear()
 
 
 @app.get("/api/health")
-def health():
-    return {"status": "ok", "message": "Server is running"}
+async def health():
+    # async: ответ не ждёт свободного потока, поэтому время ответа показывает
+    # чистую отзывчивость event loop. loop_lag — насколько он опаздывает.
+    return {
+        "status": "ok",
+        "message": "Server is running",
+        "loop_lag_ms": perf.loop_lag,
+    }
 
 
 # Загруженные картинки. Монтируется до раздачи фронтенда с "/", иначе

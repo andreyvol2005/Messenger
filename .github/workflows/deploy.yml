@@ -111,6 +111,25 @@ jobs:
 
             if [ "$health" = "200" ] && [ "$page" = "200" ] && [ "$login" = "401" ]; then
               echo "Smoke check: health=200, page=200, db-login=401 — OK"
+
+              # Диагностика скорости: время ответа изнутри сервера (без сети),
+              # нагрузка и кто ест CPU. Командную строку процессов не печатаем:
+              # в ней могут быть секреты, а лог Actions бывает публичным.
+              echo "== Скорость сервера =="
+              echo "CPU: $(nproc), load average: $(cut -d' ' -f1-3 /proc/loadavg)"
+              free -m | awk 'NR<=2' || true
+              systemctl show messenger -p ExecStart --value \
+                | grep -oE -- '--reload|--workers[= ]+[0-9]+' | sort -u \
+                | sed 's/^/uvicorn flag: /' || true
+              sleep 2
+              for j in 1 2 3 4 5; do
+                curl -sS -o /dev/null -w 'health изнутри: %{time_total}s\n' \
+                  http://127.0.0.1:8000/api/health || true
+              done
+              curl -sS http://127.0.0.1:8000/api/health || true
+              echo
+              echo "Топ процессов по CPU (%cpu %mem команда):"
+              top -bn1 -o %CPU | sed -n '8,15p' | awk '{print $9, $10, $12}' || true
               exit 0
             fi
             sleep 1

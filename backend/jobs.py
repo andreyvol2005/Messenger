@@ -16,6 +16,7 @@ import logging
 from collections.abc import Awaitable, Callable
 
 from sqlalchemy import select, text
+from starlette.concurrency import run_in_threadpool
 
 import models
 from database import SessionLocal
@@ -84,7 +85,13 @@ async def claim_pending_job(db) -> models.AccountDeletionJob | None:
 
     Джоба с недавней неудачной попыткой ждёт экспоненциальный бэкофф,
     поэтому воркер не долбит внешние сервисы каждые 5 секунд.
+    Запрос синхронный, поэтому выполняется в пуле потоков: воркер живёт в
+    том же event loop, что и сокеты, и не должен его останавливать.
     """
+    return await run_in_threadpool(_claim_pending_job_sync, db)
+
+
+def _claim_pending_job_sync(db) -> models.AccountDeletionJob | None:
     result = db.execute(
         select(models.AccountDeletionJob)
         .where(
@@ -133,18 +140,21 @@ async def process_job_once(db) -> bool:
                 job.last_error,
             )
 
-    db.add(job)
-    db.commit()
+    def save() -> None:
+        db.add(job)
+        db.commit()
+
+    await run_in_threadpool(save)
     return True
 
 
 async def process_jobs_once() -> bool:
     """Обработать не более одной джобы. Для использования в цикле воркера."""
-    db = SessionLocal()
+    db = await run_in_threadpool(SessionLocal)
     try:
         return await process_job_once(db)
     finally:
-        db.close()
+        await run_in_threadpool(db.close)
 
 
 async def worker_loop(stop_event: asyncio.Event | None = None) -> None:

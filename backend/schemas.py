@@ -1,6 +1,18 @@
-from datetime import date, datetime
+from datetime import date, datetime, timezone
+from typing import Annotated
 
-from pydantic import BaseModel
+from pydantic import AfterValidator, BaseModel
+
+
+def as_utc(value: datetime | None) -> datetime | None:
+    """Время в базе хранится в UTC без пояса (datetime.utcnow). Без явного
+    пояса браузер принял бы его за местное и сдвинул часы на разницу с UTC."""
+    if value is not None and value.tzinfo is None:
+        return value.replace(tzinfo=timezone.utc)
+    return value
+
+
+UtcDatetime = Annotated[datetime, AfterValidator(as_utc)]
 
 
 class UserCreate(BaseModel):
@@ -20,7 +32,7 @@ class UserResponse(BaseModel):
     bio: str | None = None
     avatar_url: str | None = None
     theme: str = "dark"
-    created_at: datetime
+    created_at: UtcDatetime
 
     class Config:
         from_attributes = True  # позволяет читать данные из SQLAlchemy-объектов
@@ -35,7 +47,7 @@ class ProfileResponse(BaseModel):
     birth_date: date | None = None
     avatar_url: str | None = None
     theme: str = "dark"
-    created_at: datetime
+    created_at: UtcDatetime
 
     class Config:
         from_attributes = True
@@ -94,7 +106,7 @@ class ChatResponse(BaseModel):
     title: str
     is_favorites: bool = False
     last_message: str | None = None
-    last_message_at: datetime | None = None
+    last_message_at: UtcDatetime | None = None
     # Только для личных чатов: собеседник, его аватар и признак того,
     # что он уже в контактах. peer_id нужен для индикатора «в сети».
     peer_id: int | None = None
@@ -131,12 +143,12 @@ class MessageResponse(BaseModel):
     text: str | None
     # Относительный путь вида /uploads/images/<uuid>.jpg; None у текстовых сообщений
     media_url: str | None = None
-    created_at: datetime
+    created_at: UtcDatetime
     reply_to_id: int | None = None
     # Снимок цитаты на момент ответа
     reply_to_nickname: str | None = None
     reply_to_text: str | None = None
-    edited_at: datetime | None = None
+    edited_at: UtcDatetime | None = None
     # Кто отправил оригинал: подпись «Переслано от …»
     forwarded_from_nickname: str | None = None
     # Удалённое сообщение: клиент рисует заглушку вместо текста и картинки

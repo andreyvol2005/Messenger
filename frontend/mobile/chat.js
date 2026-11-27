@@ -14,6 +14,7 @@ import {
     appendIncoming,
     appendMessage,
     loadMessageHistory,
+    sendWithPreview,
     MESSAGE_CLASSES,
     Receipts,
     updateMessageStatuses
@@ -471,22 +472,30 @@ export const MobileChat = {
         const text = input.value.trim();
         if (!text) return;
 
+        const chatId = this.chatId;
+        const replyTo = MessageActions.reply;
         const replyToId = MessageActions.replyToId();
+        // Поле и цитата очищаются сразу: сообщение уже видно в ленте,
+        // сервер подтвердит его в фоне.
         input.value = "";
-        this.clearDraft(this.chatId);
+        this.clearDraft(chatId);
         this.resizeInput(input);
+        MessageActions.clearReply();
         try {
-            const msg = await API.sendMessage(this.chatId, text, replyToId);
-            MessageActions.clearReply();
-            const box = document.getElementById("messages");
-            const hint = box.querySelector(".empty-hint");
-            if (hint) hint.remove();
-            appendMessage(box, msg, this.messageOptions());
+            await sendWithPreview(
+                document.getElementById("messages"),
+                { chatId, text, replyTo },
+                this.messageOptions(),
+                () => API.sendMessage(chatId, text, replyToId)
+            );
             this.applyCachedStatuses();
-            UI.scrollToBottom(box);
         } catch (err) {
-            input.value = text;
-            this.resizeInput(input);
+            // Не отправилось — возвращаем текст и цитату, чтобы ничего не потерять
+            if (!input.value) {
+                input.value = text;
+                this.resizeInput(input);
+                if (replyTo) MessageActions.beginReply(replyTo);
+            }
             alert(err.message);
         }
     },
