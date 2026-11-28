@@ -71,6 +71,81 @@ def create_group_chat(
     return chat
 
 
+# ==========================================
+# Каналы
+# ==========================================
+
+
+@router.post("/channels", response_model=schemas.ChatResponse)
+def create_channel(
+    payload: schemas.ChannelCreate,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user),
+):
+    """Создать канал. Автор становится владельцем и первым подписчиком."""
+    chat = services.create_channel(db, current_user, payload.name)
+    background_tasks.add_task(
+        events.publish,
+        [current_user.id],
+        events.build_chat_event(chat.id),
+    )
+    return chat
+
+
+@router.get("/channels", response_model=schemas.ChannelListResponse)
+def list_channels(
+    query: str | None = None,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user),
+):
+    """Каталог публичных каналов с поиском по названию."""
+    return services.list_channels(db, current_user, query)
+
+
+@router.get("/channels/{chat_id}", response_model=schemas.ChatResponse)
+def get_channel(
+    chat_id: int,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user),
+):
+    return services.get_channel(db, current_user, chat_id)
+
+
+@router.post("/{chat_id}/subscribe", response_model=schemas.ChatResponse)
+def subscribe_channel(
+    chat_id: int,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user),
+):
+    """Подписаться на канал. Повторная подписка ничего не меняет."""
+    chat = services.subscribe_channel(db, current_user, chat_id)
+    background_tasks.add_task(
+        events.publish,
+        [current_user.id],
+        events.build_chat_event(chat_id),
+    )
+    return chat
+
+
+@router.delete("/{chat_id}/subscribe", response_model=schemas.ChatResponse)
+def unsubscribe_channel(
+    chat_id: int,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user),
+):
+    """Отписаться от канала. Владелец остаётся подписчиком."""
+    chat = services.unsubscribe_channel(db, current_user, chat_id)
+    background_tasks.add_task(
+        events.publish,
+        [current_user.id],
+        events.build_chat_event(chat_id),
+    )
+    return chat
+
+
 @router.get(
     "/{chat_id}/members",
     response_model=list[schemas.ChatMemberResponse],
@@ -131,8 +206,9 @@ async def update_group_chat(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user),
 ):
-    """Изменить название и/или аватар группы.
+    """Изменить название и/или аватар группы или канала.
 
+    Группу может менять любой участник, канал — только владелец.
     Поддерживаются оба формата:
       * `application/json` — `{"name": "Название"}`;
       * `multipart/form-data` — поля `name` и `file` (или `avatar`).
@@ -187,7 +263,7 @@ async def update_group_chat(
 
     # Диск и база синхронные: в пуле потоков они не останавливают event loop.
     def save():
-        chat = services.update_group_chat(
+        chat = services.update_chat(
             db,
             current_user,
             chat_id,

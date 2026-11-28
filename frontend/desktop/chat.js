@@ -14,11 +14,13 @@ import {
     sendWithPreview,
     MESSAGE_CLASSES,
     Receipts,
-    updateMessageStatuses
+    updateMessageStatuses,
+    updateMessageViews
 } from "../shared/messages.js";
 import { MessageActions } from "../shared/message-actions.js";
 import { UserSearch } from "../shared/user-search.js";
 import { GroupInfo } from "../shared/group-info.js";
+import { ChannelBar, ChannelInfo } from "../shared/channels.js";
 import { PeerInfo } from "./peer-info.js";
 
 export const Chat = {
@@ -29,6 +31,8 @@ export const Chat = {
     chatType: "private",
     chatMembersCount: null,
     chatAvatarUrl: null,
+    chatSubscribed: false,
+    chatOwnerId: null,
     // Последние отметки по чатам: событие может прийти раньше, чем ответ
     // на отправку добавит сообщение в DOM. Тогда применим их после рендера.
     statusBounds: new Map(),
@@ -114,8 +118,10 @@ export const Chat = {
     messageOptions() {
         return {
             ...MessageActions.messageOptions(),
-            // В группе подписываем чужие сообщения ником отправителя
-            showSender: this.chatType === "group"
+            // В группе и канале подписываем чужие сообщения отправителем
+            // или названием канала
+            showSender: this.chatType === "group" || this.chatType === "channel",
+            showSenderForMine: this.chatType === "channel"
         };
     },
 
@@ -128,16 +134,38 @@ export const Chat = {
         if (msg.chat_id === this.currentChatId) {
             appendIncoming(document.getElementById("messages"), msg, this.messageOptions());
             if (mine) this.applyCachedStatuses(msg.chat_id);
+            if (this.chatType === "channel") {
+                // Новый пост — сразу отмечаем уникальный просмотр
+                if (!mine) this.markPostViewed(msg.id);
+                this.refreshList();
+                return;
+            }
             if (!mine) {
                 // Чат открыт: если вкладка видима — сообщение сразу прочитано.
                 // Ждём отметку, иначе список успеет показать бейдж непрочитанного.
                 await Receipts.acknowledgeMessage(msg.chat_id, msg.id, true);
             }
-        } else if (!mine) {
-            // Чат закрыт, но сообщение получено — отмечаем доставку
+        } else if (!mine && !msg.views_count) {
+            // Чат закрыт, но сообщение получено — отмечаем доставку.
+            // У поста канала views_count всегда больше нуля: там отметок
+            // о доставке нет, считаются только просмотры.
             Receipts.markDelivered(msg.chat_id, msg.id);
         }
         this.refreshList();
+    },
+
+    // Просмотр поста канала: сервер не увеличит счётчик повторно
+    async markPostViewed(messageId) {
+        try {
+            const result = await API.viewMessage(messageId);
+            updateMessageViews(
+                document.getElementById("messages"),
+                result.message_id,
+                result.views_count
+            );
+        } catch (err) {
+            // Счётчик обновится при следующей загрузке истории
+        }
     },
 
     // Собеседник получил или прочитал наши сообщения — обновляем галочки
@@ -161,7 +189,7 @@ export const Chat = {
     },
 
     async markCurrentChatRead() {
-        if (this.currentChatId === null) return;
+        if (this.currentChatId === null || this.chatType === "channel") return;
         await Receipts.acknowledgeHistory(
             document.getElementById("messages"),
             this.currentChatId
@@ -253,7 +281,9 @@ export const Chat = {
             chat.avatar_url,
             chat.peer_id,
             chat.chat_type || "private",
-            chat.members_count ?? null
+            chat.members_count ?? null,
+            chat.is_subscribed ?? false,
+            chat.owner_id ?? null
         );
     },
 
@@ -265,7 +295,9 @@ export const Chat = {
         avatarUrl = null,
         peerId = null,
         chatType = "private",
-        membersCount = null
+        membersCount = null,
+        isSubscribed = false,
+        ownerId = null
     ) {
         // Сохраняем черновик текущего чата перед переключением. Если открыта
         // правка, в поле лежит текст сообщения, а не черновик — его не трогаем.
@@ -282,20 +314,26 @@ export const Chat = {
         this.chatType = chatType || "private";
         this.chatMembersCount = membersCount ?? null;
         this.chatAvatarUrl = avatarUrl || null;
+        this.chatSubscribed = Boolean(isSubscribed);
+        this.chatOwnerId = ownerId ?? null;
         this.updateContactSuggestion();
 
         // Панели профиля собеседника и группы взаимоисключающие
         if (this.chatType === "group") {
             if (PeerInfo.isOpen()) PeerInfo.close();
+        } else if (this.chatType === "channel") {
+            if (PeerInfo.isOpen()) PeerInfo.close();
+            if (GroupInfo.isOpen()) GroupInfo.close();
         } else if (GroupInfo.isOpen()) {
             GroupInfo.close();
         }
+        if (ChannelInfo.isOpen()) ChannelInfo.close();
         this.updateInfoButton();
 
         // Переключаемся между личными чатами: панель профиля остаётся открытой,
         // просто перерисовываем её под нового собеседника.
-        // У «Избранного» и группы нет собеседника — панель закрываем.
-        if (this.chatType !== "group" && PeerInfo.isOpen()) {
+        // У «Избранного», группы и канала нет собеседника — панель закрываем.
+        if (this.chatType !== "group" && this.chatType !== "channel" && PeerInfo.isOpen()) {
             if (this.peerUsername) {
                 PeerInfo.open(this.peerUsername, { nickname: title, avatarUrl });
             } else {
@@ -308,6 +346,7 @@ export const Chat = {
         document.getElementById("chat-title").textContent = title;
         this.setChatAvatar(title, avatarUrl, peerId);
         this.setChatStatus(peerId, chatId);
+        this.updateComposer();
         // Чат могли создать только что: собеседник уже был онлайн, поэтому
         // события о его входе не приходило — уточняем состояние.
         Presence.refresh();
@@ -321,8 +360,11 @@ export const Chat = {
         const box = document.getElementById("messages");
         await loadMessageHistory(box, chatId, this.messageOptions());
         this.applyCachedStatuses(chatId);
-        // Открыли чат — всё входящее в ленте получено и (в видимой вкладке) прочитано
-        await Receipts.acknowledgeHistory(box, chatId);
+        // Открыли чат — всё входящее в ленте получено и (в видимой вкладке) прочитано.
+        // В канале отметок о прочтении нет: там считаются просмотры постов.
+        if (this.chatType !== "channel") {
+            await Receipts.acknowledgeHistory(box, chatId);
+        }
         await this.loadChats();
     },
 
@@ -333,12 +375,15 @@ export const Chat = {
         this.peerUsername = chat.peer_username || null;
         this.peerIsContact = Boolean(chat.is_contact);
         this.chatAvatarUrl = chat.avatar_url || null;
+        this.chatSubscribed = Boolean(chat.is_subscribed);
+        this.chatOwnerId = chat.owner_id ?? null;
 
         document.getElementById("chat-title").textContent = chat.title;
         this.setChatAvatar(chat.title, chat.avatar_url, chat.peer_id);
         this.setChatStatus(chat.peer_id, chat.id);
         this.updateContactSuggestion();
         this.updateInfoButton();
+        this.updateComposer();
     },
 
     // После события chat_updated: имя, аватар и состав группы могли измениться
@@ -352,13 +397,19 @@ export const Chat = {
         try {
             const { chats } = await API.getChats();
             const current = chats.find((chat) => chat.id === this.currentChatId);
-            if (!current) {
+            if (current) {
+                this.applyChatHeader(current);
+            } else if (this.chatType === "channel") {
+                // Канал без подписки в списке чатов отсутствует, но остаётся
+                // доступным для чтения — перечитываем его отдельно.
+                const channel = await API.getChannel(this.currentChatId);
+                this.applyChatHeader(channel);
+            } else {
                 // Пользователя удалили из группы — открывать больше нечего
                 this.closeChat();
                 await this.loadChats();
                 return;
             }
-            this.applyChatHeader(current);
         } catch (err) {
             // Сеть отвалилась: оставляем то, что уже показано
         }
@@ -367,6 +418,7 @@ export const Chat = {
 
     closeChat() {
         if (GroupInfo.isOpen()) GroupInfo.close();
+        if (ChannelInfo.isOpen()) ChannelInfo.close();
         if (PeerInfo.isOpen()) PeerInfo.close();
         MessageActions.reset();
 
@@ -376,6 +428,10 @@ export const Chat = {
         this.chatType = "private";
         this.chatMembersCount = null;
         this.chatAvatarUrl = null;
+        this.chatSubscribed = false;
+        this.chatOwnerId = null;
+        MessageActions.setChannel(false);
+        ChannelBar.hide();
 
         document.getElementById("chat-window").classList.add("hidden");
         document.getElementById("chat-placeholder").classList.remove("hidden");
@@ -388,7 +444,30 @@ export const Chat = {
         if (!infoBtn) return;
 
         const isGroup = this.chatType === "group";
-        infoBtn.classList.toggle("hidden", !isGroup && !this.peerUsername);
+        const isChannel = this.chatType === "channel";
+        infoBtn.classList.toggle(
+            "hidden",
+            !isGroup && !isChannel && !this.peerUsername
+        );
+
+        if (isChannel) {
+            infoBtn.title = "Информация о канале";
+            infoBtn.setAttribute("aria-label", "Информация о канале");
+            infoBtn.onclick = () => {
+                if (ChannelInfo.isOpen() && ChannelInfo.chatId === this.currentChatId) {
+                    ChannelInfo.close();
+                    return;
+                }
+                ChannelInfo.open(this.currentChatId, {
+                    title: document.getElementById("chat-title").textContent,
+                    avatar_url: this.chatAvatarUrl,
+                    members_count: this.chatMembersCount,
+                    owner_id: this.chatOwnerId,
+                    is_subscribed: this.chatSubscribed
+                });
+            };
+            return;
+        }
 
         if (isGroup) {
             infoBtn.title = "Информация о группе";
@@ -442,6 +521,15 @@ export const Chat = {
         const element = document.getElementById("chat-status");
         if (!element) return;
 
+        if (this.chatType === "channel") {
+            // В канале не бывает «печатает…»: показываем число подписчиков
+            element.textContent = this.chatMembersCount !== null
+                ? UI.subscribersLabel(this.chatMembersCount)
+                : "Канал";
+            element.classList.remove("hidden");
+            return;
+        }
+
         if (this.chatType === "group") {
             // Пока никто не печатает — число участников; как только кто-то
             // набирает текст, Presence подменяет строку на «Имя печатает...».
@@ -456,6 +544,32 @@ export const Chat = {
         }
 
         Presence.bindStatus(element, peerId, chatId);
+    },
+
+    // В канале поле ввода есть только у владельца: остальные читают ленту
+    // и могут подписаться кнопкой под сообщениями.
+    updateComposer() {
+        const isChannel = this.chatType === "channel";
+        const isOwner = isChannel && this.chatOwnerId === Session.userId();
+        const form = document.getElementById("message-form");
+        if (form) form.classList.toggle("hidden", isChannel && !isOwner);
+
+        const input = document.getElementById("message-input");
+        if (input) {
+            input.placeholder = isChannel ? "Написать пост..." : "Введите сообщение...";
+        }
+
+        if (isChannel) {
+            ChannelBar.show({
+                chatId: this.currentChatId,
+                title: document.getElementById("chat-title").textContent,
+                subscribed: this.chatSubscribed,
+                isOwner
+            });
+        } else {
+            ChannelBar.hide();
+        }
+        MessageActions.setChannel(isChannel);
     },
 
     updateContactSuggestion() {
@@ -508,6 +622,10 @@ export const Chat = {
 
     async sendMessage(e) {
         e.preventDefault();
+        // В канал пишет только владелец, остальные читают ленту
+        if (this.chatType === "channel" && this.chatOwnerId !== Session.userId()) {
+            return;
+        }
         const input = document.getElementById("message-input");
 
         // Enter в режиме правки сохраняет изменение, а не отправляет новое
@@ -536,7 +654,14 @@ export const Chat = {
         try {
             await sendWithPreview(
                 document.getElementById("messages"),
-                { chatId, text, replyTo },
+                {
+                    chatId,
+                    text,
+                    replyTo,
+                    senderNickname: this.chatType === "channel"
+                        ? document.getElementById("chat-title").textContent
+                        : null
+                },
                 this.messageOptions(),
                 () => API.sendMessage(chatId, text, replyToId)
             );
@@ -612,6 +737,11 @@ export const Chat = {
 
     // Скрепка: файл выбран — сразу отправляем, без промежуточной формы
     async sendImage(input) {
+        // В канал посты публикует только владелец
+        if (this.chatType === "channel" && this.chatOwnerId !== Session.userId()) {
+            input.value = "";
+            return;
+        }
         const file = input.files && input.files[0];
         // Сбрасываем значение, иначе повторный выбор того же файла не сработает
         input.value = "";

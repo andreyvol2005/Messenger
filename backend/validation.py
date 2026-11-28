@@ -69,14 +69,23 @@ def validate_nickname(raw: str | None) -> str:
     return value
 
 
-def validate_chat_name(raw: str | None) -> str:
-    """Проверяет название группы. Пробелы и эмодзи здесь допустимы."""
+def _validate_chat_title(raw: str | None, entity: str) -> str:
     value = (raw or "").strip()
     if not value:
-        raise HTTPException(status_code=400, detail="Введите название группы")
+        raise HTTPException(status_code=400, detail=f"Введите название {entity}")
     if len(value) > CHAT_NAME_MAX:
         raise HTTPException(
             status_code=400,
-            detail=f"Название группы не может быть длиннее {CHAT_NAME_MAX} символов",
+            detail=f"Название {entity} не может быть длиннее {CHAT_NAME_MAX} символов",
         )
     return value
+
+
+def validate_chat_name(raw: str | None) -> str:
+    """Проверяет название группы. Пробелы и эмодзи здесь допустимы."""
+    return _validate_chat_title(raw, "группы")
+
+
+def validate_channel_name(raw: str | None) -> str:
+    """Проверяет название канала. Пробелы и эмодзи здесь допустимы."""
+    return _validate_chat_title(raw, "канала")

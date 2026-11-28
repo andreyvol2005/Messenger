@@ -93,17 +93,35 @@ def is_favorites(chat_id: int) -> bool:
 
 
 def can_access_chat(db: Session, user: models.User, chat_id: int) -> bool:
-    """Доступ к обычному чату — только через участие в нём."""
+    """Доступ к чату.
+
+    Каналы публичные: читать посты может любой активный пользователь, даже
+    без подписки. Писать в канал по-прежнему может только владелец — это
+    проверяется отдельно при создании сообщения.
+    """
     if user.deleted_at is not None:
         return False
     if is_favorites(chat_id):
         return True
+
+    chat = db.query(models.Chat.type).filter(models.Chat.id == chat_id).first()
+    if chat is not None and chat.type == "channel":
+        return True
+
     member = (
         db.query(models.ChatMember)
         .filter(models.ChatMember.chat_id == chat_id, models.ChatMember.user_id == user.id)
         .first()
     )
     return member is not None
+
+
+def is_channel_chat(db: Session, chat_id: int) -> bool:
+    """True, если chat_id — канал. Для «Избранного» и несуществующих чатов False."""
+    if is_favorites(chat_id):
+        return False
+    row = db.query(models.Chat.type).filter(models.Chat.id == chat_id).first()
+    return bool(row and row.type == "channel")
 
 
 def chat_member_ids(db: Session, chat_id: int) -> list[int]:
@@ -251,8 +269,9 @@ def list_chats(db: Session, user: models.User) -> schemas.ChatListResponse:
         .order_by(func.coalesce(last_msg.created_at, models.Chat.created_at).desc())
         .all()
     )
-    group_ids = [chat.id for chat, *_ in rows if chat.type == "group"]
-    group_counts = _group_member_counts(db, group_ids)
+    # У групп и каналов число строк в chat_members — это участники/подписчики.
+    counted_ids = [chat.id for chat, *_ in rows if chat.type in ("group", "channel")]
+    member_counts = _chat_member_counts(db, counted_ids)
     private_ids = [chat.id for chat, *_ in rows if chat.type == "private"]
     peers = _private_peers(db, private_ids, user.id)
 
@@ -273,6 +292,10 @@ def list_chats(db: Session, user: models.User) -> schemas.ChatListResponse:
                 is_contact = peer.id in contact_ids
             else:
                 title = chat.name or "Личный чат"
+        elif chat.type == "channel":
+            # Канал публичный, но в общем списке он есть только у подписчиков.
+            title = chat.name or "Канал"
+            avatar_url = chat.avatar_url
         else:
             # У группы нет собеседника: название и аватар хранятся в chats
             title = chat.name or "Группа"
@@ -288,18 +311,21 @@ def list_chats(db: Session, user: models.User) -> schemas.ChatListResponse:
                 peer_username=peer_username,
                 avatar_url=avatar_url,
                 is_contact=is_contact,
-                unread_count=unread_by_chat.get(chat.id, 0),
+                # В канале нет отметок о прочтении: там считаются просмотры
+                # постов, поэтому бейдж непрочитанного не показываем.
+                unread_count=0 if chat.type == "channel" else unread_by_chat.get(chat.id, 0),
                 chat_type=chat.type,
-                members_count=(group_counts.get(chat.id) if chat.type == "group" else None),
+                members_count=(member_counts.get(chat.id) if chat.type in ("group", "channel") else None),
                 owner_id=chat.owner_id,
+                is_subscribed=(chat.type == "channel"),
             )
         )
 
     return schemas.ChatListResponse(chats=chats)
 
 
-def _group_member_counts(db: Session, chat_ids: list[int]) -> dict[int, int]:
-    """Число участников для каждого группового чата одним запросом."""
+def _chat_member_counts(db: Session, chat_ids: list[int]) -> dict[int, int]:
+    """Число участников группы или подписчиков канала одним запросом."""
     if not chat_ids:
         return {}
     rows = (
@@ -588,22 +614,20 @@ def remove_group_member(db: Session, user: models.User, chat_id: int, user_id: i
     db.commit()
 
 
-def update_group_chat(
+def _apply_chat_update(
     db: Session,
-    user: models.User,
-    chat_id: int,
-    name: str | None = None,
-    avatar_data: bytes | None = None,
-    avatar_extension: str | None = None,
-) -> schemas.ChatResponse:
-    """Меняет название и/или аватар группы. Доступно любому участнику."""
-    chat = _require_group_member(db, user, chat_id)
-
+    chat: models.Chat,
+    name: str | None,
+    avatar_data: bytes | None,
+    avatar_extension: str | None,
+    name_validator,
+) -> None:
+    """Общая часть смены названия и аватара для группы и канала."""
     if name is None and avatar_data is None:
         raise HTTPException(status_code=400, detail="Нечего обновлять")
 
     if name is not None:
-        chat.name = validation.validate_chat_name(name)
+        chat.name = name_validator(name)
 
     old_avatar_url = chat.avatar_url
     new_avatar_url = None
@@ -625,7 +649,201 @@ def update_group_chat(
     if old_avatar_url and old_avatar_url != chat.avatar_url:
         media.delete_group_avatar(old_avatar_url)
 
+
+def update_group_chat(
+    db: Session,
+    user: models.User,
+    chat_id: int,
+    name: str | None = None,
+    avatar_data: bytes | None = None,
+    avatar_extension: str | None = None,
+) -> schemas.ChatResponse:
+    """Меняет название и/или аватар группы. Доступно любому участнику."""
+    chat = _require_group_member(db, user, chat_id)
+    _apply_chat_update(
+        db,
+        chat,
+        name,
+        avatar_data,
+        avatar_extension,
+        validation.validate_chat_name,
+    )
     return _group_chat_response(db, chat)
+
+
+def update_chat(
+    db: Session,
+    user: models.User,
+    chat_id: int,
+    name: str | None = None,
+    avatar_data: bytes | None = None,
+    avatar_extension: str | None = None,
+) -> schemas.ChatResponse:
+    """PATCH /api/chats/{id}: группу меняет участник, канал — только владелец."""
+    chat = _get_chat(db, chat_id)
+    if chat.type == "channel":
+        _require_channel_owner(db, user, chat_id)
+        _apply_chat_update(
+            db,
+            chat,
+            name,
+            avatar_data,
+            avatar_extension,
+            validation.validate_channel_name,
+        )
+        return _channel_response(db, chat, user)
+    if chat.type == "group":
+        return update_group_chat(db, user, chat_id, name, avatar_data, avatar_extension)
+    raise HTTPException(status_code=400, detail="Это не групповой чат и не канал")
+
+
+# ==========================================
+# Каналы
+# ==========================================
+
+
+def _channel_response(db: Session, chat: models.Chat, user: models.User) -> schemas.ChatResponse:
+    count = (db.query(func.count(models.ChatMember.user_id)).filter(models.ChatMember.chat_id == chat.id).scalar()) or 0
+    subscribed = (
+        db.query(models.ChatMember)
+        .filter(
+            models.ChatMember.chat_id == chat.id,
+            models.ChatMember.user_id == user.id,
+        )
+        .first()
+        is not None
+    )
+    return schemas.ChatResponse(
+        id=chat.id,
+        title=chat.name or "Канал",
+        avatar_url=chat.avatar_url,
+        chat_type="channel",
+        members_count=count,
+        owner_id=chat.owner_id,
+        is_subscribed=subscribed,
+    )
+
+
+def _require_channel_owner(db: Session, user: models.User, chat_id: int) -> models.Chat:
+    chat = _get_chat(db, chat_id)
+    if chat.type != "channel":
+        raise HTTPException(status_code=400, detail="Это не канал")
+    if chat.owner_id != user.id:
+        raise HTTPException(status_code=403, detail="Управлять каналом может только владелец")
+    return chat
+
+
+def create_channel(db: Session, user: models.User, name: str) -> schemas.ChatResponse:
+    """Создаёт канал. Автор сразу становится владельцем и первым подписчиком."""
+    title = validation.validate_channel_name(name)
+    chat = models.Chat(type="channel", name=title, owner_id=user.id)
+    db.add(chat)
+    try:
+        db.flush()
+        db.add(models.ChatMember(chat_id=chat.id, user_id=user.id))
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise
+    db.refresh(chat)
+    return _channel_response(db, chat, user)
+
+
+def list_channels(
+    db: Session,
+    user: models.User,
+    query: str | None = None,
+) -> schemas.ChannelListResponse:
+    """Каталог публичных каналов. Подписка не требуется, чтобы их увидеть."""
+    channels_query = db.query(models.Chat).filter(models.Chat.type == "channel")
+    channels = channels_query.order_by(
+        models.Chat.created_at.desc(),
+        models.Chat.id.desc(),
+    ).all()
+    if query and query.strip():
+        # SQLite в тестах не умеет lower() для кириллицы, поэтому поиск
+        # без учёта регистра делаем в Python — каналов в каталоге немного.
+        needle = query.strip().casefold()
+        channels = [chat for chat in channels if needle in (chat.name or "").casefold()]
+    channels = channels[:200]
+
+    channel_ids = [chat.id for chat in channels]
+    counts = _chat_member_counts(db, channel_ids)
+    subscribed_ids = {
+        row.chat_id
+        for row in db.query(models.ChatMember.chat_id).filter(
+            models.ChatMember.user_id == user.id,
+            models.ChatMember.chat_id.in_(channel_ids),
+        )
+    }
+
+    return schemas.ChannelListResponse(
+        channels=[
+            schemas.ChatResponse(
+                id=chat.id,
+                title=chat.name or "Канал",
+                avatar_url=chat.avatar_url,
+                chat_type="channel",
+                members_count=counts.get(chat.id, 0),
+                owner_id=chat.owner_id,
+                is_subscribed=chat.id in subscribed_ids,
+            )
+            for chat in channels
+        ]
+    )
+
+
+def get_channel(db: Session, user: models.User, chat_id: int) -> schemas.ChatResponse:
+    chat = _get_chat(db, chat_id)
+    if chat.type != "channel":
+        raise HTTPException(status_code=400, detail="Это не канал")
+    return _channel_response(db, chat, user)
+
+
+def subscribe_channel(db: Session, user: models.User, chat_id: int) -> schemas.ChatResponse:
+    """Подписка идемпотентна: повторный запрос не создаёт вторую строку."""
+    chat = _get_chat(db, chat_id)
+    if chat.type != "channel":
+        raise HTTPException(status_code=400, detail="Это не канал")
+
+    existing = (
+        db.query(models.ChatMember)
+        .filter(
+            models.ChatMember.chat_id == chat_id,
+            models.ChatMember.user_id == user.id,
+        )
+        .first()
+    )
+    if existing is None:
+        db.add(models.ChatMember(chat_id=chat_id, user_id=user.id))
+        try:
+            db.commit()
+        except IntegrityError:
+            # Параллельный запрос уже подписал пользователя.
+            db.rollback()
+    return _channel_response(db, chat, user)
+
+
+def unsubscribe_channel(db: Session, user: models.User, chat_id: int) -> schemas.ChatResponse:
+    """Отписка. Владелец остаётся подписчиком, иначе канал потеряет автора."""
+    chat = _get_chat(db, chat_id)
+    if chat.type != "channel":
+        raise HTTPException(status_code=400, detail="Это не канал")
+    if chat.owner_id == user.id:
+        raise HTTPException(status_code=400, detail="Владелец не может отписаться от своего канала")
+
+    member = (
+        db.query(models.ChatMember)
+        .filter(
+            models.ChatMember.chat_id == chat_id,
+            models.ChatMember.user_id == user.id,
+        )
+        .first()
+    )
+    if member is not None:
+        db.delete(member)
+        db.commit()
+    return _channel_response(db, chat, user)
 
 
 # ==========================================
@@ -674,6 +892,7 @@ def serialize_message(
     nickname: str | None,
     status: str = "sent",
     view_chat_id: int | None = None,
+    views_count: int = 0,
 ) -> schemas.MessageResponse:
     # В базе у «Избранного» chat_id = NULL, а клиент работает с -1.
     chat_id = view_chat_id if view_chat_id is not None else msg.chat_id
@@ -697,12 +916,76 @@ def serialize_message(
         forwarded_from_nickname=None if deleted else msg.forwarded_from_nickname,
         is_deleted=deleted,
         status=status,
+        views_count=views_count,
     )
 
 
 def _message_sender_nickname(db: Session, msg: models.Message) -> str | None:
     row = db.query(models.User.nickname).filter(models.User.id == msg.sender_id).first()
     return row[0] if row else None
+
+
+def _channel_title(db: Session, chat_id: int | None) -> str | None:
+    """Название канала для подписи поста; None для обычных чатов."""
+    if chat_id is None or is_favorites(chat_id):
+        return None
+    row = db.query(models.Chat.name, models.Chat.type).filter(models.Chat.id == chat_id).first()
+    if row is not None and row.type == "channel":
+        return row.name or "Канал"
+    return None
+
+
+def _view_counts(db: Session, message_ids: list[int]) -> dict[int, int]:
+    if not message_ids:
+        return {}
+    rows = (
+        db.query(models.MessageView.message_id, func.count(models.MessageView.user_id))
+        .filter(models.MessageView.message_id.in_(message_ids))
+        .group_by(models.MessageView.message_id)
+        .all()
+    )
+    return dict(rows)
+
+
+def record_message_views(
+    db: Session,
+    user: models.User,
+    message_ids: list[int],
+    commit: bool = True,
+) -> None:
+    """Запоминает уникальные просмотры постов канала текущим пользователем.
+
+    Повторная загрузка истории или открытие канала с другого устройства не
+    увеличивает счётчик: первичный ключ (message_id, user_id) не даёт дублей.
+    `commit=False` нужен, когда просмотры добавляются в общую транзакцию
+    вместе с другими изменениями.
+    """
+    ids = sorted({int(message_id) for message_id in message_ids})
+    if not ids:
+        return
+
+    existing = {
+        row.message_id
+        for row in db.query(models.MessageView.message_id).filter(
+            models.MessageView.user_id == user.id,
+            models.MessageView.message_id.in_(ids),
+        )
+    }
+    new_views = [
+        models.MessageView(message_id=message_id, user_id=user.id) for message_id in ids if message_id not in existing
+    ]
+    if not new_views:
+        return
+
+    db.add_all(new_views)
+    if not commit:
+        db.flush()
+        return
+    try:
+        db.commit()
+    except IntegrityError:
+        # Параллельный запрос уже записал часть просмотров.
+        db.rollback()
 
 
 def _serialize_for_user(
@@ -712,13 +995,27 @@ def _serialize_for_user(
     view_chat_id: int | None = None,
 ) -> schemas.MessageResponse:
     """Сериализация действия пользователя: ник, чат и актуальные галочки."""
-    nickname = user.nickname if msg.sender_id == user.id else _message_sender_nickname(db, msg)
     chat_id = view_chat_id if view_chat_id is not None else msg.chat_id
-    status = "sent"
-    if chat_id not in (None, FAVORITES_CHAT_ID):
-        delivered_to, read_by = _receipt_bounds(db, chat_id, user.id)
-        status = _message_status(msg, user.id, delivered_to, read_by)
-    return serialize_message(msg, nickname, status, view_chat_id=chat_id)
+    channel_title = _channel_title(db, chat_id)
+    if channel_title is not None:
+        # В канале вместо автора показывается название канала.
+        nickname = channel_title
+        status = "sent"
+        views_count = _view_counts(db, [msg.id]).get(msg.id, 0)
+    else:
+        nickname = user.nickname if msg.sender_id == user.id else _message_sender_nickname(db, msg)
+        status = "sent"
+        if chat_id not in (None, FAVORITES_CHAT_ID):
+            delivered_to, read_by = _receipt_bounds(db, chat_id, user.id)
+            status = _message_status(msg, user.id, delivered_to, read_by)
+        views_count = 0
+    return serialize_message(
+        msg,
+        nickname,
+        status,
+        view_chat_id=chat_id,
+        views_count=views_count,
+    )
 
 
 def list_messages(
@@ -750,6 +1047,24 @@ def list_messages(
     # стабильные страницы даже при одинаковом created_at.
     rows = query.order_by(models.Message.id.desc()).limit(limit).all()
     rows.reverse()  # в чате сообщения идут снизу вверх
+
+    channel_title = _channel_title(db, chat_id)
+    if channel_title is not None:
+        # Загрузка истории канала и есть просмотр: записываем уникальные
+        # просмотры для всех показанных постов, включая автора.
+        visible_ids = [msg.id for msg, _nickname in rows if not msg.is_deleted]
+        record_message_views(db, user, visible_ids)
+        counts = _view_counts(db, visible_ids)
+        return [
+            serialize_message(
+                msg,
+                channel_title,
+                "sent",
+                view_chat_id=chat_id,
+                views_count=counts.get(msg.id, 0),
+            )
+            for msg, _nickname in rows
+        ]
 
     delivered_to, read_by = (0, 0)
     if not is_favorites(chat_id):
@@ -850,6 +1165,29 @@ def _insert_message(
     return msg
 
 
+def _require_post_access(db: Session, user: models.User, chat_id: int) -> str | None:
+    """Проверяет право писать в чат и возвращает название канала, если это канал.
+
+    В обычный чат пишут участники, в канал — только владелец. Публичные
+    каналы при этом остаются доступными для чтения всем.
+    """
+    if is_favorites(chat_id):
+        return None
+
+    chat = _get_chat(db, chat_id)
+    if chat.type == "channel":
+        if chat.owner_id != user.id:
+            raise HTTPException(
+                status_code=403,
+                detail="Публиковать посты в канале может только владелец",
+            )
+        return chat.name or "Канал"
+
+    if not can_access_chat(db, user, chat_id):
+        raise HTTPException(status_code=403, detail="No access to this chat")
+    return None
+
+
 def create_message(
     db: Session,
     user: models.User,
@@ -859,8 +1197,10 @@ def create_message(
 ) -> schemas.MessageResponse:
     if not text or not text.strip():
         raise HTTPException(status_code=400, detail="Message text is empty")
-    if not can_access_chat(db, user, chat_id):
-        raise HTTPException(status_code=403, detail="No access to this chat")
+
+    channel_title = _require_post_access(db, user, chat_id)
+    if channel_title is not None and reply_to_id is not None:
+        raise HTTPException(status_code=400, detail="В канале нельзя отвечать на посты")
 
     reply_nickname, reply_text = _reply_snapshot(db, user, chat_id, reply_to_id)
     msg = _insert_message(
@@ -872,7 +1212,15 @@ def create_message(
         reply_to_nickname=reply_nickname,
         reply_to_text=reply_text,
     )
-    return serialize_message(msg, user.nickname, view_chat_id=chat_id)
+    if channel_title is not None:
+        # Автор входит в число уникальных просмотревших.
+        record_message_views(db, user, [msg.id])
+    return serialize_message(
+        msg,
+        channel_title or user.nickname,
+        view_chat_id=chat_id,
+        views_count=1 if channel_title is not None else 0,
+    )
 
 
 def create_image_message(
@@ -884,8 +1232,9 @@ def create_image_message(
     reply_to_id: int | None = None,
 ) -> schemas.MessageResponse:
     """Сообщение с картинкой: файл уже лежит на диске, в БД пишем только путь."""
-    if not can_access_chat(db, user, chat_id):
-        raise HTTPException(status_code=403, detail="No access to this chat")
+    channel_title = _require_post_access(db, user, chat_id)
+    if channel_title is not None and reply_to_id is not None:
+        raise HTTPException(status_code=400, detail="В канале нельзя отвечать на посты")
 
     # Подпись необязательна: у сообщения только с картинкой text остаётся NULL
     text = caption.strip() if caption and caption.strip() else None
@@ -900,7 +1249,14 @@ def create_image_message(
         reply_to_nickname=reply_nickname,
         reply_to_text=reply_text,
     )
-    return serialize_message(msg, user.nickname, view_chat_id=chat_id)
+    if channel_title is not None:
+        record_message_views(db, user, [msg.id])
+    return serialize_message(
+        msg,
+        channel_title or user.nickname,
+        view_chat_id=chat_id,
+        views_count=1 if channel_title is not None else 0,
+    )
 
 
 def _get_message(db: Session, message_id: int) -> models.Message:
@@ -908,6 +1264,25 @@ def _get_message(db: Session, message_id: int) -> models.Message:
     if not msg:
         raise HTTPException(status_code=404, detail="Message not found")
     return msg
+
+
+def view_message(db: Session, user: models.User, message_id: int) -> schemas.MessageViewResponse:
+    """Отмечает просмотр поста канала и возвращает актуальный счётчик.
+
+    Нужен для постов, пришедших по WebSocket: история записывает просмотры
+    сама, а только что показанный пост отмечается этим запросом.
+    """
+    msg = _get_message(db, message_id)
+    if msg.chat_id is None or msg.is_deleted:
+        raise HTTPException(status_code=400, detail="Это не пост канала")
+    if not is_channel_chat(db, msg.chat_id):
+        raise HTTPException(status_code=400, detail="Это не пост канала")
+    if not can_access_chat(db, user, msg.chat_id):
+        raise HTTPException(status_code=403, detail="Нет доступа к каналу")
+
+    record_message_views(db, user, [msg.id])
+    count = _view_counts(db, [msg.id]).get(msg.id, 0)
+    return schemas.MessageViewResponse(message_id=msg.id, views_count=count)
 
 
 def _require_own_message(db: Session, user: models.User, msg: models.Message) -> None:
@@ -1043,9 +1418,9 @@ def forward_messages(
     ids = _unique_positive_ids(message_ids, "сообщения")
     targets = _unique_positive_ids(chat_ids, "чаты")
 
-    for target in targets:
-        if not can_access_chat(db, user, target):
-            raise HTTPException(status_code=403, detail="Нет доступа к одному из чатов")
+    # Для канала это ещё и проверка, что пересылает владелец: подписчик
+    # не должен получить право публиковать чужие посты.
+    target_titles = {target: _require_post_access(db, user, target) for target in targets}
 
     rows = (
         db.query(models.Message, models.User.nickname)
@@ -1074,7 +1449,9 @@ def forward_messages(
     for target in targets:
         for source, nickname in ordered:
             # forwarded_from_nickname — немедленный отправитель оригинала,
-            # даже если тот сам был переслан раньше.
+            # даже если тот сам был переслан раньше. Для поста канала
+            # подписываем источник названием канала, а не именем владельца.
+            source_label = _channel_title(db, source.chat_id) or nickname
             msg = models.Message(
                 chat_id=None if is_favorites(target) else target,
                 sender_id=user.id,
@@ -1083,19 +1460,30 @@ def forward_messages(
                 reply_to_id=None,
                 reply_to_nickname=source.reply_to_nickname if keep_reply else None,
                 reply_to_text=source.reply_to_text if keep_reply else None,
-                forwarded_from_nickname=nickname,
+                forwarded_from_nickname=source_label,
             )
             db.add(msg)
             created.append((msg, target))
 
     try:
         db.flush()
+        channel_messages = [(msg, target) for msg, target in created if target_titles[target] is not None]
+        if channel_messages:
+            # Автор тоже входит в число просмотревших свои посты.
+            record_message_views(
+                db,
+                user,
+                [msg.id for msg, _target in channel_messages],
+                commit=False,
+            )
+        counts = _view_counts(db, [msg.id for msg, _target in channel_messages])
         responses = [
             serialize_message(
                 msg,
-                user.nickname,
+                target_titles[target] or user.nickname,
                 "sent",
                 view_chat_id=target,
+                views_count=counts.get(msg.id, 0),
             )
             for msg, target in created
         ]
@@ -1118,6 +1506,11 @@ def update_message_receipt(
     Отметки только растут: запоздавший запрос за старое сообщение не откатит
     прогресс, достигнутый, например, при открытии чата.
     """
+    if is_channel_chat(db, chat_id):
+        # В канале нет переписки и галочек: активность читателей считается
+        # уникальными просмотрами постов, а не доставкой и прочтением.
+        raise HTTPException(status_code=400, detail="В канале нет отметок о прочтении")
+
     member = (
         db.query(models.ChatMember)
         .filter(

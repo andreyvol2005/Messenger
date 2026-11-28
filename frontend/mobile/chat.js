@@ -10,6 +10,7 @@ import { Realtime } from "../shared/realtime.js";
 import { Session } from "../shared/session.js";
 import { UI } from "../shared/ui.js";
 import { GroupInfo } from "../shared/group-info.js";
+import { ChannelBar, ChannelInfo } from "../shared/channels.js";
 import {
     appendIncoming,
     appendMessage,
@@ -17,7 +18,8 @@ import {
     sendWithPreview,
     MESSAGE_CLASSES,
     Receipts,
-    updateMessageStatuses
+    updateMessageStatuses,
+    updateMessageViews
 } from "../shared/messages.js";
 import { MessageActions } from "../shared/message-actions.js";
 
@@ -29,6 +31,8 @@ export const MobileChat = {
     chatType: "private",
     chatMembersCount: null,
     chatAvatarUrl: null,
+    chatSubscribed: false,
+    chatOwnerId: null,
     // Событие о прочтении может прийти раньше ответа на отправку — применим
     // отметки после того, как сообщение появится в DOM.
     statusDelivered: 0,
@@ -93,6 +97,12 @@ export const MobileChat = {
                 window.location.href = PATHS.MOBILE_CHATS;
             }
         });
+        ChannelInfo.init({
+            onChanged: () => this.loadTitle()
+        });
+        ChannelBar.init({
+            onChanged: () => this.loadTitle()
+        });
 
         document.getElementById("peer-info-close").onclick = () =>
             this.closePeerInfo();
@@ -143,8 +153,10 @@ export const MobileChat = {
     messageOptions() {
         return {
             ...MessageActions.messageOptions(),
-            // В группе подписываем чужие сообщения ником отправителя
-            showSender: this.chatType === "group"
+            // В группе и канале подписываем чужие сообщения отправителем
+            // или названием канала
+            showSender: this.chatType === "group" || this.chatType === "channel",
+            showSenderForMine: this.chatType === "channel"
         };
     },
 
@@ -158,9 +170,28 @@ export const MobileChat = {
         if (!mine) Presence.clearTyping(msg.chat_id, msg.sender_id);
         appendIncoming(document.getElementById("messages"), msg, this.messageOptions());
         if (mine) this.applyCachedStatuses();
+        if (this.chatType === "channel") {
+            // Новый пост — сразу отмечаем уникальный просмотр и обновляем счётчик
+            if (!mine) this.markPostViewed(msg.id);
+            return;
+        }
         if (!mine) {
             // Чат открыт: если вкладка видима — сообщение сразу прочитано
             Receipts.acknowledgeMessage(msg.chat_id, msg.id, true);
+        }
+    },
+
+    // Просмотр поста канала: сервер не увеличит счётчик повторно
+    async markPostViewed(messageId) {
+        try {
+            const result = await API.viewMessage(messageId);
+            updateMessageViews(
+                document.getElementById("messages"),
+                result.message_id,
+                result.views_count
+            );
+        } catch (err) {
+            // Счётчик обновится при следующей загрузке истории
         }
     },
 
@@ -181,42 +212,87 @@ export const MobileChat = {
     },
 
     async markCurrentChatRead() {
+        if (this.chatType === "channel") return;
         await Receipts.acknowledgeHistory(
             document.getElementById("messages"),
             this.chatId
         );
     },
 
-    // Заголовок берём из списка чатов — так он всегда совпадает с тем, что видит собеседник
+    // Заголовок берём из списка чатов — так он всегда совпадает с тем, что видит собеседник.
+    // Канал без подписки в списке отсутствует, поэтому его читаем отдельно.
     async loadTitle() {
         const titleEl = document.getElementById("chat-title");
         titleEl.textContent = this.chatId === CONFIG.FAVORITES_CHAT_ID ? "Избранное" : "Чат";
         try {
             const { chats } = await API.getChats();
             const found = chats.find((c) => c.id === this.chatId);
-            if (!found) {
-                // Чата нет (удалили или с другого устройства) — назад к списку
-                window.location.replace(PATHS.MOBILE_CHATS);
+            if (found) {
+                this.applyChat(found);
                 return;
             }
-            titleEl.textContent = found.title;
-            this.chatType = found.chat_type || "private";
-            this.chatMembersCount = found.members_count ?? null;
-            this.peerUsername = this.chatType === "group"
-                ? null
-                : (found.peer_username || null);
-            this.chatAvatarUrl = found.avatar_url || null;
-            this.peerAvatarUrl = this.chatType === "group"
-                ? null
-                : (found.avatar_url || null);
-            this.peerIsContact = Boolean(found.is_contact);
-            this.setChatAvatar(found.title, found.avatar_url, found.peer_id);
-            this.setChatStatus(found.peer_id, found.id);
-            this.updateContactSuggestion();
-            this.updateInfoButton();
+            if (this.chatId > 0) {
+                try {
+                    const channel = await API.getChannel(this.chatId);
+                    this.applyChat(channel);
+                    return;
+                } catch (err) {
+                    // Ни чата, ни канала — значит, доступа больше нет
+                }
+            }
+            // Чата нет (удалили или с другого устройства) — назад к списку
+            window.location.replace(PATHS.MOBILE_CHATS);
         } catch (err) {
             titleEl.textContent = "Чат";
         }
+    },
+
+    applyChat(found) {
+        const titleEl = document.getElementById("chat-title");
+        titleEl.textContent = found.title;
+        this.chatType = found.chat_type || "private";
+        this.chatMembersCount = found.members_count ?? null;
+        this.chatSubscribed = Boolean(found.is_subscribed);
+        this.chatOwnerId = found.owner_id ?? null;
+        this.peerUsername = this.chatType === "group" || this.chatType === "channel"
+            ? null
+            : (found.peer_username || null);
+        this.chatAvatarUrl = found.avatar_url || null;
+        this.peerAvatarUrl = this.chatType === "group" || this.chatType === "channel"
+            ? null
+            : (found.avatar_url || null);
+        this.peerIsContact = Boolean(found.is_contact);
+        this.setChatAvatar(found.title, found.avatar_url, found.peer_id);
+        this.setChatStatus(found.peer_id, found.id);
+        this.updateContactSuggestion();
+        this.updateInfoButton();
+        this.updateComposer();
+    },
+
+    // В канале поле ввода есть только у владельца: остальные читают ленту
+    // и могут подписаться кнопкой под сообщениями.
+    updateComposer() {
+        const isChannel = this.chatType === "channel";
+        const isOwner = isChannel && this.chatOwnerId === Session.userId();
+        const form = document.getElementById("message-form");
+        if (form) form.classList.toggle("hidden", isChannel && !isOwner);
+
+        const input = document.getElementById("message-input");
+        if (input) {
+            input.placeholder = isChannel ? "Написать пост..." : "Введите сообщение...";
+        }
+
+        if (isChannel) {
+            ChannelBar.show({
+                chatId: this.chatId,
+                title: document.getElementById("chat-title").textContent,
+                subscribed: this.chatSubscribed,
+                isOwner
+            });
+        } else {
+            ChannelBar.hide();
+        }
+        MessageActions.setChannel(isChannel);
     },
 
     setChatAvatar(title, avatarUrl, peerId = null) {
@@ -238,6 +314,14 @@ export const MobileChat = {
     setChatStatus(peerId, chatId) {
         const element = document.getElementById("chat-status");
         if (!element) return;
+
+        if (this.chatType === "channel") {
+            element.textContent = this.chatMembersCount !== null
+                ? UI.subscribersLabel(this.chatMembersCount)
+                : "Канал";
+            element.classList.remove("hidden");
+            return;
+        }
 
         if (this.chatType === "group") {
             // Пока никто не печатает — число участников; как только кто-то
@@ -268,22 +352,36 @@ export const MobileChat = {
     },
 
     // Кнопка информации: профиль собеседника в личном чате, панель группы
-    // в групповом. У «Избранного» собеседника нет.
+    // или канала в соответствующем чате. У «Избранного» собеседника нет.
     updateInfoButton() {
         const btn = document.getElementById("chat-info-btn");
         const isGroup = this.chatType === "group";
+        const isChannel = this.chatType === "channel";
         btn.classList.toggle(
             "hidden",
-            this.chatId === CONFIG.FAVORITES_CHAT_ID || (!isGroup && !this.peerUsername)
+            this.chatId === CONFIG.FAVORITES_CHAT_ID
+                || (!isGroup && !isChannel && !this.peerUsername)
         );
-        btn.title = isGroup ? "Информация о группе" : "Профиль собеседника";
-        btn.setAttribute(
-            "aria-label",
-            isGroup ? "Информация о группе" : "Информация о собеседнике"
-        );
+        const label = isChannel
+            ? "Информация о канале"
+            : isGroup
+                ? "Информация о группе"
+                : "Профиль собеседника";
+        btn.title = label;
+        btn.setAttribute("aria-label", label);
     },
 
     openInfo() {
+        if (this.chatType === "channel") {
+            ChannelInfo.open(this.chatId, {
+                title: document.getElementById("chat-title").textContent,
+                avatar_url: this.chatAvatarUrl,
+                members_count: this.chatMembersCount,
+                owner_id: this.chatOwnerId,
+                is_subscribed: this.chatSubscribed
+            });
+            return;
+        }
         if (this.chatType === "group") {
             GroupInfo.open(this.chatId, {
                 title: document.getElementById("chat-title").textContent,
@@ -395,8 +493,11 @@ export const MobileChat = {
         const box = document.getElementById("messages");
         await loadMessageHistory(box, this.chatId, this.messageOptions());
         this.applyCachedStatuses();
-        // Открыли чат — всё входящее в ленте получено и (в видимой вкладке) прочитано
-        await Receipts.acknowledgeHistory(box, this.chatId);
+        // Открыли чат — всё входящее в ленте получено и (в видимой вкладке) прочитано.
+        // В канале отметок о прочтении нет: там считаются просмотры постов.
+        if (this.chatType !== "channel") {
+            await Receipts.acknowledgeHistory(box, this.chatId);
+        }
     },
 
     draftKey(chatId) {
@@ -456,6 +557,10 @@ export const MobileChat = {
 
     async sendMessage(e) {
         e.preventDefault();
+        // В канал пишет только владелец, остальные читают ленту
+        if (this.chatType === "channel" && this.chatOwnerId !== Session.userId()) {
+            return;
+        }
         const input = document.getElementById("message-input");
 
         // Enter в режиме правки сохраняет изменение, а не отправляет новое
@@ -484,7 +589,14 @@ export const MobileChat = {
         try {
             await sendWithPreview(
                 document.getElementById("messages"),
-                { chatId, text, replyTo },
+                {
+                    chatId,
+                    text,
+                    replyTo,
+                    senderNickname: this.chatType === "channel"
+                        ? document.getElementById("chat-title").textContent
+                        : null
+                },
                 this.messageOptions(),
                 () => API.sendMessage(chatId, text, replyToId)
             );
@@ -502,6 +614,11 @@ export const MobileChat = {
 
     // Скрепка: файл выбран — сразу отправляем, без промежуточной формы
     async sendImage(input) {
+        // В канал посты публикует только владелец
+        if (this.chatType === "channel" && this.chatOwnerId !== Session.userId()) {
+            input.value = "";
+            return;
+        }
         const file = input.files && input.files[0];
         // Сбрасываем значение, иначе повторный выбор того же файла не сработает
         input.value = "";

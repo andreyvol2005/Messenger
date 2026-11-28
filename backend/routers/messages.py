@@ -74,10 +74,21 @@ def send_message(
     # бы его дважды. Получателей и само событие считаем здесь, в фоновую задачу
     # сессия базы не передаётся — к её выполнению она уже может быть закрыта.
     recipients = events.recipients_for(db, result, payload.chat_id)
-    event = events.build_event(result, payload.chat_id, current_user.nickname)
+    # Для канала sender_nickname — это название канала, а не имя владельца.
+    event = events.build_event(result, payload.chat_id, result.sender_nickname or current_user.nickname)
     background_tasks.add_task(events.publish, recipients, event)
 
     return result
+
+
+@router.post("/{message_id}/view", response_model=schemas.MessageViewResponse)
+def view_message(
+    message_id: int,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user),
+):
+    """Отметить просмотр поста канала. Повторный вызов счётчик не увеличивает."""
+    return services.view_message(db, current_user, message_id)
 
 
 @router.post("/upload", response_model=schemas.MessageResponse)
@@ -105,7 +116,8 @@ async def upload_image(
         return result, events.recipients_for(db, result, chat_id)
 
     result, recipients = await run_in_threadpool(save)
-    event = events.build_event(result, chat_id, current_user.nickname)
+    # Для канала sender_nickname — это название канала, а не имя владельца.
+    event = events.build_event(result, chat_id, result.sender_nickname or current_user.nickname)
     background_tasks.add_task(events.publish, recipients, event)
 
     return result

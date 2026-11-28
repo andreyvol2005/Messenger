@@ -88,6 +88,12 @@ class GroupChatCreate(BaseModel):
     user_ids: list[int] = []
 
 
+class ChannelCreate(BaseModel):
+    """Создание канала: название обязательно, аватар можно задать позже."""
+
+    name: str
+
+
 class ChatMemberAdd(BaseModel):
     user_id: int
 
@@ -115,17 +121,24 @@ class ChatResponse(BaseModel):
     is_contact: bool = False
     # Входящие сообщения, которые пользователь ещё не прочитал (бейдж в списке)
     unread_count: int = 0
-    # "private" | "group": интерфейсу нужно отличать группу от личного чата,
-    # даже если у группы ещё нет ни одного сообщения.
+    # "private" | "group" | "channel": интерфейсу нужно отличать тип чата,
+    # даже если в нём ещё нет ни одного сообщения.
     chat_type: str = "private"
-    # Число участников — только у группового чата
+    # Число участников группы или подписчиков канала
     members_count: int | None = None
-    # Владелец группы: интерфейс показывает кнопку «Удалить» только ему
+    # Владелец группы или канала: интерфейс показывает управление только ему
     owner_id: int | None = None
+    # Для канала: подписан ли на него текущий пользователь. В общем списке
+    # чатов всегда True, в каталоге каналов может быть False.
+    is_subscribed: bool = False
 
 
 class ChatListResponse(BaseModel):
     chats: list[ChatResponse]
+
+
+class ChannelListResponse(BaseModel):
+    channels: list[ChatResponse]
 
 
 class MessageCreate(BaseModel):
@@ -155,6 +168,13 @@ class MessageResponse(BaseModel):
     is_deleted: bool = False
     # sent | delivered | read. Показывается только у своих сообщений
     status: str = "sent"
+    # Число уникальных просмотров поста канала. Для остальных сообщений 0.
+    views_count: int = 0
+
+
+class MessageViewResponse(BaseModel):
+    message_id: int
+    views_count: int
 
 
 class MessageBatchDelete(BaseModel):

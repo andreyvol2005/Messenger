@@ -20,6 +20,8 @@ export const MessageActions = {
     classes: null,
     getChatId: () => null,
     onChanged: null,
+    // В канале нет ответов на посты: это лента, а не переписка.
+    isChannel: false,
 
     menu: null,
     selectionMode: false,
@@ -61,12 +63,19 @@ export const MessageActions = {
     messageOptions() {
         return {
             classes: this.classes,
-            showStatus: this.getChatId() !== CONFIG.FAVORITES_CHAT_ID,
+            showStatus: !this.isChannel && this.getChatId() !== CONFIG.FAVORITES_CHAT_ID,
+            showViews: this.isChannel,
             isSelected: (id) => this.selected.has(id),
             onToggleSelect: (msg) => this.toggleSelection(msg),
             onQuoteClick: (id) => this.jumpToMessage(id),
             findMessage: (id) => this.findMessage(id)
         };
+    },
+
+    // Канал — лента постов: ответы и цитаты в ней не нужны.
+    setChannel(value) {
+        this.isChannel = Boolean(value);
+        if (this.isChannel && this.reply) this.clearReply();
     },
 
     findMessage(messageId) {
@@ -163,11 +172,13 @@ export const MessageActions = {
     contextItems(msg) {
         const mine = msg.sender_id === Session.userId();
         if (msg.is_deleted) {
-            // У заглушки разрешён только ответ
-            return [
-                { action: "reply", label: "Ответить", icon: "↩" },
-                { action: "select", label: "Выделить", icon: "☑" }
-            ];
+            // У заглушки разрешён только ответ, а в канале ответов нет
+            return this.isChannel
+                ? [{ action: "select", label: "Выделить", icon: "☑" }]
+                : [
+                    { action: "reply", label: "Ответить", icon: "↩" },
+                    { action: "select", label: "Выделить", icon: "☑" }
+                ];
         }
 
         const items = [
@@ -176,10 +187,12 @@ export const MessageActions = {
                 label: "Копировать",
                 icon: "⧉",
                 disabled: !msg.text
-            },
-            { action: "reply", label: "Ответить", icon: "↩" },
-            { action: "forward", label: "Переслать", icon: "↪" }
+            }
         ];
+        if (!this.isChannel) {
+            items.push({ action: "reply", label: "Ответить", icon: "↩" });
+        }
+        items.push({ action: "forward", label: "Переслать", icon: "↪" });
         if (mine) {
             // Пересланную копию можно удалить, но не изменить
             if (!msg.forwarded_from_nickname) {
@@ -422,7 +435,7 @@ export const MessageActions = {
         const canDelete = items.length > 0 && items.every(
             (msg) => msg.sender_id === Session.userId() && !msg.is_deleted
         );
-        const canReply = Boolean(one);
+        const canReply = Boolean(one) && !this.isChannel;
         const canEdit = Boolean(
             one
             && one.sender_id === Session.userId()
@@ -518,6 +531,8 @@ export const MessageActions = {
 
     beginReply(msg) {
         if (!msg) return;
+        // В канале ответы на посты не предусмотрены
+        if (this.isChannel) return;
         if (this.edit) this.cancelEdit();
         this.reply = msg;
         const preview = msg.is_deleted

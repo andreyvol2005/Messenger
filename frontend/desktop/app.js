@@ -5,6 +5,12 @@ import { Session } from "../shared/session.js";
 import { Settings } from "../shared/settings.js";
 import { GroupCreate } from "../shared/group-create.js";
 import { GroupInfo } from "../shared/group-info.js";
+import {
+    ChannelBar,
+    ChannelCatalog,
+    ChannelCreate,
+    ChannelInfo
+} from "../shared/channels.js";
 import { Chat } from "./chat.js";
 import { Contacts } from "./contacts.js";
 import { Menu } from "./menu.js";
@@ -24,6 +30,19 @@ document.addEventListener("DOMContentLoaded", () => {
     });
     GroupCreate.init({
         onCreated: (chat) => Chat.openChatFromResponse(chat)
+    });
+    ChannelCreate.init({
+        onCreated: (chat) => Chat.openChatFromResponse(chat)
+    });
+    ChannelCatalog.init({
+        onOpen: (chat) => Chat.openChatFromResponse(chat),
+        onChanged: () => Chat.refreshList()
+    });
+    ChannelInfo.init({
+        onChanged: () => Chat.refreshCurrentChat()
+    });
+    ChannelBar.init({
+        onChanged: () => Chat.refreshCurrentChat()
     });
 
     Menu.init();
