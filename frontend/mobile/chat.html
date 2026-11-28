@@ -53,6 +53,15 @@
 
         <div id="messages" class="m-messages"></div>
 
+        <div id="channel-subscribe-bar" class="channel-subscribe-bar hidden">
+            <div class="channel-subscribe-text">
+                <div id="channel-subscribe-title" class="channel-subscribe-title"></div>
+                <div id="channel-subscribe-hint" class="channel-subscribe-hint"></div>
+            </div>
+            <button type="button" id="channel-subscribe-toggle"
+                    class="channel-subscribe-toggle">Подписаться</button>
+        </div>
+
         <div id="composer-banner" class="composer-banner hidden">
             <div class="composer-banner-icon">↩</div>
             <div class="composer-banner-body">
@@ -131,6 +140,40 @@
                    aria-label="Поиск пользователя для добавления в группу">
             <ul id="group-add-results"
                 class="user-search-results m-group-add-results hidden"></ul>
+        </div>
+    </div>
+
+    <!-- Информация о канале: название, аватар, подписчики и подписка -->
+    <div id="channel-info" class="m-peer-info m-channel-info" aria-hidden="true"
+         role="dialog" aria-modal="true">
+        <div id="channel-info-backdrop" class="m-peer-info-backdrop"></div>
+        <div class="m-peer-info-content">
+            <button type="button" id="channel-info-close" class="m-peer-info-close"
+                    aria-label="Закрыть" title="Закрыть">×</button>
+            <div id="channel-info-avatar" class="avatar avatar-xl">?</div>
+            <button type="button" id="channel-avatar-btn"
+                    class="m-group-avatar-btn hidden">
+                Сменить фото
+            </button>
+            <input type="file" id="channel-avatar-input" accept="image/*" hidden>
+            <h1 id="channel-info-name" class="m-peer-info-name"></h1>
+            <p id="channel-info-count" class="m-peer-info-username"></p>
+
+            <button type="button" id="channel-subscribe-btn"
+                    class="channel-subscribe-toggle">Подписаться</button>
+
+            <div id="channel-edit" class="channel-edit hidden">
+                <label class="m-field">
+                    <span class="m-field-label">Название канала</span>
+                    <div class="m-group-name-row">
+                        <input type="text" id="channel-name-input" maxlength="50"
+                               placeholder="Название канала">
+                        <button type="button" id="channel-name-save">Сохранить</button>
+                    </div>
+                </label>
+            </div>
+
+            <p id="channel-info-error" class="error hidden"></p>
         </div>
     </div>
     </div>

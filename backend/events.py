@@ -124,6 +124,7 @@ def build_event(msg, chat_id: int, sender_nickname: str | None) -> dict:
         "edited_at": schemas.as_utc(msg.edited_at).isoformat() if msg.edited_at else None,
         "forwarded_from_nickname": msg.forwarded_from_nickname,
         "is_deleted": bool(msg.is_deleted),
+        "views_count": getattr(msg, "views_count", 0),
     }
 
 
@@ -145,6 +146,7 @@ def build_response_event(event_type: str, msg) -> dict:
         "forwarded_from_nickname": msg.forwarded_from_nickname,
         "is_deleted": bool(msg.is_deleted),
         "status": getattr(msg, "status", "sent"),
+        "views_count": getattr(msg, "views_count", 0),
     }
 
 
@@ -180,8 +182,20 @@ def build_receipt_event(chat_id: int, user_id: int, delivered_to: int, read_by: 
 
 
 def chat_peer_ids(db: Session, user_id: int) -> set[int]:
-    """Пользователи, с которыми у данного есть общий чат."""
-    chat_ids = db.query(models.ChatMember.chat_id).filter(models.ChatMember.user_id == user_id)
+    """Пользователи, с которыми у данного есть общий чат.
+
+    Каналы сюда не входят: подписчики не должны получать присутствие и
+    аватарку владельца только из-за подписки, а у больших каналов такая
+    рассылка была бы ещё и очень дорогой.
+    """
+    chat_ids = (
+        db.query(models.ChatMember.chat_id)
+        .join(models.Chat, models.Chat.id == models.ChatMember.chat_id)
+        .filter(
+            models.ChatMember.user_id == user_id,
+            models.Chat.type != "channel",
+        )
+    )
     return {
         row.user_id
         for row in (
@@ -290,8 +304,12 @@ def build_typing_event(chat_id: int, user_id: int, nickname: str | None = None) 
 
 
 def typing_recipients(db: Session, user_id: int, chat_id: int) -> list[int]:
-    """Кому показать «печатает…»: остальным участникам чата (не «Избранному»)."""
-    if services.is_favorites(chat_id):
+    """Кому показать «печатает…»: остальным участникам чата (не «Избранному»).
+
+    В канале посты пишет только владелец, а подписчикам индикатор набора не
+    нужен: это не переписка.
+    """
+    if services.is_favorites(chat_id) or services.is_channel_chat(db, chat_id):
         return []
     return [member_id for member_id in services.chat_member_ids(db, chat_id) if member_id != user_id]
 

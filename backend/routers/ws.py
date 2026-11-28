@@ -118,7 +118,15 @@ def _send_message(db, user_id: int, chat_id: int, text: str, reply_to_id) -> tup
         except HTTPException as exc:
             return "error", exc.detail, None
         recipients = events.recipients_for(db, result, chat_id)
-        return "ok", recipients, events.build_event(result, chat_id, user.nickname)
+        return (
+            "ok",
+            recipients,
+            events.build_event(
+                result,
+                chat_id,
+                result.sender_nickname or user.nickname,
+            ),
+        )
     finally:
         # Чтения и рассылка могли открыть транзакцию — закрываем её,
         # чтобы сокет не блокировал таблицы между сообщениями.

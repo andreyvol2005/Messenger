@@ -97,6 +97,22 @@ class Message(Base):
     is_deleted = Column(Boolean, default=False)
 
 
+class MessageView(Base):
+    """Уникальный просмотр поста канала.
+
+    Пара (message_id, user_id) — первичный ключ, поэтому повторное открытие
+    канала или повторная загрузка истории не увеличивают счётчик. Автор поста
+    тоже получает строку при публикации: по требованию он входит в число
+    уникальных просмотревших.
+    """
+
+    __tablename__ = "message_views"
+
+    message_id = Column(Integer, ForeignKey("messages.id", ondelete="CASCADE"), primary_key=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
+    viewed_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+
 class Contact(Base):
     __tablename__ = "contacts"
     user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)

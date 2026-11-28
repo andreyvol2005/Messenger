@@ -6,6 +6,7 @@ import { Session } from "../shared/session.js";
 import { Settings } from "../shared/settings.js";
 import { UI } from "../shared/ui.js";
 import { GroupCreate } from "../shared/group-create.js";
+import { ChannelCatalog, ChannelCreate } from "../shared/channels.js";
 import { Contacts } from "./contacts.js";
 import { Profile } from "./profile.js";
 
@@ -29,6 +30,14 @@ export const Menu = {
         document.getElementById("menu-create-group").onclick = () => {
             this.close();
             GroupCreate.open();
+        };
+        document.getElementById("menu-channels").onclick = () => {
+            this.close();
+            ChannelCatalog.open();
+        };
+        document.getElementById("menu-create-channel").onclick = () => {
+            this.close();
+            ChannelCreate.open();
         };
 
         const settingsBtn = document.getElementById("menu-settings");

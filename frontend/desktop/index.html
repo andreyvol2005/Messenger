@@ -84,6 +84,14 @@
                     </div>
                 </div>
                 <div id="messages" class="messages"></div>
+                <div id="channel-subscribe-bar" class="channel-subscribe-bar hidden">
+                    <div class="channel-subscribe-text">
+                        <div id="channel-subscribe-title" class="channel-subscribe-title"></div>
+                        <div id="channel-subscribe-hint" class="channel-subscribe-hint"></div>
+                    </div>
+                    <button type="button" id="channel-subscribe-toggle"
+                            class="channel-subscribe-toggle">Подписаться</button>
+                </div>
                 <div id="composer-banner" class="composer-banner hidden">
                     <div class="composer-banner-icon">↩</div>
                     <div class="composer-banner-body">
@@ -154,6 +162,35 @@
                 <ul id="group-add-results"
                     class="user-search-results group-add-results hidden"></ul>
             </aside>
+
+            <!-- Панель канала: название, аватар, подписчики и подписка -->
+            <aside id="channel-info" class="peer-info channel-info" aria-label="Информация о канале">
+                <button type="button" id="channel-info-close" class="peer-info-close"
+                        aria-label="Закрыть" title="Закрыть">×</button>
+                <div id="channel-info-avatar" class="avatar avatar-xl">?</div>
+                <button type="button" id="channel-avatar-btn" class="group-avatar-btn hidden">
+                    Сменить фото
+                </button>
+                <input type="file" id="channel-avatar-input" accept="image/*" hidden>
+                <h2 id="channel-info-name" class="peer-info-name"></h2>
+                <p id="channel-info-count" class="peer-info-username"></p>
+
+                <button type="button" id="channel-subscribe-btn"
+                        class="channel-subscribe-toggle">Подписаться</button>
+
+                <div id="channel-edit" class="channel-edit hidden">
+                    <label class="field group-name-field">
+                        <span class="field-label">Название канала</span>
+                        <div class="group-name-row">
+                            <input type="text" id="channel-name-input" maxlength="50"
+                                   placeholder="Название канала">
+                            <button type="button" id="channel-name-save">Сохранить</button>
+                        </div>
+                    </label>
+                </div>
+
+                <p id="channel-info-error" class="error hidden"></p>
+            </aside>
         </main>
     </div>
 
@@ -194,6 +231,22 @@
                     <path d="M17 7v6M14 10h6"/>
                 </svg>
                 <span>Создать группу</span>
+            </button>
+            <button type="button" id="menu-channels" class="menu-item">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M4 10v4h3l4 3V7L7 10H4z"/>
+                    <path d="M15 8.5a5 5 0 0 1 0 7"/>
+                    <path d="M18 6a9 9 0 0 1 0 12"/>
+                </svg>
+                <span>Каналы</span>
+            </button>
+            <button type="button" id="menu-create-channel" class="menu-item">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M4 10v4h3l4 3V7L7 10H4z"/>
+                    <path d="M15 8.5a5 5 0 0 1 0 7"/>
+                    <path d="M20 5v6M17 8h6"/>
+                </svg>
+                <span>Создать канал</span>
             </button>
             <button type="button" id="menu-settings" class="menu-item">
                 <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -352,6 +405,63 @@
                     <button type="submit" id="group-create-submit">Создать</button>
                 </div>
             </form>
+        </div>
+    </div>
+
+    <!-- Создание канала -->
+    <div id="channel-create-modal" class="modal" aria-hidden="true">
+        <div id="channel-create-backdrop" class="modal-backdrop"></div>
+
+        <div class="group-create-dialog" role="dialog" aria-modal="true"
+             aria-labelledby="channel-create-title">
+            <div class="contacts-header">
+                <h2 id="channel-create-title" class="contacts-title">Создать канал</h2>
+                <button type="button" id="channel-create-close" class="contacts-close"
+                        aria-label="Закрыть" title="Закрыть">×</button>
+            </div>
+
+            <form id="channel-create-form" class="group-create-form">
+                <label class="field">
+                    <span class="field-label">Название канала</span>
+                    <input type="text" id="channel-create-name" maxlength="50"
+                           placeholder="Например, Новости" autocomplete="off">
+                </label>
+
+                <p class="channel-create-hint">
+                    Посты публикует только владелец канала, а подписчики
+                    видят их в своей ленте.
+                </p>
+                <p id="channel-create-error" class="error hidden"></p>
+
+                <div class="group-create-actions">
+                    <button type="button" id="channel-create-cancel" class="btn-ghost">
+                        Отмена
+                    </button>
+                    <button type="submit" id="channel-create-submit">Создать</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Каталог каналов: поиск и подписка -->
+    <div id="channels-modal" class="modal" aria-hidden="true">
+        <div id="channels-backdrop" class="modal-backdrop"></div>
+
+        <div class="contacts-dialog channels-dialog" role="dialog" aria-modal="true"
+             aria-labelledby="channels-title">
+            <div class="contacts-header">
+                <h2 id="channels-title" class="contacts-title">Каналы</h2>
+                <button type="button" id="channels-close" class="contacts-close"
+                        aria-label="Закрыть" title="Закрыть">×</button>
+            </div>
+
+            <label class="field">
+                <span class="field-label">Поиск</span>
+                <input type="text" id="channels-search"
+                       placeholder="Название канала" autocomplete="off">
+            </label>
+
+            <ul id="channels-list" class="channels-list"></ul>
         </div>
     </div>
     </div>

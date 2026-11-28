@@ -107,6 +107,36 @@ export const API = {
         });
     },
 
+    createChannel(name) {
+        return this.request("/api/chats/channels", {
+            method: "POST",
+            body: JSON.stringify({ name })
+        });
+    },
+
+    // Каталог каналов: поиск по названию, подписка не требуется
+    getChannels(query = "") {
+        const suffix = query ? `?query=${encodeURIComponent(query)}` : "";
+        return this.request(`/api/chats/channels${suffix}`);
+    },
+
+    getChannel(chatId) {
+        return this.request(`/api/chats/channels/${chatId}`);
+    },
+
+    subscribeChannel(chatId) {
+        return this.request(`/api/chats/${chatId}/subscribe`, { method: "POST" });
+    },
+
+    unsubscribeChannel(chatId) {
+        return this.request(`/api/chats/${chatId}/subscribe`, { method: "DELETE" });
+    },
+
+    // Уникальный просмотр поста канала: повторный вызов счётчик не меняет
+    viewMessage(messageId) {
+        return this.request(`/api/messages/${messageId}/view`, { method: "POST" });
+    },
+
     getChatMembers(chatId) {
         return this.request(`/api/chats/${chatId}/members`);
     },

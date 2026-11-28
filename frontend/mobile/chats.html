@@ -74,6 +74,22 @@
                 </svg>
                 <span>Создать группу</span>
             </button>
+            <button type="button" id="menu-channels" class="m-menu-item">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M4 10v4h3l4 3V7L7 10H4z"></path>
+                    <path d="M15 8.5a5 5 0 0 1 0 7"></path>
+                    <path d="M18 6a9 9 0 0 1 0 12"></path>
+                </svg>
+                <span>Каналы</span>
+            </button>
+            <button type="button" id="menu-create-channel" class="m-menu-item">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M4 10v4h3l4 3V7L7 10H4z"></path>
+                    <path d="M15 8.5a5 5 0 0 1 0 7"></path>
+                    <path d="M20 5v6M17 8h6"></path>
+                </svg>
+                <span>Создать канал</span>
+            </button>
             <button type="button" id="menu-settings" class="m-menu-item">
                 <svg viewBox="0 0 24 24" aria-hidden="true">
                     <circle cx="12" cy="12" r="3"></circle>
@@ -232,6 +248,63 @@
                     <button type="submit" id="group-create-submit">Создать</button>
                 </div>
             </form>
+        </div>
+    </div>
+
+    <!-- Создание канала -->
+    <div id="channel-create-modal" class="m-modal" aria-hidden="true">
+        <div id="channel-create-backdrop" class="m-modal-backdrop"></div>
+
+        <div class="m-modal-dialog m-group-create-dialog" role="dialog" aria-modal="true"
+             aria-labelledby="channel-create-title">
+            <div class="m-contacts-header">
+                <h2 id="channel-create-title" class="m-modal-title">Создать канал</h2>
+                <button type="button" id="channel-create-close" class="m-contacts-close"
+                        aria-label="Закрыть" title="Закрыть">×</button>
+            </div>
+
+            <form id="channel-create-form" class="m-group-create-form">
+                <label class="m-field">
+                    <span class="m-field-label">Название канала</span>
+                    <input type="text" id="channel-create-name" maxlength="50"
+                           placeholder="Например, Новости" autocomplete="off">
+                </label>
+
+                <p class="channel-create-hint">
+                    Посты публикует только владелец канала, а подписчики
+                    видят их в своей ленте.
+                </p>
+                <p id="channel-create-error" class="error hidden"></p>
+
+                <div class="m-modal-actions">
+                    <button type="button" id="channel-create-cancel" class="m-secondary-btn">
+                        Отмена
+                    </button>
+                    <button type="submit" id="channel-create-submit">Создать</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Каталог каналов: поиск и подписка -->
+    <div id="channels-modal" class="m-modal" aria-hidden="true">
+        <div id="channels-backdrop" class="m-modal-backdrop"></div>
+
+        <div class="m-modal-dialog m-channels-dialog" role="dialog" aria-modal="true"
+             aria-labelledby="channels-title">
+            <div class="m-contacts-header">
+                <h2 id="channels-title" class="m-modal-title">Каналы</h2>
+                <button type="button" id="channels-close" class="m-contacts-close"
+                        aria-label="Закрыть" title="Закрыть">×</button>
+            </div>
+
+            <label class="m-field">
+                <span class="m-field-label">Поиск</span>
+                <input type="text" id="channels-search"
+                       placeholder="Название канала" autocomplete="off">
+            </label>
+
+            <ul id="channels-list" class="channels-list"></ul>
         </div>
     </div>
     </div>

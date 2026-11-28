@@ -15,7 +15,8 @@ export const MESSAGE_CLASSES = {
         text: "message-text",
         image: "message-image",
         time: "message-time",
-        select: "message-select"
+        select: "message-select",
+        views: "message-views"
     },
     mobile: {
         row: "m-message",
@@ -24,7 +25,8 @@ export const MESSAGE_CLASSES = {
         text: "m-message-text",
         image: "m-message-image",
         time: "m-message-time",
-        select: "message-select"
+        select: "message-select",
+        views: "message-views"
     }
 };
 
@@ -214,8 +216,13 @@ export function renderMessage(msg, options) {
         );
     } else {
         // В группе по нику видно, кто написал. Свои сообщения не подписываем:
-        // их и так выделяет сторона и цвет пузыря.
-        if (options.showSender && !mine && msg.sender_nickname) {
+        // их и так выделяет сторона и цвет пузыря. В канале подпись — это
+        // название канала, и она нужна даже под постами владельца.
+        if (
+            options.showSender
+            && msg.sender_nickname
+            && (!mine || options.showSenderForMine)
+        ) {
             bubble.appendChild(
                 UI.el("div", options.classes.sender, msg.sender_nickname)
             );
@@ -292,6 +299,18 @@ export function renderMessage(msg, options) {
     if (msg.edited_at && !msg.is_deleted) {
         meta.appendChild(UI.el("span", "message-edited", "изменено"));
     }
+    // У поста канала под временем показываем уникальные просмотры.
+    // У ещё не подтверждённого черновика счётчика нет.
+    if (options.showViews && !msg.is_deleted && msg.status !== "pending") {
+        const views = UI.el(
+            "span",
+            options.classes.views,
+            UI.viewsLabel(msg.views_count)
+        );
+        views.dataset.views = String(Number(msg.views_count) || 0);
+        views.title = "Уникальные просмотры";
+        meta.appendChild(views);
+    }
     bubble.appendChild(meta);
     row.appendChild(bubble);
 
@@ -364,7 +383,8 @@ export async function sendWithPreview(box, draft, options, send) {
         id: `pending-${++pendingSeq}`,
         chat_id: draft.chatId,
         sender_id: Session.userId(),
-        sender_nickname: Session.nickname(),
+        // В канале подпись поста — название канала, а не ник владельца
+        sender_nickname: draft.senderNickname || Session.nickname(),
         text: draft.text,
         media_url: null,
         created_at: new Date().toISOString(),
@@ -428,6 +448,18 @@ export function removeMessageRow(box, messageId) {
     const row = box.querySelector(`[data-msg-id="${messageId}"]`);
     if (!row) return false;
     row.remove();
+    return true;
+}
+
+// Счётчик просмотров поста канала обновился после отметки просмотра.
+export function updateMessageViews(box, messageId, count) {
+    const row = box.querySelector(`[data-msg-id="${messageId}"]`);
+    if (!row) return false;
+    const node = row.querySelector(".message-views");
+    if (!node) return false;
+    const value = Number(count) || 0;
+    node.textContent = UI.viewsLabel(value);
+    node.dataset.views = String(value);
     return true;
 }
 

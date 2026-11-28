@@ -65,13 +65,16 @@ CREATE INDEX ix_account_deletion_jobs_pending
 -- У групповых чатов он NULL, а несколько NULL в UNIQUE не конфликтуют.
 CREATE TABLE chats (
     id SERIAL PRIMARY KEY,
-    type VARCHAR(10) NOT NULL CHECK (type IN ('private', 'group')),
+    type VARCHAR(10) NOT NULL CONSTRAINT chats_type_check
+        CHECK (type IN ('private', 'group', 'channel')),
     name VARCHAR(50) DEFAULT NULL,
-    -- Аватар группы: относительный путь /uploads/group_avatars/<uuid>.<ext>.
-    -- У личных чатов NULL — показывается аватар собеседника.
+    -- Аватар группы или канала: относительный путь
+    -- /uploads/group_avatars/<uuid>.<ext>. У личных чатов NULL —
+    -- показывается аватар собеседника.
     avatar_url TEXT DEFAULT NULL,
     pair_key VARCHAR(32) UNIQUE DEFAULT NULL,
-    -- Владелец группы: только он удаляет других участников. У личных чатов NULL.
+    -- Владелец группы или канала: у группы удаляет других участников,
+    -- у канала — единственный, кто публикует посты. У личных чатов NULL.
     owner_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -118,6 +121,18 @@ CREATE TABLE messages (
 ALTER TABLE chats ADD COLUMN last_message_id INTEGER REFERENCES messages(id) ON DELETE SET NULL;
 
 -- ====================================================
+-- 4.1. Просмотры постов каналов
+-- ====================================================
+-- Пара (message_id, user_id) уникальна: повторное открытие канала не
+-- увеличивает счётчик. Автор поста тоже получает строку при публикации.
+CREATE TABLE message_views (
+    message_id INTEGER NOT NULL REFERENCES messages(id) ON DELETE CASCADE,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    viewed_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (message_id, user_id)
+);
+
+-- ====================================================
 -- 5. Контакты
 -- ====================================================
 CREATE TABLE contacts (
@@ -134,6 +149,7 @@ CREATE INDEX idx_messages_chat_created ON messages(chat_id, created_at DESC);
 CREATE INDEX idx_messages_chat_id_desc ON messages(chat_id, id DESC);
 CREATE INDEX idx_messages_sender ON messages(sender_id);
 CREATE INDEX idx_chat_members_user ON chat_members(user_id);
+CREATE INDEX idx_message_views_user ON message_views(user_id);
 CREATE INDEX idx_contacts_user ON contacts(user_id);
 -- Частичный индекс: обычный idx_messages_chat_created избранное не покрывает.
 -- Сортировка идёт по времени, поэтому владелец входит в ключ индекса.

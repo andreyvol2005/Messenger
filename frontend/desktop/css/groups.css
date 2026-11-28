@@ -291,3 +291,46 @@
     font-size: 11px;
     color: var(--accent);
 }
+
+/* ============================
+   Каналы: панель и каталог
+   ============================ */
+#channel-info {
+    width: 0;
+    flex-shrink: 0;
+    overflow: hidden;
+    padding: 24px 20px;
+    background: var(--bg-elevated);
+    border-left: 1px solid var(--bg-active);
+    color: var(--text);
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    transition: width 0.22s ease;
+}
+
+#channel-info:not(.open) {
+    min-height: 0;
+    height: 0;
+    padding: 0;
+    border: none;
+}
+
+#channel-info.open {
+    width: min(420px, 92vw);
+    overflow-y: auto;
+    border-left: 1px solid var(--bg-active);
+}
+
+#channel-info .channel-subscribe-toggle {
+    align-self: center;
+    min-width: 150px;
+}
+
+.channels-dialog {
+    max-width: 540px;
+}
+
+.channels-dialog .field {
+    margin-bottom: 12px;
+}

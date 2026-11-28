@@ -44,6 +44,16 @@ export const UI = {
         return `${value} ${this.plural(value, "участник", "участника", "участников")}`;
     },
 
+    subscribersLabel(count) {
+        const value = Number(count) || 0;
+        return `${value} ${this.plural(value, "подписчик", "подписчика", "подписчиков")}`;
+    },
+
+    viewsLabel(count) {
+        const value = Number(count) || 0;
+        return `${value} ${this.plural(value, "просмотр", "просмотра", "просмотров")}`;
+    },
+
     // Круглый аватар: картинка, а при её отсутствии — первая буква ника
     avatar(name, avatarUrl, className = "avatar") {
         const node = this.el("div", className);

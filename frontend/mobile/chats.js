@@ -10,6 +10,7 @@ import { Settings } from "../shared/settings.js";
 import { UI } from "../shared/ui.js";
 import { UserSearch } from "../shared/user-search.js";
 import { GroupCreate } from "../shared/group-create.js";
+import { ChannelCatalog, ChannelCreate } from "../shared/channels.js";
 import { Contacts } from "./contacts.js";
 import { Menu } from "./menu.js";
 import { Profile } from "./profile.js";
@@ -26,6 +27,17 @@ export const MobileChats = {
                 window.location.href = Session.chatUrl(chat.id);
             }
         });
+        ChannelCreate.init({
+            onCreated: (chat) => {
+                window.location.href = Session.chatUrl(chat.id);
+            }
+        });
+        ChannelCatalog.init({
+            onOpen: (chat) => {
+                window.location.href = Session.chatUrl(chat.id);
+            },
+            onChanged: () => this.refreshList()
+        });
 
         Menu.init();
         Profile.init();
@@ -39,7 +51,9 @@ export const MobileChats = {
         // доставку, чтобы отправитель увидел вторую серую галочку.
         Realtime.connect((msg) => {
             const mine = msg.sender_id === Session.userId();
-            if (!mine && msg.chat_id > 0) {
+            // У поста канала views_count больше нуля: отметок о доставке
+            // там нет, считаются только уникальные просмотры.
+            if (!mine && msg.chat_id > 0 && !msg.views_count) {
                 Receipts.markDelivered(msg.chat_id, msg.id);
             }
             this.refreshList();
